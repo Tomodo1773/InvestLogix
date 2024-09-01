@@ -1,0 +1,18 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Python: FastAPI",
+			"type": "debugpy",
+			"request": "launch",
+			"module": "uvicorn",
+			"args": ["stock.main:app", "--reload"], // 'api.main:app' から 'main:app' へ変更
+			"console": "integratedTerminal",
+			"cwd": "${workspaceFolder}/src/api", // 'cwd' を '${workspaceFolder}' から '${workspaceFolder}/api' へ変更
+			"envFile": "${workspaceFolder}/.env", // 環境変数はworkspaceFolder/.envから取得
+			"env": {
+				"PYTHONPATH": "${workspaceFolder}/src/api/stock"
+			}
+		}
+	]
+}

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 
-from stock.models.task import Base
+from stock.models.invest import Base
 
 import os
 from dotenv import load_dotenv

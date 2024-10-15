@@ -1,4 +1,4 @@
-import stock.models.task as task_model
+import stock.models.invest as task_model
 from sqlalchemy import select
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession

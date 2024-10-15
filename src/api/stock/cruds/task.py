@@ -1,4 +1,4 @@
-import stock.models.task as task_model
+import stock.models.invest as task_model
 import stock.schemas.task as task_schema
 from sqlalchemy import select
 from sqlalchemy.engine import Result

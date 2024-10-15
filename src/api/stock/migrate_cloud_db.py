@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import InternalError, OperationalError
 from stock.db import DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
-from stock.models.task import Base
+from stock.models.invest import Base
 
 # api/db.py からDB接続用の定数を取得（環境変数に由来）
 DB_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/?charset=utf8"

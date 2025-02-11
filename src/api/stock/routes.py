@@ -18,6 +18,15 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
+@router.get("/")
+async def root():
+    """
+    APIのルートエンドポイント
+    - 戻り値: APIの基本情報
+    """
+    return {"name": "InvestLogix API", "version": "1.0.0", "description": "株式投資ポートフォリオ管理APIサービス"}
+
+
 @router.post("/token", response_model=schemas.Token)
 async def login_for_access_token(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = Depends(get_db)

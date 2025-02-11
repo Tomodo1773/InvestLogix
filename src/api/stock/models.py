@@ -53,7 +53,6 @@ class Stock(Base):
 
     holdings = relationship("Holding", back_populates="stock")  # Holding モデルとの関連
     transactions = relationship("Transaction", back_populates="stock")  # Transaction モデルとの関連
-    profit_loss_history = relationship("PortfolioHistory", back_populates="stock")  # PortfolioHistory モデルとの関連
     dividend = relationship("Dividend", back_populates="stock")  # Dividend モデルとの関連
     jpx_detail = relationship("StockJPXDetail", back_populates="stock", uselist=False)  # StockJPXDetail モデルとの関連
     us_detail = relationship("StockUSDetail", back_populates="stock", uselist=False)  # StockUSDetail モデルとの関連
@@ -115,7 +114,6 @@ class User(Base):
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
-    favorites = relationship("Favorite", back_populates="user")
     dividend = relationship("Dividend", back_populates="user")
     portfolio_history = relationship("PortfolioHistory", back_populates="user")
 

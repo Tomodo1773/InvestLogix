@@ -6,6 +6,7 @@ FastAPIアプリケーション定義
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .database import settings
 from .routes import router
 
 # FastAPIアプリケーションの作成
@@ -18,7 +19,7 @@ app = FastAPI(
 # CORSミドルウェアの設定
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 本番環境では適切なオリジンに制限すること
+    allow_origins=settings.CORS_ORIGINS,  # 環境変数から読み込む
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

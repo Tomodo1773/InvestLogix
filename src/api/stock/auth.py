@@ -5,24 +5,29 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
-from .database import get_db
+from .database import get_db, settings
 
-# JWTの設定
-SECRET_KEY = "your-secret-key"  # 本番環境では環境変数から取得すること
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
-# パスワードハッシュ化のコンテキスト
+# パスワードハッシュ化のための設定
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# JWT設定を settings から取得
+SECRET_KEY = settings.JWT_SECRET_KEY
+ALGORITHM = settings.JWT_ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    平文のパスワードとハッシュ化されたパスワードを比較する
+    パスワードの検証を行う
+    - plain_password: 検証対象の平文パスワード
+    - hashed_password: ハッシュ化されたパスワード
+    - 戻り値: パスワードが一致する場合True、それ以外はFalse
     """
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -30,31 +35,46 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """
     パスワードをハッシュ化する
+    - password: ハッシュ化する平文パスワード
+    - 戻り値: ハッシュ化されたパスワード
     """
     return pwd_context.hash(password)
 
 
-def authenticate_user(db: Session, username: str, password: str) -> models.User | None:
+async def get_user(db: AsyncSession, username: str):
     """
-    ユーザー認証を行う
-    - username: ユーザー名
-    - password: パスワード
-    - return: 認証成功時はUserモデル、失敗時はNone
+    ユーザー名からユーザーを取得する
+    - db: データベースセッション
+    - username: 検索対象のユーザー名
+    - 戻り値: 該当ユーザーが存在する場合はUserモデル、存在しない場合はNone
     """
-    user = db.query(models.User).filter(models.User.username == username).first()
+    query = select(models.User).where(models.User.username == username)
+    result = await db.execute(query)
+    return result.scalar_one_or_none()
+
+
+async def authenticate_user(db: AsyncSession, username: str, password: str):
+    """
+    ユーザーの認証を行う
+    - db: データベースセッション
+    - username: 認証対象のユーザー名
+    - password: 認証対象のパスワード
+    - 戻り値: 認証成功時はUserモデル、失敗時はFalse
+    """
+    user = await get_user(db, username)
     if not user:
-        return None
+        return False
     if not verify_password(password, user.password_hash):
-        return None
+        return False
     return user
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
+def create_access_token(data: dict, expires_delta: timedelta | None = None):
     """
     JWTトークンを生成する
-    - data: トークンに含めるデータ
-    - expires_delta: 有効期限（指定がない場合はデフォルト値を使用）
-    - return: JWTトークン
+    - data: トークンに含めるデータ（通常はユーザー名）
+    - expires_delta: トークンの有効期限（オプション）
+    - 戻り値: 生成されたJWTトークン
     """
     to_encode = data.copy()
     if expires_delta:
@@ -66,12 +86,16 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
     return encoded_jwt
 
 
-async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Session = Depends(get_db)) -> models.User:
+async def get_current_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: AsyncSession = Depends(get_db),
+) -> schemas.User:
     """
-    現在のユーザーを取得する（認証済みユーザーのみアクセス可能なエンドポイントで使用）
-    - token: JWTトークン
-    - return: 認証済みユーザー
-    - 認証失敗時は401 Unauthorized
+    現在のユーザーを取得する
+    - token: リクエストから取得したJWTトークン
+    - db: データベースセッション
+    - 戻り値: 認証されたユーザー情報
+    - エラー: 認証失敗時は401 Unauthorized
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -87,7 +111,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)], db: Se
     except JWTError:
         raise credentials_exception
 
-    user = db.query(models.User).filter(models.User.username == token_data.username).first()
+    user = await get_user(db, username=token_data.username)
     if user is None:
         raise credentials_exception
     return user

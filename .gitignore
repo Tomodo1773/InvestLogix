@@ -2,3 +2,17 @@
 .env
 .dockervenv
 __pycache__
+
+# Python packaging
+*.egg-info/
+*.egg
+dist/
+build/
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+*.db-shm
+*.db-wal
+*.db-journal

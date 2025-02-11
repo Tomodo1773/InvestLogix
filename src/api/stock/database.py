@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # J-Quants API設定
+    JQUANTS_MAIL_ADDRESS: str = ""
+    JQUANTS_PASSWORD: str = ""
+
     # CORS設定
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 

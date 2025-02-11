@@ -18,6 +18,8 @@ dependencies = [
     "aiosqlite>=0.21.0",
     "python-dotenv>=1.0.1",
     "pydantic-settings>=2.7.1",
+    "jquants-api-client>=1.7.3",
+    "aiohttp>=3.11.12",
 ]
 
 [build-system]

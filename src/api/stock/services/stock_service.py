@@ -1,10 +1,15 @@
+import json
+import os
+import re
 from typing import List, Optional
 
+import requests
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from ..jquants import jquants_client
+from .alphavantage_service import fetch_us_stock_details
 
 
 class StockService:
@@ -19,22 +24,53 @@ class StockService:
         if db_stock:
             return None
 
-        # Fetch additional stock information from JQuants
+        if self.is_investment_trust(stock.symbol):
+            return await self.create_investment_trust(stock)
+        elif self.is_japanese_stock(stock.symbol):
+            return await self.create_japanese_stock(stock)
+        elif self.is_us_stock(stock.symbol):
+            return await self.create_us_stock(stock)
+        else:
+            raise ValueError("Invalid stock symbol format")
+
+    def is_investment_trust(self, symbol: str) -> bool:
+        return symbol.startswith("JP") and re.match(r"^JP[0-9A-Z]{10}$", symbol) is not None
+
+    def is_japanese_stock(self, symbol: str) -> bool:
+        return re.match(r"^[0-9]{4}$", symbol) is not None
+
+    def is_us_stock(self, symbol: str) -> bool:
+        return re.match(r"^[A-Z]{1,5}$", symbol) is not None
+
+    async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
+        db_stock = models.Stock(
+            symbol=stock.symbol,
+            name="投資信託名",
+            name_en="Investment Trust",
+            market="JPX",
+            security_type="FUND",
+            currency="JPY",
+        )
+        self.db.add(db_stock)
+        await self.db.commit()
+        await self.db.refresh(db_stock)
+        return db_stock
+
+    async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
         company_info = jquants_client.get_company_info(stock.symbol)
         if not company_info:
-            return None
+            raise ValueError("Company information not found")
 
         db_stock = models.Stock(
             symbol=stock.symbol,
             name=company_info.get("CompanyName"),
             name_en=company_info.get("CompanyNameEnglish"),
-            market=schemas.StockMarket.JPX,  # Assuming JPX for now
-            security_type="STOCK",  # Assuming STOCK for now
-            currency="JPY",  # Assuming JPY for now
+            market="JPX",
+            security_type="STOCK",
+            currency="JPY",
         )
         self.db.add(db_stock)
 
-        # Create StockJPXDetail
         db_stock_jpx_detail = models.StockJPXDetail(
             symbol=stock.symbol,
             sector_17_code=company_info.get("Sector17Code"),
@@ -52,7 +88,38 @@ class StockService:
         await self.db.refresh(db_stock)
         return db_stock
 
-    async def list_stocks(self, market: Optional[schemas.StockMarket] = None) -> List[models.Stock]:
+    async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
+        # Alpha Vantage APIを使用して米国株の詳細情報を取得
+        data = await fetch_us_stock_details(stock.symbol)
+
+        name = data["Name"]  # 銘柄名を取得
+        market = data["Exchange"]  # 市場を取得
+        industry = data["Sector"]  # 産業を取得
+
+        db_stock = models.Stock(
+            symbol=stock.symbol,
+            name=name,
+            name_en=name,
+            market=market,
+            security_type="STOCK",
+            currency="USD",
+        )
+        self.db.add(db_stock)
+
+        db_stock_us_detail = models.StockUSDetail(
+            symbol=stock.symbol,
+            gics_sector=industry,
+            gics_industry=industry,
+            sp500_component=False,
+            market=market,
+        )
+        self.db.add(db_stock_us_detail)
+
+        await self.db.commit()
+        await self.db.refresh(db_stock)
+        return db_stock
+
+    async def list_stocks(self, market: Optional[str] = None) -> List[models.Stock]:
         query = select(models.Stock)
         if market:
             query = query.where(models.Stock.market == market)

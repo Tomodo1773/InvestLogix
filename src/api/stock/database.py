@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     JQUANTS_MAIL_ADDRESS: str = ""
     JQUANTS_PASSWORD: str = ""
 
+    # Alpha Vantage API設定
+    ALPHAVANTAGE_API_KEY: str = ""
+
     # CORS設定
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 

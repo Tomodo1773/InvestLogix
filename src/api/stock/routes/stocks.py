@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import Stock, StockCreate, StockMarket, StockWithRelations, User
+from ..schemas import Stock, StockCreate, StockWithRelations, User
 from ..services.stock_service import StockService
 
 router = APIRouter()
@@ -34,7 +34,7 @@ async def create_stock(
 @router.get("/", response_model=List[StockWithRelations])
 async def list_stocks(
     current_user: Annotated[User, Depends(get_current_user)],
-    market: StockMarket | None = None,
+    market: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """

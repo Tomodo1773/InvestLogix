@@ -1,22 +1,15 @@
 from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
-
-
-class StockMarket(str, Enum):
-    JPX = "JPX"
-    NYSE = "NYSE"
-    NASDAQ = "NASDAQ"
 
 
 class StockBase(BaseModel):
     symbol: str
     name: str
     name_en: Optional[str]
-    market: StockMarket
+    market: str
     security_type: str
     currency: str
 

@@ -1,7 +1,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import authenticate_user, create_access_token  # この参照は親モジュールからなので変更なし
@@ -10,7 +10,6 @@ from ..schemas import Token, User, UserCreate
 from ..services.auth_service import AuthService
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @router.post("/token", response_model=Token)

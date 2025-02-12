@@ -27,7 +27,7 @@ async def create_stock(
     stock_service = StockService(db)
     db_stock = await stock_service.create_stock(stock)
     if not db_stock:
-        raise HTTPException(status_code=404, detail="Failed to fetch stock information from JQuants")
+        raise HTTPException(status_code=400, detail="this symbol already registered")
     return db_stock
 
 

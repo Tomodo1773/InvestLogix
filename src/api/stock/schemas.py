@@ -14,7 +14,13 @@ class StockBase(BaseModel):
     currency: str
 
 
-class Stock(StockBase):
+class Stock(BaseModel):
+    symbol: str
+    name: str
+    name_en: Optional[str]
+    market: str
+    security_type: str
+    currency: str
     last_updated: datetime
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,5 +1,4 @@
 from datetime import datetime
-from enum import Enum as PyEnum
 
 import pytz
 from sqlalchemy import (
@@ -28,12 +27,6 @@ class Base(DeclarativeBase):
     pass
 
 
-class StockMarket(str, PyEnum):
-    JPX = "JPX"
-    NYSE = "NYSE"
-    NASDAQ = "NASDAQ"
-
-
 class Stock(Base):
     """
     基本情報のみを保持する既存テーブル
@@ -44,7 +37,7 @@ class Stock(Base):
     symbol = Column(String(10), primary_key=True)  # [SYSTEM] 銘柄コード (例: "AAPL")
     name = Column(String(100), nullable=False)  # [API_FETCH] 銘柄名 (例: "Apple Inc.")
     name_en = Column(String(100))  # [API_FETCH] 英語名 (例: "Apple Inc.")
-    market = Column(Enum(StockMarket), nullable=False)  # [API_FETCH] 上場市場 (例: "JPX", "NYSE", "NASDAQ")
+    market = Column(String(20), nullable=False)  # [API_FETCH] 上場市場 (例: "JPX", "NYSE", "NASDAQ")
     security_type = Column(
         Enum("STOCK", "ETF", "REIT", "FUND", name="security_types"), nullable=False
     )  # [SYSTEM] 証券種別 (例: "STOCK")

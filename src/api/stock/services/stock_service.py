@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from ..jquants import jquants_client
-from .alphavantage_service import fetch_us_stock_details
+from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 
 
 class StockService:
@@ -90,30 +90,40 @@ class StockService:
 
     async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
         # Alpha Vantage APIを使用して米国株の詳細情報を取得
-        data = await fetch_us_stock_details(stock.symbol)
+        data = await fetch_us_stock_overview(stock.symbol)
 
-        name = data["Name"]  # 銘柄名を取得
-        market = data["Exchange"]  # 市場を取得
-        industry = data["Sector"]  # 産業を取得
+        if not data:
+            # ETFの可能性があるため、SYMBOL_SEARCHを使用
+            search_data = await fetch_us_stock_search(stock.symbol)
+            best_match = search_data.get("bestMatches", [])[0]
+            name = best_match["2. name"]
+            market = best_match["4. region"]
+            security_type = "ETF"
+        else:
+            name = data["Name"]  # 銘柄名を取得
+            market = data["Exchange"]  # 市場を取得
+            industry = data["Sector"]  # 産業を取得
+            security_type = "STOCK"
 
         db_stock = models.Stock(
             symbol=stock.symbol,
             name=name,
             name_en=name,
             market=market,
-            security_type="STOCK",
+            security_type=security_type,
             currency="USD",
         )
         self.db.add(db_stock)
 
-        db_stock_us_detail = models.StockUSDetail(
-            symbol=stock.symbol,
-            gics_sector=industry,
-            gics_industry=industry,
-            sp500_component=False,
-            market=market,
-        )
-        self.db.add(db_stock_us_detail)
+        if security_type == "STOCK":
+            db_stock_us_detail = models.StockUSDetail(
+                symbol=stock.symbol,
+                gics_sector=industry,
+                gics_industry=industry,
+                sp500_component=False,
+                market=market,
+            )
+            self.db.add(db_stock_us_detail)
 
         await self.db.commit()
         await self.db.refresh(db_stock)

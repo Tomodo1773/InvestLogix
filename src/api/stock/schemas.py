@@ -168,10 +168,10 @@ class TokenData(BaseModel):
     username: str | None = None
 
 
-class StockCreate(StockBase):
+class StockCreate(BaseModel):
     """株式銘柄登録リクエスト"""
 
-    pass
+    symbol: str
 
 
 class StockJPXDetailCreate(StockJPXDetailBase):

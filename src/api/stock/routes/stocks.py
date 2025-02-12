@@ -19,14 +19,15 @@ async def create_stock(
 ):
     """
     新規銘柄を登録する
-    - stock: 銘柄情報（シンボル、名称、市場、通貨等）
+    - stock: 銘柄情報（シンボル）
     - 登録成功時: 作成された銘柄情報を返却
     - シンボル重複時: 400 Bad Request
+    - JQuantsから情報取得失敗時: 404 Not Found
     """
     stock_service = StockService(db)
     db_stock = await stock_service.create_stock(stock)
     if not db_stock:
-        raise HTTPException(status_code=400, detail="Symbol already registered")
+        raise HTTPException(status_code=404, detail="Failed to fetch stock information from JQuants")
     return db_stock
 
 

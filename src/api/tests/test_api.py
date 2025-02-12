@@ -11,7 +11,7 @@ async def test_root_endpoint(client: AsyncClient):
         - ステータスコード200
         - APIの基本情報を含むレスポンス
     """
-    response = await client.get("/api/v1/")
+    response = await client.get("/")
     assert response.status_code == 200
     assert response.json() == {
         "name": "InvestLogix API",
@@ -27,7 +27,7 @@ def test_root_endpoint_sync(sync_client: TestClient):
         - ステータスコード200
         - APIの基本情報を含むレスポンス
     """
-    response = sync_client.get("/api/v1/")
+    response = sync_client.get("/")
     assert response.status_code == 200
     assert response.json() == {
         "name": "InvestLogix API",

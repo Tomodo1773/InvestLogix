@@ -1,15 +1,13 @@
-import json
-import os
 import re
 from typing import List, Optional
 
-import requests
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from ..jquants import jquants_client
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
+from .investment_trust_service import fetch_investment_trust_details
 
 
 class StockService:
@@ -43,10 +41,14 @@ class StockService:
         return re.match(r"^[A-Z]{1,5}$", symbol) is not None
 
     async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
+        # 投資信託の詳細情報を取得
+        details = await fetch_investment_trust_details(stock.symbol)
+        name = details["name"]
+
         db_stock = models.Stock(
             symbol=stock.symbol,
-            name="投資信託名",
-            name_en="Investment Trust",
+            name=name,
+            name_en="",
             market="JPX",
             security_type="FUND",
             currency="JPY",

@@ -10,6 +10,8 @@ from sqlalchemy.pool import StaticPool
 
 from stock.app import app
 from stock.database import get_db, settings
+from stock.schemas import UserCreate
+from stock.services.auth_service import AuthService
 
 # テスト用のエンジン設定をアプリケーションの設定から取得
 engine = create_async_engine(
@@ -29,6 +31,18 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
         await session.rollback()
         await session.close()
+
+
+@pytest_asyncio.fixture
+async def auth_token(client: AsyncClient, db_session: AsyncSession) -> str:
+    """テスト用の認証トークンを取得するフィクスチャー"""
+    # テストユーザーを作成
+    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
+    await AuthService(db_session).create_user(UserCreate(**user_data))
+
+    # ログインしてトークンを取得
+    response = await client.post("/api/v1/token", data={"username": user_data["username"], "password": user_data["password"]})
+    return response.json()["access_token"]
 
 
 @pytest_asyncio.fixture

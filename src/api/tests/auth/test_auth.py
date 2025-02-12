@@ -15,7 +15,7 @@ async def test_create_user(client: AsyncClient, db_session: AsyncSession):
         - 作成されたユーザー情報を返却
         - パスワードハッシュが含まれない
     """
-    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
+    user_data = {"username": "testuser2", "email": "test2@example.com", "password": "testpassword"}
     response = await client.post("/api/v1/users/", json=user_data)
     assert response.status_code == 200
     data = response.json()

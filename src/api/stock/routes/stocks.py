@@ -44,3 +44,21 @@ async def list_stocks(
     """
     stock_service = StockService(db)
     return await stock_service.list_stocks(market)
+
+
+@router.delete("/{symbol}", response_model=bool)
+async def delete_stock(
+    symbol: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    指定されたシンボルの銘柄を削除する
+    - symbol: 銘柄シンボル
+    - 戻り値: 削除成功時はTrue、失敗時はFalse
+    """
+    stock_service = StockService(db)
+    success = await stock_service.delete_stock(symbol)
+    if not success:
+        raise HTTPException(status_code=404, detail="Stock not found")
+    return success

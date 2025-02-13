@@ -137,3 +137,34 @@ class StockService:
             query = query.where(models.Stock.market == market)
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    async def delete_stock(self, symbol: str) -> bool:
+        """
+        指定されたシンボルの銘柄を削除する
+        - symbol: 銘柄シンボル
+        - 戻り値: 削除成功時はTrue、失敗時はFalse
+        """
+        query = select(models.Stock).where(models.Stock.symbol == symbol)
+        result = await self.db.execute(query)
+        db_stock = result.scalar_one_or_none()
+
+        if not db_stock:
+            return False
+
+        # 関連する詳細情報テーブルの削除
+        # 日本株の詳細情報を削除
+        jpx_detail_query = select(models.StockJPXDetail).where(models.StockJPXDetail.symbol == symbol)
+        jpx_detail_result = await self.db.execute(jpx_detail_query)
+        if jpx_detail := jpx_detail_result.scalar_one_or_none():
+            await self.db.delete(jpx_detail)
+
+        # 米国株の詳細情報を削除
+        us_detail_query = select(models.StockUSDetail).where(models.StockUSDetail.symbol == symbol)
+        us_detail_result = await self.db.execute(us_detail_query)
+        if us_detail := us_detail_result.scalar_one_or_none():
+            await self.db.delete(us_detail)
+
+        # 株式情報を削除
+        await self.db.delete(db_stock)
+        await self.db.commit()
+        return True

@@ -1,8 +1,34 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict
+
+
+class SecurityType(str, Enum):
+    """証券種別"""
+
+    STOCK = "STOCK"
+    ETF = "ETF"
+    REIT = "REIT"
+    FUND = "FUND"
+
+
+class TransactionType(str, Enum):
+    """取引種別"""
+
+    BUY = "buy"
+    SELL = "sell"
+
+
+class AccountType(str, Enum):
+    """預かり種別"""
+
+    JUNIOR_NISA = "ジュニアNISA"
+    OLD_NISA = "旧NISA"
+    NISA_TSUMITATE = "NISA(つみたて投資枠)"
+    NISA_GROWTH = "NISA(成長投資枠)"
 
 
 class StockBase(BaseModel):
@@ -10,7 +36,7 @@ class StockBase(BaseModel):
     name: str
     name_en: Optional[str]
     market: str
-    security_type: str
+    security_type: SecurityType
     currency: str
 
 
@@ -19,7 +45,7 @@ class Stock(BaseModel):
     name: str
     name_en: Optional[str]
     market: str
-    security_type: str
+    security_type: SecurityType
     currency: str
     last_updated: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -81,7 +107,6 @@ class HoldingBase(BaseModel):
 
 
 class Holding(HoldingBase):
-    holding_id: int
     user_id: int
     last_updated: datetime
     model_config = ConfigDict(from_attributes=True)
@@ -89,10 +114,10 @@ class Holding(HoldingBase):
 
 class TransactionBase(BaseModel):
     symbol: str
-    transaction_type: str
+    transaction_type: TransactionType
     quantity: Decimal
     price: Decimal
-    account_type: str
+    account_type: AccountType
     fee: Decimal
     tax: Decimal
 
@@ -185,10 +210,25 @@ class StockUSDetailCreate(StockUSDetailBase):
     pass
 
 
-class TransactionCreate(TransactionBase):
+class TransactionCreate(BaseModel):
     """取引登録リクエスト"""
 
-    transaction_date: datetime
+    symbol: str
+    transaction_type: TransactionType
+    quantity: Decimal
+    price: Decimal
+    account_type: AccountType
+    fee: Decimal
+    tax: Decimal
+    transaction_date: str
+
+    def model_dump(self, **kwargs):
+        """Decimalオブジェクトを文字列に変換"""
+        dump = super().model_dump(**kwargs)
+        for key in ["quantity", "price", "fee", "tax"]:
+            if key in dump and isinstance(dump[key], Decimal):
+                dump[key] = str(dump[key])
+        return dump
 
 
 class DividendCreate(DividendBase):

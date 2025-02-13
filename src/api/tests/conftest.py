@@ -10,12 +10,16 @@ from sqlalchemy.pool import StaticPool
 
 from stock.app import app
 from stock.database import get_db, settings
+from stock.models import Base
 from stock.schemas import UserCreate
 from stock.services.auth_service import AuthService
 
-# テスト用のエンジン設定をアプリケーションの設定から取得
+# テスト用のDBのURL設定
+TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+
+# テスト用のエンジン設定
 engine = create_async_engine(
-    settings.SQLALCHEMY_DATABASE_URL,
+    TEST_DATABASE_URL,  # テスト用のDBを使用
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
@@ -24,13 +28,23 @@ engine = create_async_engine(
 TestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def setup_database():
+    """データベースの初期化を行うフィクスチャー"""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
+
 @pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """非同期データベースセッションのフィクスチャー"""
     async with TestingSessionLocal() as session:
-        yield session
-        await session.rollback()
-        await session.close()
+        try:
+            yield session
+        finally:
+            await session.rollback()
+            await session.close()
 
 
 @pytest_asyncio.fixture

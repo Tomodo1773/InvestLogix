@@ -67,11 +67,20 @@ class TransactionService:
             self.db.add(holding)
 
     async def _handle_sell_transaction(self, holding, transaction):
+        # 売却による実現損益の計算
+        realized_pl_for_sale = (transaction.price - holding.average_cost) * transaction.quantity
+
+        # 保有数量の更新
         holding.quantity -= transaction.quantity
-        if holding.quantity == 0:
-            await self.db.delete(holding)
+
+        # 残りの保有情報を更新（数量が0でも保持）
+        holding.total_cost = holding.average_cost * holding.quantity
+
+        # 実現損益の更新
+        if holding.realized_pl is None:
+            holding.realized_pl = realized_pl_for_sale
         else:
-            holding.total_cost = holding.average_cost * holding.quantity
+            holding.realized_pl += realized_pl_for_sale
 
     async def list_transactions(self, user_id: int) -> List[models.Transaction]:
         query = (

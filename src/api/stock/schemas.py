@@ -102,6 +102,8 @@ class HoldingBase(BaseModel):
     total_cost: Decimal
     current_price: Optional[Decimal]
     market_value: Optional[Decimal]
+    realized_pl: Optional[Decimal]
+    total_dividend: Optional[Decimal]
     unrealized_pl: Optional[Decimal]
     unrealized_pl_percentage: Optional[Decimal]
 

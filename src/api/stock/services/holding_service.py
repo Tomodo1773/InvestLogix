@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..jquants import jquants_client
 from ..models import Holding, Stock
 from ..schemas import SecurityType
+from ..services import investment_trust_service
 
 
 async def get_current_price(stock: Stock) -> Decimal:
@@ -29,10 +30,14 @@ async def get_current_price(stock: Stock) -> Decimal:
             now = datetime.now(jst)
             end_date = now.strftime("%Y-%m-%d")
             start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-
+            
             # 非同期でJ-Quants APIを呼び出し
-            prices = await jquants_client.get_prices(symbol=stock.symbol, start_date=start_date, end_date=end_date)
-
+            prices = await jquants_client.get_prices(
+                symbol=stock.symbol,
+                start_date=start_date,
+                end_date=end_date
+            )
+            
             # 最新の株価を返す
             if prices and len(prices) > 0:
                 return Decimal(str(prices[0].get("Close", "0")))
@@ -44,8 +49,8 @@ async def get_current_price(stock: Stock) -> Decimal:
         # TODO: 米国ETFの価格取得ロジックを実装
         return Decimal("0")
     elif stock.security_type == SecurityType.FUND:
-        # TODO: 投資信託の基準価額取得ロジックを実装
-        return Decimal("0")
+        # 投資信託の場合は投資信託ライブラリの基準価額を使用
+        return await investment_trust_service.get_fund_price(stock.symbol)
     else:
         return Decimal("0")
 
@@ -74,24 +79,15 @@ async def update_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Hold
     stmt = select(Stock).filter(Stock.symbol == symbol)
     result = await db.execute(stmt)
     stock = result.scalar_one_or_none()
-
+    
     # 最新株価を取得
     current_price = await get_current_price(stock)
 
-    # 時価評価額を計算
-    market_value = current_price * holding.quantity
-
-    # 評価損益を計算
-    unrealized_pl = market_value + holding.realized_pl + holding.total_dividend - holding.total_cost
-
-    # 評価損益率を計算
-    unrealized_pl_percentage = (unrealized_pl / holding.total_cost * 100) if holding.total_cost != 0 else Decimal("0")
-
-    # 保有情報を更新
+    # 現在値情報を更新
     holding.current_price = current_price
-    holding.market_value = market_value
-    holding.unrealized_pl = unrealized_pl
-    holding.unrealized_pl_percentage = unrealized_pl_percentage
+    holding.market_value = current_price * holding.quantity
+    holding.unrealized_pl = holding.market_value + holding.realized_pl + holding.total_dividend - holding.total_cost
+    holding.unrealized_pl_percentage = (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost != 0 else Decimal("0")
 
     await db.commit()
     await db.refresh(holding)

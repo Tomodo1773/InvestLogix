@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 
 import pytz
 from sqlalchemy import (
@@ -129,8 +130,8 @@ class Holding(Base):
     # 現在値情報
     current_price = Column(Numeric(10, 2))  # [API_FETCH] 現在価格
     market_value = Column(Numeric(10, 2))  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
-    realized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
-    total_dividend = Column(Numeric(10, 2))  # [AUTO_CALC] 配当総額
+    realized_pl = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
+    total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額
     unrealized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 評価損益（時価評価額 + 売却益 + 配当総額 - 取得価格合計）
     unrealized_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
     last_updated = Column(DateTime, default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）

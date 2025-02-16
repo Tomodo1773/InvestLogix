@@ -1,8 +1,8 @@
-"""create initial tables
+"""Initial migration
 
-Revision ID: f028831aaa3a
+Revision ID: 8eb30d065c88
 Revises: 
-Create Date: 2025-02-11 11:38:23.007870
+Create Date: 2025-02-16 15:41:39.222562
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'f028831aaa3a'
+revision: str = '8eb30d065c88'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -24,7 +24,7 @@ def upgrade() -> None:
     sa.Column('symbol', sa.String(length=10), nullable=False),
     sa.Column('name', sa.String(length=100), nullable=False),
     sa.Column('name_en', sa.String(length=100), nullable=True),
-    sa.Column('market', sa.Enum('JPX', 'NYSE', 'NASDAQ', name='stockmarket'), nullable=False),
+    sa.Column('market', sa.String(length=20), nullable=False),
     sa.Column('security_type', sa.Enum('STOCK', 'ETF', 'REIT', 'FUND', name='security_types'), nullable=False),
     sa.Column('currency', sa.String(length=3), nullable=False),
     sa.Column('last_updated', sa.DateTime(), nullable=True),
@@ -116,6 +116,8 @@ def upgrade() -> None:
     sa.Column('transaction_type', sa.Enum('buy', 'sell', name='transaction_types'), nullable=False),
     sa.Column('quantity', sa.Numeric(precision=10, scale=2), nullable=False),
     sa.Column('price', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('usd_price', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('adjusted_price', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('transaction_date', sa.DateTime(), nullable=True),
     sa.Column('account_type', sa.Enum('ジュニアNISA', '旧NISA', 'NISA(つみたて投資枠)', 'NISA(成長投資枠)', name='account_types'), nullable=False),
     sa.Column('fee', sa.Numeric(precision=10, scale=2), nullable=False),

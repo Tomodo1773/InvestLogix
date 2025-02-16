@@ -152,7 +152,9 @@ class Transaction(Base):
         Enum("buy", "sell", name="transaction_types"), nullable=False
     )  # [USER_INPUT] トランザクションタイプ (例: "buy", "sell")
     quantity = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 数量
-    price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格
+    price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
+    usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
+    adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
     transaction_date = Column(DateTime, default=get_jst_now)  # [USER_INPUT] トランザクション日時（JST）
     account_type = Column(
         Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", name="account_types"), nullable=False

@@ -273,3 +273,39 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
 
     # 売却益の確認（(1500円 - 1000円) * 60株 = 30,000円）
     assert Decimal(holding["realized_pl"]) == Decimal("30000.0")
+
+
+@pytest.mark.asyncio
+async def test_create_transaction_with_usd_price(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """
+    USD価格を含む取引の登録テスト
+    - 期待する動作:
+        - ステータスコード200
+        - 登録された取引情報を返却（USD価格を含む）
+    """
+    # 事前に銘柄を登録
+    stock_data = StockCreate(symbol="AAPL")
+    stock_response = await client.post(
+        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert stock_response.status_code == 200
+
+    transaction_data = TransactionCreate(
+        symbol="AAPL",
+        transaction_type="buy",
+        quantity=Decimal("10.0"),
+        price=Decimal("20000.0"),  # 日本円での価格
+        usd_price=Decimal("135.67"),  # USD価格
+        account_type="NISA(成長投資枠)",
+        fee=Decimal("0.0"),
+        tax=Decimal("0.0"),
+        transaction_date="2024-01-01T00:00:00",
+    )
+    response = await client.post(
+        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "AAPL"
+    assert Decimal(data["price"]) == Decimal("20000.0")
+    assert Decimal(data["usd_price"]) == Decimal("135.67")

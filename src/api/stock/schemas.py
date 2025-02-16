@@ -119,6 +119,8 @@ class TransactionBase(BaseModel):
     transaction_type: TransactionType
     quantity: Decimal
     price: Decimal
+    usd_price: Optional[Decimal] = None
+    adjusted_price: Optional[Decimal] = None
     account_type: AccountType
     fee: Decimal
     tax: Decimal
@@ -219,6 +221,8 @@ class TransactionCreate(BaseModel):
     transaction_type: TransactionType
     quantity: Decimal
     price: Decimal
+    usd_price: Optional[Decimal] = None
+    adjusted_price: Optional[Decimal] = None
     account_type: AccountType
     fee: Decimal
     tax: Decimal
@@ -227,7 +231,7 @@ class TransactionCreate(BaseModel):
     def model_dump(self, **kwargs):
         """Decimalオブジェクトを文字列に変換"""
         dump = super().model_dump(**kwargs)
-        for key in ["quantity", "price", "fee", "tax"]:
+        for key in ["quantity", "price", "usd_price", "adjusted_price", "fee", "tax"]:
             if key in dump and isinstance(dump[key], Decimal):
                 dump[key] = str(dump[key])
         return dump

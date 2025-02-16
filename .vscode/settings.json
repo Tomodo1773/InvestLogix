@@ -2,5 +2,9 @@
 	"python.testing.pytestArgs": ["tests"],
 	"python.testing.unittestEnabled": false,
 	"python.testing.pytestEnabled": true,
-	"python.testing.cwd": "${workspaceFolder}/src/api"
+	"python.testing.cwd": "${workspaceFolder}/src/api",
+	"python.testing.autoTestDiscoverOnSaveEnabled": true,
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "${workspaceFolder}/src"
+    }
 }

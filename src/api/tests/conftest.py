@@ -151,16 +151,7 @@ async def mock_external_apis(mocker):
     mock_search = mocker.patch("stock.services.stock_service.fetch_us_stock_search", autospec=True)
     mock_search.return_value = MOCK_ETF_SEARCH_RESPONSE
 
-    mock_rate = mocker.patch("stock.services.stock_service.fetch_usdjpy_rate", autospec=True)
-    mock_rate.return_value = MOCK_USD_JPY_RATE_RESPONSE
-
-    # JQuantsクライアントのモック
-    mock_get_company_info = mocker.patch("stock.jquants.jquants_client.get_company_info", autospec=True)
-    mock_get_company_info.return_value = MOCK_JQUANTS_COMPANY_INFO
-
     return {
         "overview": mock_overview,
         "search": mock_search,
-        "rate": mock_rate,
-        "get_company_info": mock_get_company_info,
     }

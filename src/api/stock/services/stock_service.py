@@ -6,11 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from ..jquants import jquants_client
-from .alphavantage_service import (
-    fetch_us_stock_overview,
-    fetch_us_stock_search,
-    fetch_usdjpy_rate,
-)
+from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .investment_trust_service import fetch_investment_trust_details
 
 

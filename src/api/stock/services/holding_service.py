@@ -2,6 +2,8 @@ import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+import pandas as pd
+import pandas_datareader.data as web
 import pytz
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,7 +11,44 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..jquants import jquants_client
 from ..models import Holding, Stock
 from ..schemas import SecurityType
-from ..services import investment_trust_service
+from ..services import alphavantage_service, investment_trust_service
+
+
+async def get_us_stock_price(symbol: str) -> Decimal:
+    """
+    米国株・ETFの株価を取得します。
+    株価は円換算して返します。
+
+    Args:
+        symbol (str): ティッカーシンボル
+
+    Returns:
+        Decimal: 最新株価（円換算後）。取得できない場合は0
+    """
+    try:
+        # 1週間前の日付を取得（日本時間）
+        end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
+        start = end - timedelta(days=7)
+
+        # stooqから株価データを取得（非同期処理のためにループで実行）
+        loop = asyncio.get_event_loop()
+        df = await loop.run_in_executor(None, web.DataReader, symbol, "stooq", start, end)
+
+        # 最新の終値を取得（データは新しい順）
+        if not df.empty and "Close" in df.columns and len(df["Close"]) > 0:
+            latest_close = df["Close"].iloc[0]
+            if not pd.isna(latest_close):  # NaN値のチェック
+                # ドル円レートを取得
+                usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
+                if usdjpy_rate:
+                    # 円換算して返す
+                    return Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
+
+        return Decimal("0")
+
+    except Exception as e:
+        print(f"Error fetching US stock price for {symbol}: {str(e)}")
+        return Decimal("0")
 
 
 async def get_current_price(stock: Stock) -> Decimal:
@@ -30,24 +69,20 @@ async def get_current_price(stock: Stock) -> Decimal:
             now = datetime.now(jst)
             end_date = now.strftime("%Y-%m-%d")
             start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-            
+
             # 非同期でJ-Quants APIを呼び出し
-            prices = await jquants_client.get_prices(
-                symbol=stock.symbol,
-                start_date=start_date,
-                end_date=end_date
-            )
-            
+            prices = await jquants_client.get_prices(symbol=stock.symbol, start_date=start_date, end_date=end_date)
+
             # 最新の株価を返す
             if prices and len(prices) > 0:
                 return Decimal(str(prices[0].get("Close", "0")))
             return Decimal("0")
         elif stock.currency == "USD":
-            # TODO: 米国株の株価取得ロジックを実装
-            return Decimal("0")
+            # 米国株の株価を取得
+            return await get_us_stock_price(stock.symbol)
     elif stock.security_type == SecurityType.ETF and stock.currency == "USD":
-        # TODO: 米国ETFの価格取得ロジックを実装
-        return Decimal("0")
+        # 米国ETFの株価を取得（米国株と同じロジック）
+        return await get_us_stock_price(stock.symbol)
     elif stock.security_type == SecurityType.FUND:
         # 投資信託の場合は投資信託ライブラリの基準価額を使用
         return await investment_trust_service.get_fund_price(stock.symbol)
@@ -79,7 +114,7 @@ async def update_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Hold
     stmt = select(Stock).filter(Stock.symbol == symbol)
     result = await db.execute(stmt)
     stock = result.scalar_one_or_none()
-    
+
     # 最新株価を取得
     current_price = await get_current_price(stock)
 
@@ -87,7 +122,9 @@ async def update_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Hold
     holding.current_price = current_price
     holding.market_value = current_price * holding.quantity
     holding.unrealized_pl = holding.market_value + holding.realized_pl + holding.total_dividend - holding.total_cost
-    holding.unrealized_pl_percentage = (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost != 0 else Decimal("0")
+    holding.unrealized_pl_percentage = (
+        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost != 0 else Decimal("0")
+    )
 
     await db.commit()
     await db.refresh(holding)

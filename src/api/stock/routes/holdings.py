@@ -1,3 +1,5 @@
+from typing import Annotated, List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,7 +16,8 @@ router = APIRouter()
 async def recalculate_holding_pl(
     symbol: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
-    """保有株の損益を再計算します。
+    """
+    保有株の損益を再計算します。
 
     Args:
         symbol (str): 銘柄コード
@@ -28,3 +31,12 @@ async def recalculate_holding_pl(
     if not holding:
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in user's holdings")
     return holding
+
+
+@router.get("/", response_model=List[Holding])
+async def list_holdings(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+    """
+    ユーザーの保有銘柄一覧を取得する
+    - 成功時: 保有銘柄情報のリストを返却
+    """
+    return await holding_service.list_holdings(db, current_user.user_id)

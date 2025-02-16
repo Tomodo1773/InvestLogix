@@ -122,6 +122,7 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
     - 期待する動作:
         - ステータスコード200
         - 登録された配当情報が支払日の降順で返却される
+        - 配当情報に銘柄名が含まれている
     """
     # 事前に銘柄を登録
     stock_data = StockCreate(symbol="8058")
@@ -184,3 +185,4 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
         assert Decimal(dividend["total_amount"]) == Decimal("25000.0")
         assert Decimal(dividend["tax"]) == Decimal("2500.0")
         assert Decimal(dividend["fee"]) == Decimal("0.0")
+        assert data[0]["stock_name"] == "三菱商事"

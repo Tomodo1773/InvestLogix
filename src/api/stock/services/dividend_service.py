@@ -52,6 +52,16 @@ class DividendService:
         return db_dividend
 
     async def list_dividends(self, user_id: int) -> List[models.Dividend]:
-        query = select(models.Dividend).where(models.Dividend.user_id == user_id).order_by(models.Dividend.payment_date.desc())
+        query = (
+            select(models.Dividend, models.Stock.name)
+            .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
+            .where(models.Dividend.user_id == user_id)
+            .order_by(models.Dividend.payment_date.desc())
+        )
         result = await self.db.execute(query)
-        return result.scalars().all()
+        dividends = []
+        for row in result:
+            dividend = row[0]
+            dividend.stock_name = row[1]
+            dividends.append(dividend)
+        return dividends

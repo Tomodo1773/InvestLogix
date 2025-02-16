@@ -84,9 +84,15 @@ class TransactionService:
 
     async def list_transactions(self, user_id: int) -> List[models.Transaction]:
         query = (
-            select(models.Transaction)
+            select(models.Transaction, models.Stock.name)
+            .join(models.Stock, models.Transaction.symbol == models.Stock.symbol)
             .where(models.Transaction.user_id == user_id)
             .order_by(models.Transaction.transaction_date.desc())
         )
         result = await self.db.execute(query)
-        return result.scalars().all()
+        transactions = []
+        for row in result:
+            transaction = row[0]
+            transaction.stock_name = row[1]
+            transactions.append(transaction)
+        return transactions

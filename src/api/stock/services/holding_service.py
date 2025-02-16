@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime, timedelta
 from decimal import Decimal
+from typing import List
 
 import pandas as pd
 import pandas_datareader.data as web
@@ -130,3 +131,14 @@ async def update_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Hold
     await db.refresh(holding)
 
     return holding
+
+
+async def list_holdings(db: AsyncSession, user_id: int) -> List[Holding]:
+    query = select(Holding, Stock.name).join(Stock, Holding.symbol == Stock.symbol).where(Holding.user_id == user_id)
+    result = await db.execute(query)
+    holdings = []
+    for row in result:
+        holding = row[0]
+        holding.stock_name = row[1]
+        holdings.append(holding)
+    return holdings

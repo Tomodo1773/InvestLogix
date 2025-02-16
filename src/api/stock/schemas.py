@@ -111,6 +111,7 @@ class HoldingBase(BaseModel):
 class Holding(HoldingBase):
     user_id: int
     last_updated: datetime
+    stock_name: Optional[str] = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -130,6 +131,7 @@ class Transaction(TransactionBase):
     transaction_id: int
     user_id: int
     transaction_date: datetime
+    stock_name: Optional[str] = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -162,6 +164,7 @@ class DividendBase(BaseModel):
 class Dividend(DividendBase):
     dividend_id: int
     user_id: int
+    stock_name: Optional[str] = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
 
 

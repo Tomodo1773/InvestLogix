@@ -2,9 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.schemas import StockCreate, UserCreate
-from stock.services.auth_service import AuthService
-from tests.conftest import client, db_session
+from stock.schemas import StockCreate
 
 
 @pytest.mark.asyncio

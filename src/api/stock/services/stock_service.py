@@ -6,7 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from ..jquants import jquants_client
-from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
+from .alphavantage_service import (
+    fetch_us_stock_overview,
+    fetch_us_stock_search,
+    fetch_usdjpy_rate,
+)
 from .investment_trust_service import fetch_investment_trust_details
 
 
@@ -97,14 +101,16 @@ class StockService:
         if not data:
             # ETFの可能性があるため、SYMBOL_SEARCHを使用
             search_data = await fetch_us_stock_search(stock.symbol)
+            if not search_data.get("bestMatches"):
+                raise ValueError("Stock information not found")
             best_match = search_data.get("bestMatches", [])[0]
-            name = best_match["2. name"]
+            name = best_match["2. name"].rstrip()  # 末尾のスペースを削除
             market = best_match["4. region"]
             security_type = "ETF"
         else:
             name = data["Name"]  # 銘柄名を取得
             market = data["Exchange"]  # 市場を取得
-            industry = data["Sector"]  # 産業を取得
+            industry = data.get("Sector", "")  # 産業を取得（存在しない場合は空文字）
             security_type = "STOCK"
 
         db_stock = models.Stock(

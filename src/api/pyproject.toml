@@ -25,6 +25,7 @@ dependencies = [
     "beautifulsoup4>=4.13.3",
     "pandas-datareader>=0.10.0",
     "pandas>=2.2.3",
+    "pytest-mock>=3.14.0",
 ]
 
 [build-system]

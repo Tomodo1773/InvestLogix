@@ -40,9 +40,7 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
     """
     # 事前に銘柄を登録
     stock_data = StockCreate(symbol="8058")
-    await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
 
     # 事前に購入取引を登録
     transaction_data = TransactionCreate(
@@ -66,14 +64,10 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
         "shares_owned": "100.0",
         "total_amount": "25000.0",
         "tax": "2500.0",
-        "fee": "0.0"
+        "fee": "0.0",
     }
 
-    response = await client.post(
-        "/api/v1/dividends/",
-        json=dividend_data,
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -108,14 +102,10 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
         "shares_owned": "100.0",
         "total_amount": "25000.0",
         "tax": "2500.0",
-        "fee": "0.0"
+        "fee": "0.0",
     }
 
-    response = await client.post(
-        "/api/v1/dividends/",
-        json=dividend_data,
-        headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Stock not found"
@@ -135,9 +125,7 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
     """
     # 事前に銘柄を登録
     stock_data = StockCreate(symbol="8058")
-    await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
 
     # 事前に購入取引を登録
     transaction_data = TransactionCreate(
@@ -162,7 +150,7 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
             "shares_owned": "100.0",
             "total_amount": "25000.0",
             "tax": "2500.0",
-            "fee": "0.0"
+            "fee": "0.0",
         },
         {
             "symbol": "8058",
@@ -170,30 +158,26 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
             "shares_owned": "100.0",
             "total_amount": "25000.0",
             "tax": "2500.0",
-            "fee": "0.0"
-        }
+            "fee": "0.0",
+        },
     ]
 
     for dividend_data in dividend_data_list:
-        await client.post(
-            "/api/v1/dividends/",
-            json=dividend_data,
-            headers={"Authorization": f"Bearer {auth_token}"}
-        )
+        await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 配当一覧を取得
     response = await client.get("/api/v1/dividends/", headers={"Authorization": f"Bearer {auth_token}"})
-    
+
     # レスポンスの検証
     assert response.status_code == 200
     data = response.json()
-    
+
     # 2件の配当情報が取得できることを確認
     assert len(data) == 2
-    
+
     # 支払日の降順でソートされていることを確認
     assert datetime.fromisoformat(data[0]["payment_date"]) > datetime.fromisoformat(data[1]["payment_date"])
-    
+
     # 各配当情報の内容を確認
     for dividend in data:
         assert dividend["symbol"] == "8058"

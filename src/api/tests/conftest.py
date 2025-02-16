@@ -9,10 +9,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from stock.app import app
-from stock.database import get_db, settings
+from stock.database import get_db
 from stock.models import Base
 from stock.schemas import UserCreate
 from stock.services.auth_service import AuthService
+
+# pytest-asyncioのデフォルトスコープを設定
+pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
 # テスト用のDBのURL設定
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -89,3 +92,75 @@ def sync_client() -> Generator[TestClient, None, None]:
     with TestClient(app=app) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+# モックレスポンスの定義
+MOCK_STOCK_OVERVIEW_RESPONSE = {
+    "Symbol": "AAPL",
+    "Name": "Apple Inc",
+    "Exchange": "NASDAQ",
+    "Sector": "Technology",
+    "Industry": "Consumer Electronics",
+}
+
+MOCK_ETF_SEARCH_RESPONSE = {
+    "bestMatches": [
+        {
+            "1. symbol": "SPYD",
+            "2. name": "SPDR(R) PORTFOLIO S&P 500 HIGH DIVIDEND ETF",  # 末尾のスペースを削除
+            "3. type": "ETF",
+            "4. region": "United States",
+            "5. marketOpen": "09:30",
+            "6. marketClose": "16:00",
+            "7. timezone": "UTC-04",
+            "8. currency": "USD",
+            "9. matchScore": "1.0000",
+        }
+    ]
+}
+
+MOCK_USD_JPY_RATE_RESPONSE = 150.0
+
+# JQuantsのレスポンスをモック化
+MOCK_JQUANTS_COMPANY_INFO = {
+    "CompanyName": "三菱商事",
+    "CompanyNameEnglish": "Mitsubishi Corporation",
+    "Sector17Code": "6050",
+    "Sector17CodeName": "商社・卸売",
+    "Sector33Code": "6050",
+    "Sector33CodeName": "商社・卸売業",
+    "MarketCodeName": "プライム",
+    "ScaleCategory": "PRIME",
+    "MarginCode": "1",
+}
+
+
+@pytest_asyncio.fixture
+async def mocker(request):
+    """async版のmockerフィクスチャー"""
+    return request.getfixturevalue("mocker")
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def mock_external_apis(mocker):
+    """外部APIの応答をモック化するフィクスチャー"""
+    # AlphaVantage APIのモック（stock_service内で使用されるのでパスを変更）
+    mock_overview = mocker.patch("stock.services.stock_service.fetch_us_stock_overview", autospec=True)
+    mock_overview.return_value = MOCK_STOCK_OVERVIEW_RESPONSE
+
+    mock_search = mocker.patch("stock.services.stock_service.fetch_us_stock_search", autospec=True)
+    mock_search.return_value = MOCK_ETF_SEARCH_RESPONSE
+
+    mock_rate = mocker.patch("stock.services.stock_service.fetch_usdjpy_rate", autospec=True)
+    mock_rate.return_value = MOCK_USD_JPY_RATE_RESPONSE
+
+    # JQuantsクライアントのモック
+    mock_get_company_info = mocker.patch("stock.jquants.jquants_client.get_company_info", autospec=True)
+    mock_get_company_info.return_value = MOCK_JQUANTS_COMPANY_INFO
+
+    return {
+        "overview": mock_overview,
+        "search": mock_search,
+        "rate": mock_rate,
+        "get_company_info": mock_get_company_info,
+    }

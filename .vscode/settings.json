@@ -4,7 +4,17 @@
 	"python.testing.pytestEnabled": true,
 	"python.testing.cwd": "${workspaceFolder}/src/api",
 	"python.testing.autoTestDiscoverOnSaveEnabled": true,
-    "terminal.integrated.env.windows": {
-        "PYTHONPATH": "${workspaceFolder}/src"
-    }
+	"terminal.integrated.env.windows": {
+		"PYTHONPATH": "${workspaceFolder}/src"
+	},
+	"[python]": {
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true,
+		"editor.codeActionsOnSave": {
+			"source.fixAll": "explicit",
+			"source.organizeImports": "explicit"
+		},
+		"editor.defaultFormatter": "charliermarsh.ruff"
+	},
+	"ruff.lineLength": 127
 }

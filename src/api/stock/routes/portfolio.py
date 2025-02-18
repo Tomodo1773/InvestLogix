@@ -27,18 +27,3 @@ async def get_portfolio_summary(current_user: Annotated[User, Depends(get_curren
     """
     portfolio_service = PortfolioService(db)
     return await portfolio_service.get_portfolio_summary(current_user.user_id)
-
-
-@router.get("/holdings/", response_model=List[Holding])
-async def list_holdings(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
-    """
-    ユーザーの保有銘柄一覧を取得する
-    - 取得情報:
-        - シンボル
-        - 数量
-        - 平均取得単価
-        - 取得総額
-        - 時価評価額
-    """
-    portfolio_service = PortfolioService(db)
-    return await portfolio_service.list_holdings(current_user.user_id)

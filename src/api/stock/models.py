@@ -182,7 +182,6 @@ class PortfolioHistory(Base):
     total_unrealized_pl_percentage = Column(Numeric(5, 2), nullable=False)  # [AUTO_CALC] 評価損益率
     total_realized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 実現損益合計
     total_dividend = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 配当金合計
-    cash_balance = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 現金残高
 
     user = relationship("User", back_populates="portfolio_history")
 

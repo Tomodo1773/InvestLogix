@@ -143,7 +143,6 @@ class PortfolioHistoryBase(BaseModel):
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal
-    cash_balance: Decimal
 
 
 class PortfolioHistory(PortfolioHistoryBase):
@@ -255,7 +254,6 @@ class PortfolioSummary(BaseModel):
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal
-    cash_balance: Decimal
     holdings_by_market: dict[str, Decimal]
     holdings_by_currency: dict[str, Decimal]
 

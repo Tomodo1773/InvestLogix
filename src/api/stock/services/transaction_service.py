@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
+from .holding_service import update_holding_pl
 
 
 class TransactionService:
@@ -45,6 +46,10 @@ class TransactionService:
 
         await self.db.commit()
         await self.db.refresh(db_transaction)
+
+        # 取引登録後に保有損益を更新
+        await update_holding_pl(self.db, user_id, transaction.symbol)
+
         return db_transaction
 
     async def _handle_buy_transaction(self, holding, transaction, user_id):

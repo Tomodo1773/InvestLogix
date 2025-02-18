@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
+from .holding_service import update_holding_pl
 
 
 class DividendService:
@@ -49,6 +50,10 @@ class DividendService:
 
         await self.db.commit()
         await self.db.refresh(db_dividend)
+
+        # 配当登録後に保有損益を更新
+        await update_holding_pl(self.db, user_id, dividend.symbol)
+
         return db_dividend
 
     async def list_dividends(self, user_id: int) -> List[models.Dividend]:

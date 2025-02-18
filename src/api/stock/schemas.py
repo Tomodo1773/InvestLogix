@@ -228,7 +228,7 @@ class TransactionCreate(BaseModel):
     account_type: AccountType
     fee: Decimal
     tax: Decimal
-    transaction_date: str
+    transaction_date: datetime
 
     def model_dump(self, **kwargs):
         """Decimalオブジェクトを文字列に変換"""

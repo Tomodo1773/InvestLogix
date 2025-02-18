@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import select
@@ -21,12 +20,8 @@ class TransactionService:
         if not stock:
             return None
 
-        # 文字列をdatetimeに変換
-        transaction_date = datetime.fromisoformat(transaction.transaction_date)
-
-        # 取引情報の登録（transaction_dateを変換したものに置き換え）
+        # 取引情報の登録
         transaction_dict = transaction.model_dump()
-        transaction_dict["transaction_date"] = transaction_date
         db_transaction = models.Transaction(**transaction_dict, user_id=user_id)
         self.db.add(db_transaction)
 

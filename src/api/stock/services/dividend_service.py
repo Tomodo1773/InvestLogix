@@ -5,20 +5,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
 from .holding_service import update_holding_pl
+from .stock_service import StockService
 
 
 class DividendService:
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.stock_service = StockService(db)
 
     async def create_dividend(self, dividend: schemas.DividendCreate, user_id: int) -> Optional[models.Dividend]:
-        # 株式の存在確認
+        # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == dividend.symbol)
         stock_result = await self.db.execute(stock_query)
         stock = stock_result.scalar_one_or_none()
 
         if not stock:
-            return None
+            stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=dividend.symbol))
 
         # 配当情報の登録
         db_dividend = models.Dividend(**dividend.model_dump(), user_id=user_id)

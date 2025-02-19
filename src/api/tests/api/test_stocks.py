@@ -95,3 +95,50 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
     assert data["symbol"] == "JP90C000J569"
     assert data["market"] == "JPX"
     assert data["security_type"] == "FUND"
+
+
+@pytest.mark.asyncio
+async def test_create_duplicate_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
+    """
+    銘柄の重複登録テスト
+    - 期待する動作:
+        - ステータスコード200
+        - 既に登録済みの銘柄情報を返却
+        - 2回目の登録で外部APIは呼び出されないこと
+    """
+    # 米国株で検証（APIコールの検証が可能）
+    stock_data = StockCreate(symbol="AAPL")  # Appleのシンボル
+
+    # 最初の登録
+    response = await client.post(
+        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    first_data = response.json()
+
+    # 最初の登録でAPIが呼び出されたことを確認
+    mock_external_apis["overview"].assert_called_once_with("AAPL")
+    mock_external_apis["search"].assert_not_called()
+
+    # モックのカウントをリセット
+    mock_external_apis["overview"].reset_mock()
+    mock_external_apis["search"].reset_mock()
+
+    # 2回目の登録（重複）
+    response = await client.post(
+        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert response.status_code == 200
+    second_data = response.json()
+
+    # 1回目と2回目の登録で同じデータが返却されることを確認
+    assert first_data == second_data
+    assert second_data["symbol"] == "AAPL"
+    assert second_data["name"] == "Apple Inc"
+    assert second_data["market"] == "NASDAQ"
+    assert second_data["security_type"] == "STOCK"
+    assert second_data["currency"] == "USD"
+
+    # 2回目の登録でAPIが呼び出されないことを確認
+    mock_external_apis["overview"].assert_not_called()
+    mock_external_apis["search"].assert_not_called()

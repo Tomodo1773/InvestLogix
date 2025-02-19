@@ -14,13 +14,19 @@ class StockService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_stock(self, stock: schemas.StockCreate) -> Optional[models.Stock]:
+    async def create_stock(self, stock: schemas.StockCreate) -> models.Stock:
+        """
+        新規銘柄を登録する
+        - すでに登録済みの場合は、登録済みの銘柄情報を返す
+        - 新規の場合は、銘柄情報を登録して返す
+        - 銘柄情報が取得できない場合はValueErrorを発生させる
+        """
         query = select(models.Stock).where(models.Stock.symbol == stock.symbol)
         result = await self.db.execute(query)
         db_stock = result.scalar_one_or_none()
 
         if db_stock:
-            return None
+            return db_stock  # 既に登録されている場合はそのまま返す
 
         if self.is_investment_trust(stock.symbol):
             return await self.create_investment_trust(stock)

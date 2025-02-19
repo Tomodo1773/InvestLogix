@@ -232,12 +232,16 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
 
 
 @pytest.mark.asyncio
-async def test_create_transaction_with_usd_price(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_transaction_with_usd_price(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
     """USD価格を含む取引の登録テスト
     - 期待する動作:
         - ステータスコード200
         - 登録された取引情報を返却（USD価格を含む）
+        - AlphaVantage APIが適切に呼び出されること
     """
+    # AlphaVantage APIのモックが呼び出されることを確認
     transaction_data = {
         "symbol": "AAPL",
         "transaction_type": "buy",
@@ -257,6 +261,9 @@ async def test_create_transaction_with_usd_price(client: AsyncClient, db_session
     assert data["symbol"] == "AAPL"
     assert Decimal(data["price"]) == Decimal("20000.0")
     assert Decimal(data["usd_price"]) == Decimal("135.67")
+
+    # モックが呼び出されたことを確認
+    mock_external_apis["overview"].assert_called_once_with("AAPL")
 
 
 @pytest.mark.asyncio

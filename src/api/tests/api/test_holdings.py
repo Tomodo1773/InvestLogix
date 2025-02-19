@@ -38,7 +38,9 @@ async def test_recalculate_holding_pl_japanese_stock(client: AsyncClient, db_ses
 
 
 @pytest.mark.asyncio
-async def test_recalculate_holding_pl_us_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mocker):
+async def test_recalculate_holding_pl_us_stock(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
     """
     米国株の保有損益再計算テスト
     - 期待する動作:
@@ -46,15 +48,13 @@ async def test_recalculate_holding_pl_us_stock(client: AsyncClient, db_session: 
         - 更新された保有情報を返却
         - AlphaVantage APIのモックが呼び出されること
     """
-    # AlphaVantage APIのモック
-    mock_fetch_usdjpy_rate = mocker.patch("stock.services.alphavantage_service.fetch_usdjpy_rate", return_value=150.0)
-
     # 購入取引を登録
     transaction_data = {
         "symbol": "AAPL",
         "transaction_type": "buy",
         "quantity": "10.0",
         "price": "150.0",
+        "usd_price": "135.67",
         "account_type": "NISA(成長投資枠)",
         "fee": "0.0",
         "tax": "0.0",
@@ -72,8 +72,8 @@ async def test_recalculate_holding_pl_us_stock(client: AsyncClient, db_session: 
     assert data["unrealized_pl"] is not None
     assert data["unrealized_pl_percentage"] is not None
 
-    # モックが2回呼び出されたことを確認
-    assert mock_fetch_usdjpy_rate.call_count == 2
+    # トランザクション登録時の1回のAPI呼び出しを確認
+    mock_external_apis["overview"].assert_called_once_with("AAPL")
 
 
 @pytest.mark.asyncio

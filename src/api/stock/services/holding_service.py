@@ -27,6 +27,12 @@ async def get_us_stock_price(symbol: str) -> Decimal:
         Decimal: 最新株価（円換算後）。取得できない場合は0
     """
     try:
+        # まず為替レートを取得
+        usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
+        if not usdjpy_rate:
+            print(f"Failed to fetch USD/JPY rate for {symbol}")
+            return Decimal("0")
+
         # 1週間前の日付を取得（日本時間）
         end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
         start = end - timedelta(days=7)
@@ -39,11 +45,8 @@ async def get_us_stock_price(symbol: str) -> Decimal:
         if not df.empty and "Close" in df.columns and len(df["Close"]) > 0:
             latest_close = df["Close"].iloc[0]
             if not pd.isna(latest_close):  # NaN値のチェック
-                # ドル円レートを取得
-                usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
-                if usdjpy_rate:
-                    # 円換算して返す
-                    return Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
+                # 円換算して返す
+                return Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
 
         return Decimal("0")
 

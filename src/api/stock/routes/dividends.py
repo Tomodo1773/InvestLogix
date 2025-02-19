@@ -7,6 +7,7 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..schemas import Dividend, DividendCreate, User
 from ..services.dividend_service import DividendService
+from ..services.stock_service import StockNotFoundError
 
 router = APIRouter()
 
@@ -24,10 +25,11 @@ async def create_dividend(
     - 銘柄不存在時: 404 Not Found
     """
     dividend_service = DividendService(db)
-    db_dividend = await dividend_service.create_dividend(dividend, current_user.user_id)
-    if not db_dividend:
+    try:
+        db_dividend = await dividend_service.create_dividend(dividend, current_user.user_id)
+        return db_dividend
+    except StockNotFoundError:
         raise HTTPException(status_code=404, detail="Stock not found")
-    return db_dividend
 
 
 @router.get("/", response_model=List[Dividend])

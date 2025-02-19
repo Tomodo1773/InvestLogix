@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user
 from ..database import get_db
 from ..schemas import Transaction, TransactionCreate, User
+from ..services.stock_service import StockNotFoundError
 from ..services.transaction_service import TransactionService
 
 router = APIRouter()
@@ -25,13 +26,13 @@ async def create_transaction(
     - 売却時の保有数量不足: 400 Bad Request
     """
     transaction_service = TransactionService(db)
-    db_transaction = await transaction_service.create_transaction(transaction, current_user.user_id)
-    if not db_transaction:
-        if transaction.transaction_type == "sell":
+    try:
+        db_transaction = await transaction_service.create_transaction(transaction, current_user.user_id)
+        if not db_transaction:
             raise HTTPException(status_code=400, detail="Insufficient shares")
-        else:
-            raise HTTPException(status_code=404, detail="Stock not found")
-    return db_transaction
+        return db_transaction
+    except StockNotFoundError:
+        raise HTTPException(status_code=404, detail="Stock not found")
 
 
 @router.get("/", response_model=List[Transaction])

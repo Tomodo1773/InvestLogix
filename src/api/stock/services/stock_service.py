@@ -10,6 +10,12 @@ from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .investment_trust_service import fetch_investment_trust_details
 
 
+class StockNotFoundError(ValueError):
+    """銘柄が見つからない場合のエラー"""
+
+    pass
+
+
 class StockService:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -19,7 +25,7 @@ class StockService:
         新規銘柄を登録する
         - すでに登録済みの場合は、登録済みの銘柄情報を返す
         - 新規の場合は、銘柄情報を登録して返す
-        - 銘柄情報が取得できない場合はValueErrorを発生させる
+        - 銘柄情報が取得できない場合はStockNotFoundErrorを発生させる
         """
         query = select(models.Stock).where(models.Stock.symbol == stock.symbol)
         result = await self.db.execute(query)
@@ -28,14 +34,19 @@ class StockService:
         if db_stock:
             return db_stock  # 既に登録されている場合はそのまま返す
 
-        if self.is_investment_trust(stock.symbol):
-            return await self.create_investment_trust(stock)
-        elif self.is_japanese_stock(stock.symbol):
-            return await self.create_japanese_stock(stock)
-        elif self.is_us_stock(stock.symbol):
-            return await self.create_us_stock(stock)
-        else:
-            raise ValueError("Invalid stock symbol format")
+        try:
+            if self.is_investment_trust(stock.symbol):
+                return await self.create_investment_trust(stock)
+            elif self.is_japanese_stock(stock.symbol):
+                return await self.create_japanese_stock(stock)
+            elif self.is_us_stock(stock.symbol):
+                return await self.create_us_stock(stock)
+            else:
+                raise StockNotFoundError(f"Invalid stock symbol format: {stock.symbol}")
+        except StockNotFoundError:
+            raise
+        except Exception as e:
+            raise StockNotFoundError(f"Failed to get stock information: {stock.symbol}") from e
 
     def is_investment_trust(self, symbol: str) -> bool:
         return symbol.startswith("JP") and re.match(r"^JP[0-9A-Z]{10}$", symbol) is not None
@@ -67,7 +78,7 @@ class StockService:
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
         company_info = jquants_client.get_company_info(stock.symbol)
         if not company_info:
-            raise ValueError("Company information not found")
+            raise StockNotFoundError(f"Company information not found for symbol: {stock.symbol}")
 
         db_stock = models.Stock(
             symbol=stock.symbol,
@@ -104,7 +115,7 @@ class StockService:
             # ETFの可能性があるため、SYMBOL_SEARCHを使用
             search_data = await fetch_us_stock_search(stock.symbol)
             if not search_data.get("bestMatches"):
-                raise ValueError("Stock information not found")
+                raise StockNotFoundError(f"Stock information not found for symbol: {stock.symbol}")
             best_match = search_data.get("bestMatches", [])[0]
             name = best_match["2. name"].rstrip()  # 末尾のスペースを削除
             market = best_match["4. region"]

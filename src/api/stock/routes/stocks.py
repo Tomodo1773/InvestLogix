@@ -24,9 +24,12 @@ async def create_stock(
     - シンボル重複時: 登録済みの銘柄情報を返却
     - JQuantsから情報取得失敗時: 404 Not Found
     """
-    stock_service = StockService(db)
-    db_stock = await stock_service.create_stock(stock)
-    return db_stock
+    try:
+        stock_service = StockService(db)
+        db_stock = await stock_service.create_stock(stock)
+        return db_stock
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Stock not found")
 
 
 @router.get("/", response_model=List[StockWithRelations])

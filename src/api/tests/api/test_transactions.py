@@ -4,36 +4,26 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.schemas import StockCreate, TransactionCreate
-
 
 @pytest.mark.asyncio
 async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    株式購入取引の登録テスト
+    """株式購入取引の登録テスト
     - 期待する動作:
         - ステータスコード200
         - 登録された取引情報を返却
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    stock_response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert stock_response.status_code == 200
-
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
     response = await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -45,48 +35,37 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
 
 @pytest.mark.asyncio
 async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    株式売却取引の登録テスト
+    """株式売却取引の登録テスト
     - 期待する動作:
         - ステータスコード200
         - 登録された取引情報を返却
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    stock_response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert stock_response.status_code == 200
-
     # 事前に購入取引を登録
-    buy_transaction = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    buy_response = await client.post(
-        "/api/v1/transactions/", json=buy_transaction.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert buy_response.status_code == 200
+    buy_transaction = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 売却取引のテスト
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="sell",
-        quantity=Decimal("5.0"),
-        price=Decimal("3500.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "sell",
+        "quantity": "5.0",
+        "price": "3500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
     response = await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -98,32 +77,24 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_create_transaction_insufficient_shares(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    保有株数不足による売却取引の失敗テスト
+    """保有株数不足による売却取引の失敗テスト
     - 期待する動作:
         - ステータスコード400
         - エラーメッセージを返却
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    stock_response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert stock_response.status_code == 200
-
     # 売却取引のテスト（保有数量ゼロで売却）
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="sell",
-        quantity=Decimal("100.0"),
-        price=Decimal("3500.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "sell",
+        "quantity": "100.0",
+        "price": "3500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
     response = await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Insufficient shares"
@@ -131,24 +102,23 @@ async def test_create_transaction_insufficient_shares(client: AsyncClient, db_se
 
 @pytest.mark.asyncio
 async def test_create_transaction_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    存在しない銘柄による取引の失敗テスト
+    """存在しない銘柄による取引の失敗テスト
     - 期待する動作:
         - ステータスコード404
         - エラーメッセージを返却
     """
-    transaction_data = TransactionCreate(
-        symbol="INVALID",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
+    transaction_data = {
+        "symbol": "INVALID",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
     response = await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Stock not found"
@@ -156,46 +126,41 @@ async def test_create_transaction_stock_not_found(client: AsyncClient, db_sessio
 
 @pytest.mark.asyncio
 async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    複数回の購入取引による平均取得単価の計算テスト
+    """複数回の購入取引による平均取得単価の計算テスト
     - 期待する動作:
         - 1回目の購入: 10株@3000円
         - 2回目の購入: 5株@4000円
         - 保有数量: 15株
         - 平均取得単価: ((10 * 3000) + (5 * 4000)) / 15 = 3333.33...円
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
-
     # 1回目の購入取引（10株@3000円）
-    first_buy = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    await client.post("/api/v1/transactions/", json=first_buy.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
+    first_buy = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=first_buy, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 2回目の購入取引（5株@4000円）
-    second_buy = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("5.0"),
-        price=Decimal("4000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-02T00:00:00",
-    )
-    await client.post("/api/v1/transactions/", json=second_buy.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
+    second_buy = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "5.0",
+        "price": "4000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-02T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=second_buy, headers={"Authorization": f"Bearer {auth_token}"})
 
     # ポートフォリオから保有情報を取得して確認
-    holdings_response = await client.get("/api/v1/portfolio/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
 
@@ -209,8 +174,7 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
 
 @pytest.mark.asyncio
 async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    購入後の一部売却時の売却益と保有株数の計算テスト
+    """購入後の一部売却時の売却益と保有株数の計算テスト
     - 期待する動作:
         - 1回目の購入: 100株@1000円 = 100,000円
         - 一部売却: 60株@1500円
@@ -219,42 +183,34 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
             - 平均取得単価: 1000円（変化なし）
             - 残りの取得価額合計: 1000円 * 40株 = 40,000円
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="7203")
-    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
-
     # 購入取引（100株@1000円）
-    buy_transaction = TransactionCreate(
-        symbol="7203",
-        transaction_type="buy",
-        quantity=Decimal("100.0"),
-        price=Decimal("1000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    await client.post(
-        "/api/v1/transactions/", json=buy_transaction.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    buy_transaction = {
+        "symbol": "7203",
+        "transaction_type": "buy",
+        "quantity": "100.0",
+        "price": "1000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 一部売却取引（60株@1500円）
-    sell_transaction = TransactionCreate(
-        symbol="7203",
-        transaction_type="sell",
-        quantity=Decimal("60.0"),
-        price=Decimal("1500.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-02T00:00:00",
-    )
-    await client.post(
-        "/api/v1/transactions/", json=sell_transaction.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    sell_transaction = {
+        "symbol": "7203",
+        "transaction_type": "sell",
+        "quantity": "60.0",
+        "price": "1500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-02T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"})
 
     # ポートフォリオから保有情報を取得して確認
-    holdings_response = await client.get("/api/v1/portfolio/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
 
@@ -277,32 +233,24 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
 
 @pytest.mark.asyncio
 async def test_create_transaction_with_usd_price(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    USD価格を含む取引の登録テスト
+    """USD価格を含む取引の登録テスト
     - 期待する動作:
         - ステータスコード200
         - 登録された取引情報を返却（USD価格を含む）
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="AAPL")
-    stock_response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
-    assert stock_response.status_code == 200
-
-    transaction_data = TransactionCreate(
-        symbol="AAPL",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("20000.0"),  # 日本円での価格
-        usd_price=Decimal("135.67"),  # USD価格
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
+    transaction_data = {
+        "symbol": "AAPL",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "20000.0",
+        "usd_price": "135.67",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
     response = await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert response.status_code == 200
     data = response.json()
@@ -313,30 +261,23 @@ async def test_create_transaction_with_usd_price(client: AsyncClient, db_session
 
 @pytest.mark.asyncio
 async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    取引履歴取得を確認するテスト
+    """取引履歴取得を確認するテスト
     - 期待する動作:
         - ステータスコード200
         - 取引情報に銘柄名が含まれている
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058", name="Toyota Motor Corporation")
-    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
-
     # 事前に購入取引を登録
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("10.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 取引履歴を取得
     response = await client.get("/api/v1/transactions/", headers={"Authorization": f"Bearer {auth_token}"})

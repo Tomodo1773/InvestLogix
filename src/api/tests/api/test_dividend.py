@@ -5,57 +5,29 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.models import Stock
-from stock.schemas import StockCreate, TransactionCreate
-
-
-@pytest.fixture
-async def test_stock(db_session: AsyncSession):
-    """テスト用の株式データを作成するフィクスチャー"""
-    stock = Stock(
-        symbol="AAPL",
-        name="Apple Inc.",
-        name_en="Apple Inc.",
-        market="NASDAQ",
-        security_type="STOCK",
-        currency="USD",
-    )
-    db_session.add(stock)
-    await db_session.commit()
-    await db_session.refresh(stock)
-    return stock
-
 
 @pytest.mark.asyncio
 async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    配当情報の登録テスト
+    """配当情報の登録テスト
     - 事前条件:
-        - 銘柄の登録
         - 株式の購入取引
     - 期待する動作:
         - ステータスコード200
         - 登録された配当情報を返却
         - 保有情報の配当総額が更新される
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
-
     # 事前に購入取引を登録
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("100.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "100.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 配当情報の登録
     dividend_data = {
@@ -79,7 +51,7 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
     assert Decimal(data["fee"]) == Decimal(dividend_data["fee"])
 
     # 保有情報の確認（配当金が反映されているか）
-    holdings_response = await client.get("/api/v1/portfolio/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
@@ -90,8 +62,7 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
 
 @pytest.mark.asyncio
 async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: str):
-    """
-    存在しない銘柄の配当情報登録テスト
+    """存在しない銘柄の配当情報登録テスト
     - 期待する動作:
         - ステータスコード404
         - エラーメッセージを返却
@@ -113,10 +84,8 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
 @pytest.mark.asyncio
 async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    配当一覧取得テスト
+    """配当一覧取得テスト
     - 事前条件:
-        - 銘柄の登録
         - 株式の購入取引
         - 複数の配当情報の登録
     - 期待する動作:
@@ -124,24 +93,18 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
         - 登録された配当情報が支払日の降順で返却される
         - 配当情報に銘柄名が含まれている
     """
-    # 事前に銘柄を登録
-    stock_data = StockCreate(symbol="8058")
-    await client.post("/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"})
-
     # 事前に購入取引を登録
-    transaction_data = TransactionCreate(
-        symbol="8058",
-        transaction_type="buy",
-        quantity=Decimal("100.0"),
-        price=Decimal("3000.0"),
-        account_type="NISA(成長投資枠)",
-        fee=Decimal("0.0"),
-        tax=Decimal("0.0"),
-        transaction_date="2024-01-01T00:00:00",
-    )
-    await client.post(
-        "/api/v1/transactions/", json=transaction_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "100.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
 
     # 複数の配当情報を登録
     dividend_data_list = [
@@ -185,4 +148,4 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
         assert Decimal(dividend["total_amount"]) == Decimal("25000.0")
         assert Decimal(dividend["tax"]) == Decimal("2500.0")
         assert Decimal(dividend["fee"]) == Decimal("0.0")
-        assert data[0]["stock_name"] == "三菱商事"
+        assert dividend["stock_name"] == "三菱商事"

@@ -230,14 +230,6 @@ class TransactionCreate(BaseModel):
     tax: Decimal
     transaction_date: datetime
 
-    def model_dump(self, **kwargs):
-        """Decimalオブジェクトを文字列に変換"""
-        dump = super().model_dump(**kwargs)
-        for key in ["quantity", "price", "usd_price", "adjusted_price", "fee", "tax"]:
-            if key in dump and isinstance(dump[key], Decimal):
-                dump[key] = str(dump[key])
-        return dump
-
 
 class DividendCreate(DividendBase):
     """配当金登録リクエスト"""

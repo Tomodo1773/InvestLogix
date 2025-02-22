@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
-import pytz
 from sqlalchemy import (
     Boolean,
     Column,
@@ -15,11 +15,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, relationship
 
-# JSTタイムゾーンを定義
-JST = pytz.timezone("Asia/Tokyo")
+JST = ZoneInfo("Asia/Tokyo")
 
 
-def get_jst_now():
+def get_jst_now() -> datetime:
     """現在の日本時間を返す"""
     return datetime.now(JST)
 
@@ -43,7 +42,7 @@ class Stock(Base):
         Enum("STOCK", "ETF", "REIT", "FUND", name="security_types"), nullable=False
     )  # [SYSTEM] 証券種別 (例: "STOCK")
     currency = Column(String(3), nullable=False)  # [SYSTEM] 通貨 (例: "USD", "JPY")
-    last_updated = Column(DateTime, default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
+    last_updated = Column(DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
 
     holdings = relationship("Holding", back_populates="stock")  # Holding モデルとの関連
     transactions = relationship("Transaction", back_populates="stock")  # Transaction モデルとの関連
@@ -68,7 +67,9 @@ class StockJPXDetail(Base):
     market_code = Column(String(20))  # [API_FETCH] 規模区分 (例: "TOPIX Large70")
     market_name = Column(String(50))  # [API_FETCH] 規模区分名
     margin_trading = Column(Boolean, default=True)  # [API_FETCH] 信用取引可能か
-    last_updated = Column(DateTime, default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] データの最終更新日時（JST）
+    last_updated = Column(
+        DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
+    )  # [SYSTEM] データの最終更新日時（JST）
 
     stock = relationship("Stock", back_populates="jpx_detail")  # Stock モデルとの関連
 
@@ -104,7 +105,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)  # [USER_INPUT] ユーザー名
     email = Column(String(100), unique=True, nullable=False)  # [USER_INPUT] メールアドレス
     password_hash = Column(String(255), nullable=False)  # [SYSTEM] パスワードのハッシュ値
-    created_at = Column(DateTime, default=get_jst_now)  # [SYSTEM] 登録日時（JST）
+    created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
@@ -134,7 +135,7 @@ class Holding(Base):
     total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額
     unrealized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 評価損益（時価評価額 + 売却益 + 配当総額 - 取得価格合計）
     unrealized_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
-    last_updated = Column(DateTime, default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
+    last_updated = Column(DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
 
     user = relationship("User", back_populates="holdings")
     stock = relationship("Stock", back_populates="holdings")
@@ -155,7 +156,7 @@ class Transaction(Base):
     price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
     usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
     adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
-    transaction_date = Column(DateTime, default=get_jst_now)  # [USER_INPUT] トランザクション日時（JST）
+    transaction_date = Column(DateTime(timezone=True), default=get_jst_now)  # [USER_INPUT] トランザクション日時（JST固定）
     account_type = Column(
         Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", name="account_types"), nullable=False
     )  # [USER_INPUT] 預かり種別
@@ -175,8 +176,8 @@ class PortfolioHistory(Base):
 
     history_id = Column(Integer, primary_key=True)  # [SYSTEM] 履歴ID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
-    date = Column(DateTime, nullable=False)  # [SYSTEM] 記録日時
-    total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価額合計（
+    date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [SYSTEM] 記録日時（JST固定）
+    total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価額合計
     total_market_value = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 時価評価額合計
     total_unrealized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 評価損益合計
     total_unrealized_pl_percentage = Column(Numeric(5, 2), nullable=False)  # [AUTO_CALC] 評価損益率
@@ -194,7 +195,7 @@ class Dividend(Base):
     dividend_id = Column(Integer, primary_key=True)  # [SYSTEM] 配当ID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
     symbol = Column(String(10), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
-    payment_date = Column(DateTime, nullable=False)  # [USER_INPUT] 支払日
+    payment_date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [USER_INPUT] 支払日（JST固定）
     shares_owned = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 保有株数
     total_amount = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 配当金総額
     tax = Column(Numeric(10, 2))  # [USER_INPUT] 税金

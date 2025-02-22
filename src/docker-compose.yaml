@@ -1,0 +1,44 @@
+services:
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: investlogix-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: hogehoge
+      POSTGRES_DB: investlogix
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+#   api:
+#     build:
+#       context: ./api
+#       dockerfile: Dockerfile
+#     container_name: investlogix-api
+#     volumes:
+#       - ./api:/src
+#       - api_venv:/src/.venv
+#     ports:
+#       - "8000:8000"
+#     environment: 
+#       - WATCHFILES_FORCE_POLLING=true
+#       - DATABASE_URL=postgresql://postgres:hogehoge@db:5432/investlogix
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#     working_dir: /src
+
+volumes:
+  postgres_data:
+    name: investlogix_postgres_data
+#   api_venv:
+#     name: investlogix_api_venv

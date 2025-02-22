@@ -26,6 +26,8 @@ dependencies = [
     "pandas-datareader>=0.10.0",
     "pandas>=2.2.3",
     "pytest-mock>=3.14.0",
+    "pytest-postgresql>=6.1.1",
+    "psycopg2-binary>=2.9.10",
 ]
 
 [build-system]

@@ -16,3 +16,10 @@ build/
 *.db-shm
 *.db-wal
 *.db-journal
+
+# Python cache
+.pytest_cache/
+.ruff_cache/
+
+# Docker volumes
+postgres_data/

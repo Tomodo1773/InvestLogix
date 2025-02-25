@@ -34,7 +34,7 @@ class Stock(Base):
 
     __tablename__ = "stocks"
 
-    symbol = Column(String(10), primary_key=True)  # [SYSTEM] 銘柄コード (例: "AAPL")
+    symbol = Column(String(15), primary_key=True)  # [SYSTEM] 銘柄コード (例: "AAPL", "JP90C000BRT6")
     name = Column(String(100), nullable=False)  # [API_FETCH] 銘柄名 (例: "Apple Inc.")
     name_en = Column(String(100))  # [API_FETCH] 英語名 (例: "Apple Inc.")
     market = Column(String(20), nullable=False)  # [API_FETCH] 上場市場 (例: "JPX", "NYSE", "NASDAQ")
@@ -58,7 +58,9 @@ class StockJPXDetail(Base):
 
     __tablename__ = "stock_jpx_details"
 
-    symbol = Column(String(10), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード (例: "86970.T")
+    symbol = Column(
+        String(15), ForeignKey("stocks.symbol"), primary_key=True
+    )  # [SYSTEM] 銘柄コード (例: "86970.T", "JP90C000BRT6")
     sector_17_code = Column(String(2))  # [API_FETCH] 17業種区分コード (例: "16")
     sector_17_name = Column(String(50))  # [API_FETCH] 17業種区分名 (例: "金融（除く銀行）")
     sector_33_code = Column(String(4))  # [API_FETCH] 33業種区分コード (例: "7200")
@@ -81,7 +83,7 @@ class StockUSDetail(Base):
 
     __tablename__ = "stock_us_details"
 
-    symbol = Column(String(10), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
     gics_sector = Column(String(50))  # [API_FETCH] GICSセクター
     gics_industry = Column(String(50))  # [API_FETCH] GICS業種
     sp500_component = Column(Boolean, default=False)  # [API_FETCH] S&P500構成銘柄か
@@ -121,7 +123,7 @@ class Holding(Base):
     __tablename__ = "holdings"
 
     user_id = Column(Integer, ForeignKey("users.user_id"), primary_key=True)  # [SYSTEM] ユーザーID
-    symbol = Column(String(10), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
 
     # 保有情報
     quantity = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 保有数量
@@ -148,7 +150,7 @@ class Transaction(Base):
 
     transaction_id = Column(Integer, primary_key=True)  # [SYSTEM] トランザクションID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
-    symbol = Column(String(10), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
     transaction_type = Column(
         Enum("buy", "sell", name="transaction_types"), nullable=False
     )  # [USER_INPUT] トランザクションタイプ (例: "buy", "sell")
@@ -194,7 +196,7 @@ class Dividend(Base):
 
     dividend_id = Column(Integer, primary_key=True)  # [SYSTEM] 配当ID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
-    symbol = Column(String(10), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
     payment_date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [USER_INPUT] 支払日（JST固定）
     shares_owned = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 保有株数
     total_amount = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 配当金総額

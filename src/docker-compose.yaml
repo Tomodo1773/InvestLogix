@@ -19,26 +19,17 @@ services:
       retries: 5
     restart: unless-stopped
 
-#   api:
-#     build:
-#       context: ./api
-#       dockerfile: Dockerfile
-#     container_name: investlogix-api
-#     volumes:
-#       - ./api:/src
-#       - api_venv:/src/.venv
-#     ports:
-#       - "8000:8000"
-#     environment: 
-#       - WATCHFILES_FORCE_POLLING=true
-#       - DATABASE_URL=postgresql://postgres:hogehoge@db:5432/investlogix
-#     depends_on:
-#       db:
-#         condition: service_healthy
-#     working_dir: /src
-
-volumes:
-  postgres_data:
-    name: investlogix_postgres_data
-#   api_venv:
-#     name: investlogix_api_venv
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: investlogix-api
+    volumes:
+      - ./api:/src
+      - ./api/.dockervenv:/src/.venv
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    working_dir: /src

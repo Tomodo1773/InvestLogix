@@ -19,7 +19,7 @@ from stock.services.auth_service import AuthService
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
 # テスト用のDBのURL設定
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_investlogix"
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/test_investlogix"
 
 # テスト用のエンジン設定
 engine = create_async_engine(TEST_DATABASE_URL, echo=True, pool_size=5, max_overflow=10)
@@ -28,7 +28,7 @@ engine = create_async_engine(TEST_DATABASE_URL, echo=True, pool_size=5, max_over
 TestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 # テスト用の一時的なPostgreSQLインスタンスを設定
-test_db = factories.postgresql_proc(port=None)
+test_db = factories.postgresql_proc(host="localhost", port=5433, password="postgres")
 test_postgres = factories.postgresql("test_db")
 
 
@@ -42,6 +42,7 @@ async def setup_database(test_postgres):
         user=db_params.user,
         host=db_params.host,
         port=db_params.port,
+        password="postgres",  # パスワードを明示的に設定
         dbname=db_name,
         version=14,  # PostgreSQLのバージョンを指定
     )
@@ -50,7 +51,7 @@ async def setup_database(test_postgres):
         janitor.init()
 
         # 非同期エンジンの設定
-        db_url = f"postgresql+asyncpg://{db_params.user}@{db_params.host}:{db_params.port}/{db_name}"
+        db_url = f"postgresql+asyncpg://{db_params.user}:postgres@{db_params.host}:{db_params.port}/{db_name}"
         test_engine = create_async_engine(db_url, echo=True, pool_size=5, max_overflow=10)
 
         # テーブルの作成

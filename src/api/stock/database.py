@@ -19,20 +19,8 @@ class LogLevel(str, Enum):
     TRACE = "trace"
 
 
-class Environment(str, Enum):
-    """環境の定義"""
-
-    DEVELOPMENT = "development"
-    DOCKER = "docker"
-    STAGING = "staging"
-    PRODUCTION = "production"
-
-
 class Settings(BaseSettings):
     """アプリケーション設定"""
-
-    # 環境設定
-    ENVIRONMENT: Environment = Environment.DEVELOPMENT
 
     # データベース設定
     DB_USER: str = "postgres"
@@ -106,15 +94,6 @@ class Settings(BaseSettings):
             return LogLevel[v.upper()]
         except KeyError:
             return LogLevel.INFO
-
-    @field_validator("ENVIRONMENT", mode="before")
-    @classmethod
-    def parse_environment(cls, v: str) -> Environment:
-        """環境文字列をEnum値に変換"""
-        try:
-            return Environment[v.upper()]
-        except KeyError:
-            return Environment.DEVELOPMENT
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

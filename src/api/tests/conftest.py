@@ -4,9 +4,10 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
+from pytest_postgresql import factories
+from pytest_postgresql.janitor import DatabaseJanitor
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from stock.app import app
 from stock.database import get_db
@@ -18,30 +19,59 @@ from stock.services.auth_service import AuthService
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
 # テスト用のDBのURL設定
-TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_investlogix"
 
 # テスト用のエンジン設定
-engine = create_async_engine(
-    TEST_DATABASE_URL,  # テスト用のDBを使用
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
+engine = create_async_engine(TEST_DATABASE_URL, echo=True, pool_size=5, max_overflow=10)
 
 # テスト用のセッションファクトリ
 TestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
+# テスト用の一時的なPostgreSQLインスタンスを設定
+test_db = factories.postgresql_proc(port=None)
+test_postgres = factories.postgresql("test_db")
+
 
 @pytest_asyncio.fixture(autouse=True)
-async def setup_database():
+async def setup_database(test_postgres):
     """データベースの初期化を行うフィクスチャー"""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-        await conn.run_sync(Base.metadata.create_all)
+    db_params = test_postgres.info
+    db_name = "test_investlogix"
+
+    janitor = DatabaseJanitor(
+        user=db_params.user,
+        host=db_params.host,
+        port=db_params.port,
+        dbname=db_name,
+        version=14,  # PostgreSQLのバージョンを指定
+    )
+
+    try:
+        janitor.init()
+
+        # 非同期エンジンの設定
+        db_url = f"postgresql+asyncpg://{db_params.user}@{db_params.host}:{db_params.port}/{db_name}"
+        test_engine = create_async_engine(db_url, echo=True, pool_size=5, max_overflow=10)
+
+        # テーブルの作成
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+
+        yield test_engine
+
+        # テスト終了後のクリーンアップ
+        async with test_engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+        await test_engine.dispose()
+    finally:
+        janitor.drop()
 
 
 @pytest_asyncio.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
+async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """非同期データベースセッションのフィクスチャー"""
+    TestingSessionLocal = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
     async with TestingSessionLocal() as session:
         try:
             yield session

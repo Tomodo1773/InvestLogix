@@ -6,10 +6,19 @@
 			"type": "debugpy",
 			"request": "launch",
 			"module": "uvicorn",
-			"args": ["stock.app:app", "--reload"],
+			"args": [
+				"stock.app:app",
+				"--host",
+				"0.0.0.0",
+				"--port",
+				"8000",
+				"--reload",
+				"--log-level",
+				"info"
+			],
 			"console": "integratedTerminal",
 			"cwd": "${workspaceFolder}/src/api",
-			"envFile": "${workspaceFolder}/.env",
+			"envFile": "${workspaceFolder}/src/api/.env",
 			"env": {
 				"PYTHONPATH": "${workspaceFolder}/src/api"
 			}

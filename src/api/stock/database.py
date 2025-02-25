@@ -66,15 +66,7 @@ class Settings(BaseSettings):
     # SQLAlchemy URL
     @property
     def SQLALCHEMY_DATABASE_URL(self) -> str:
-        """
-        環境に応じたデータベースURLを生成
-        - development: SQLite
-        - docker, staging, production: PostgreSQL
-        """
-        if self.ENVIRONMENT == Environment.DEVELOPMENT:
-            return "sqlite+aiosqlite:///./dev.db"
-
-        # Docker環境または本番環境の場合
+        """データベースURLを生成（URLエンコード付き）"""
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
@@ -136,10 +128,6 @@ settings = Settings()
 
 # データベース接続設定
 engine_config = {"echo": True}
-
-# SQLite固有の設定
-if settings.ENVIRONMENT == Environment.DEVELOPMENT:
-    engine_config["connect_args"] = {"check_same_thread": False}
 
 # データベースエンジンの設定
 engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URL, **engine_config)

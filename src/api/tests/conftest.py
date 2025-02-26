@@ -18,6 +18,10 @@ from stock.services.auth_service import AuthService
 # pytest-asyncioのデフォルトスコープを設定
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
+# pytest-postgresqlのデフォルトスコープを設定
+factories.postgresql.DEFAULT_FIXTURE_SCOPE = "function"
+factories.postgresql_proc.DEFAULT_FIXTURE_SCOPE = "function"
+
 # テスト用のDBのURL設定
 TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/test_investlogix"
 
@@ -32,9 +36,9 @@ test_db = factories.postgresql_proc(host="localhost", port=5433, password="postg
 test_postgres = factories.postgresql("test_db")
 
 
-@pytest_asyncio.fixture(autouse=True)
+@pytest_asyncio.fixture(autouse=True, scope="function")
 async def setup_database(test_postgres):
-    """データベースの初期化を行うフィクスチャー"""
+    """各テストで使用するデータベースの初期化を行うフィクスチャー"""
     db_params = test_postgres.info
     db_name = "test_investlogix"
 
@@ -42,9 +46,9 @@ async def setup_database(test_postgres):
         user=db_params.user,
         host=db_params.host,
         port=db_params.port,
-        password="postgres",  # パスワードを明示的に設定
+        password="postgres",
         dbname=db_name,
-        version=14,  # PostgreSQLのバージョンを指定
+        version=14,
     )
 
     try:
@@ -54,16 +58,13 @@ async def setup_database(test_postgres):
         db_url = f"postgresql+asyncpg://{db_params.user}:postgres@{db_params.host}:{db_params.port}/{db_name}"
         test_engine = create_async_engine(db_url, echo=True, pool_size=5, max_overflow=10)
 
-        # テーブルの作成
+        # テーブルの作成（テストケースごとに実行）
         async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
 
         yield test_engine
 
-        # テスト終了後のクリーンアップ
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
+        # テスト終了時のクリーンアップ
         await test_engine.dispose()
     finally:
         janitor.drop()
@@ -71,36 +72,52 @@ async def setup_database(test_postgres):
 
 @pytest_asyncio.fixture
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """非同期データベースセッションのフィクスチャー"""
+    """非同期データベースセッションのフィクスチャー。
+    各テストは独立したトランザクション内で実行され、テスト終了後に自動的にロールバックされます。"""
     TestingSessionLocal = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+
     async with TestingSessionLocal() as session:
-        try:
+        # トランザクションを開始
+        async with session.begin():
             yield session
-        finally:
-            await session.rollback()
-            await session.close()
+            # トランザクションは自動的にロールバックされます
 
 
 @pytest_asyncio.fixture
-async def auth_token(client: AsyncClient, db_session: AsyncSession) -> str:
-    """テスト用の認証トークンを取得するフィクスチャー"""
-    # テストユーザーを作成
-    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
-    await AuthService(db_session).create_user(UserCreate(**user_data))
+async def auth_token(client: AsyncClient, setup_database) -> str:
+    """テスト用の認証トークンを取得するフィクスチャー
+    - 認証ユーザーを新規作成し、コミットすることで別セッションでも参照可能にする
+    """
+    from sqlalchemy.orm import sessionmaker
 
-    # ログインしてトークンを取得
+    # setup_databaseから新しいセッションファクトリを作成
+    TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+    
+    # テストユーザーのデータ
+    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
+    
+    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
+    async with TestingSessionLocalFunc() as session:
+        # テストユーザーを作成（コメント：ユーザー作成処理）
+        db_user = await AuthService(session).create_user(UserCreate(**user_data))
+        await session.commit()
+    
+    # ログインして認証トークンを取得
     response = await client.post("/api/v1/token", data={"username": user_data["username"], "password": user_data["password"]})
     return response.json()["access_token"]
 
 
 @pytest_asyncio.fixture
-async def client() -> AsyncGenerator[AsyncClient, None]:
+async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
     """非同期HTTPクライアントのフィクスチャー"""
 
     async def override_get_db():
-        async with TestingSessionLocal() as session:
+        # setup_databaseから新しいセッションファクトリを作成
+        TestingSessionLocalFunction = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+        async with TestingSessionLocalFunction() as session:
             yield session
 
+    # get_db依存性をオーバーライド
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
@@ -109,14 +126,15 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def sync_client() -> Generator[TestClient, None, None]:
+def sync_client(setup_database) -> Generator[TestClient, None, None]:
     """同期HTTPクライアントのフィクスチャー"""
 
     def override_get_db():
         async def _override_get_db():
-            async with TestingSessionLocal() as session:
+            # setup_databaseから新しいセッションファクトリを作成
+            TestingSessionLocalFunction = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+            async with TestingSessionLocalFunction() as session:
                 yield session
-
         return _override_get_db()
 
     app.dependency_overrides[get_db] = override_get_db

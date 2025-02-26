@@ -92,16 +92,16 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
 
     # setup_databaseから新しいセッションファクトリを作成
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
-    
+
     # テストユーザーのデータ
     user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
-    
+
     # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
         # テストユーザーを作成（コメント：ユーザー作成処理）
-        db_user = await AuthService(session).create_user(UserCreate(**user_data))
+        await AuthService(session).create_user(UserCreate(**user_data))
         await session.commit()
-    
+
     # ログインして認証トークンを取得
     response = await client.post("/api/v1/token", data={"username": user_data["username"], "password": user_data["password"]})
     return response.json()["access_token"]
@@ -135,6 +135,7 @@ def sync_client(setup_database) -> Generator[TestClient, None, None]:
             TestingSessionLocalFunction = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
             async with TestingSessionLocalFunction() as session:
                 yield session
+
         return _override_get_db()
 
     app.dependency_overrides[get_db] = override_get_db

@@ -42,7 +42,9 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     - ユーザー名/メールアドレス重複時: 400 Bad Request
     """
     auth_service = AuthService(db)
-    db_user = await auth_service.create_user(user)
-    if not db_user:
+    try:
+        db_user = await auth_service.create_user(user)
+        return db_user
+    except ValueError:
+        # ValueErrorの内容に関わらず統一したエラーメッセージを返す
         raise HTTPException(status_code=400, detail="Username or email already registered")
-    return db_user

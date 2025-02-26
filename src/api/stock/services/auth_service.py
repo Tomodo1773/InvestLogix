@@ -30,5 +30,4 @@ class AuthService:
         db_user = User(username=user.username, email=user.email, password_hash=hashed_password, created_at=get_jst_now())
         self.db.add(db_user)
         await self.db.commit()
-        await self.db.refresh(db_user)
         return db_user

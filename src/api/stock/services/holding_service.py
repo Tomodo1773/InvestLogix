@@ -126,9 +126,18 @@ async def update_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Hold
     holding.current_price = current_price
     holding.market_value = current_price * holding.quantity
     holding.unrealized_pl = holding.market_value + holding.realized_pl + holding.total_dividend - holding.total_cost
-    holding.unrealized_pl_percentage = (
-        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost != 0 else Decimal("0")
-    )
+
+    # パーセンテージ計算（データベースの制約に合わせて範囲を制限）
+    if holding.total_cost != 0:
+        pl_percentage = holding.unrealized_pl / holding.total_cost * 100
+        # NUMERIC(5,2)の制約に合わせて、最大値を999.99に制限
+        if pl_percentage > Decimal("999.99"):
+            pl_percentage = Decimal("999.99")
+        elif pl_percentage < Decimal("-999.99"):
+            pl_percentage = Decimal("-999.99")
+        holding.unrealized_pl_percentage = pl_percentage
+    else:
+        holding.unrealized_pl_percentage = Decimal("0")
 
     await db.commit()
     await db.refresh(holding)

@@ -263,3 +263,175 @@ async def mock_external_apis(mocker):
         "overview": mock_overview,
         "search": mock_search,
     }
+
+
+@pytest_asyncio.fixture
+async def create_transaction(client, auth_token):
+    """取引データを登録するためのユーティリティフィクスチャー
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
+
+    Returns:
+        function: 取引登録用の関数
+    """
+
+    async def _create_transaction(transaction_data):
+        response = await client.post(
+            "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        assert response.status_code == 200
+        return response.json()
+
+    return _create_transaction
+
+
+@pytest_asyncio.fixture
+async def create_dividend(client, auth_token):
+    """配当データを登録するためのユーティリティフィクスチャー
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
+
+    Returns:
+        function: 配当登録用の関数
+    """
+
+    async def _create_dividend(dividend_data):
+        response = await client.post(
+            "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
+        )
+        assert response.status_code == 200
+        return response.json()
+
+    return _create_dividend
+
+
+@pytest_asyncio.fixture
+async def setup_dividend_data(create_dividend):
+    """配当データをセットアップするフィクスチャー
+
+    Args:
+        create_dividend: 配当登録フィクスチャー
+
+    Returns:
+        dict: 配当情報
+    """
+    # 日本株の配当データ
+    dividend_data_jp = {
+        "symbol": "8058",
+        "payment_date": "2024-01-01T00:00:00",
+        "shares_owned": "100.0",
+        "total_amount": "2000.0",
+        "tax": "400.0",
+        "fee": "0.0",
+    }
+    jp_dividend = await create_dividend(dividend_data_jp)
+
+    # 米国株の配当データ
+    dividend_data_us = {
+        "symbol": "AAPL",
+        "payment_date": "2024-01-01T00:00:00",
+        "shares_owned": "10.0",
+        "total_amount": "3000.0",
+        "tax": "600.0",
+        "fee": "0.0",
+    }
+    us_dividend = await create_dividend(dividend_data_us)
+
+    return {"jp_dividend": jp_dividend, "us_dividend": us_dividend}
+
+
+@pytest_asyncio.fixture
+async def setup_japanese_stock_data(client, auth_token, create_transaction):
+    """日本株のテストデータをセットアップするフィクスチャー
+
+    Args:
+        client: 非同期HTTPクライアント
+        create_transaction: 取引登録フィクスチャー
+        auth_token: 認証トークン
+
+    Returns:
+        dict: 取引情報
+    """
+    # 取引データ登録
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "100.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    return await create_transaction(transaction_data)
+
+
+@pytest_asyncio.fixture
+async def setup_us_stock_data(client, auth_token, create_transaction):
+    """米国株のテストデータをセットアップするフィクスチャー
+
+    Args:
+        client: 非同期HTTPクライアント
+        create_transaction: 取引登録フィクスチャー
+        auth_token: 認証トークン
+
+    Returns:
+        dict: 取引情報
+    """
+    # 取引データ登録
+    transaction_data = {
+        "symbol": "AAPL",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "36054",
+        "usd_price": "240.36",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    return await create_transaction(transaction_data)
+
+
+@pytest_asyncio.fixture
+async def setup_portfolio_test_data(setup_japanese_stock_data, setup_us_stock_data, create_dividend):
+    """ポートフォリオのテスト用データを作成するフィクスチャー
+
+    基本データセットアップ後に配当データを登録します。
+
+    Args:
+        setup_japanese_stock_data: 日本株のテストデータ
+        setup_us_stock_data: 米国株のテストデータ
+        create_dividend: 配当登録用フィクスチャー
+    """
+    # 日本株の配当データ
+    japan_dividend = {
+        "symbol": "8058",
+        "payment_date": "2024-01-01T00:00:00Z",
+        "shares_owned": "100.0",
+        "total_amount": "2000.0",
+        "tax": "400.0",
+        "fee": "0.0",
+    }
+    jp_dividend = await create_dividend(japan_dividend)
+
+    # 米国株の配当データ
+    us_dividend = {
+        "symbol": "AAPL",
+        "payment_date": "2024-01-01T00:00:00Z",
+        "shares_owned": "10.0",
+        "total_amount": "3000.0",
+        "tax": "600.0",
+        "fee": "0.0",
+    }
+    apple_dividend = await create_dividend(us_dividend)
+
+    return {
+        "japanese_stock": setup_japanese_stock_data,
+        "us_stock": setup_us_stock_data,
+        "dividends": {"jp": jp_dividend, "us": apple_dividend},
+    }

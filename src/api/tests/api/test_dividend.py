@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data):
     """配当情報の登録テスト
 
     期待する動作:
@@ -19,20 +19,8 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
         auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株のテストデータ
     """
-    # 事前に購入取引を登録
-    transaction_data = {
-        "symbol": "8058",
-        "transaction_type": "buy",
-        "quantity": "100.0",
-        "price": "3000.0",
-        "account_type": "NISA(成長投資枠)",
-        "fee": "0.0",
-        "tax": "0.0",
-        "transaction_date": "2024-01-01T00:00:00",
-    }
-    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
-
     # 配当情報の登録
     dividend_data = {
         "symbol": "8058",
@@ -93,7 +81,9 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
 
 @pytest.mark.asyncio
-async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_list_dividends(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data, create_dividend
+):
     """配当一覧取得テスト
 
     期待する動作:
@@ -105,20 +95,9 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
         auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株のテストデータ
+        create_dividend: 配当登録用フィクスチャー
     """
-    # 事前に購入取引を登録
-    transaction_data = {
-        "symbol": "8058",
-        "transaction_type": "buy",
-        "quantity": "100.0",
-        "price": "3000.0",
-        "account_type": "NISA(成長投資枠)",
-        "fee": "0.0",
-        "tax": "0.0",
-        "transaction_date": "2024-01-01T00:00:00",
-    }
-    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
-
     # 複数の配当情報を登録
     dividend_data_list = [
         {
@@ -140,7 +119,7 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
     ]
 
     for dividend_data in dividend_data_list:
-        await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
+        await create_dividend(dividend_data)
 
     # 配当一覧を取得
     response = await client.get("/api/v1/dividends/", headers={"Authorization": f"Bearer {auth_token}"})

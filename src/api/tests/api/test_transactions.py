@@ -8,10 +8,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 @pytest.mark.asyncio
 async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """株式購入取引の登録テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された取引情報を返却
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された取引情報を返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
+    # テストデータ準備
     transaction_data = {
         "symbol": "8058",
         "transaction_type": "buy",
@@ -22,9 +29,13 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "8058"
@@ -36,9 +47,15 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
 @pytest.mark.asyncio
 async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """株式売却取引の登録テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された取引情報を返却
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された取引情報を返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 事前に購入取引を登録
     buy_transaction = {
@@ -53,7 +70,7 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     }
     await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
 
-    # 売却取引のテスト
+    # 売却取引のテストデータ準備
     transaction_data = {
         "symbol": "8058",
         "transaction_type": "sell",
@@ -64,9 +81,13 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "8058"
@@ -78,11 +99,17 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
 @pytest.mark.asyncio
 async def test_create_transaction_insufficient_shares(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """保有株数不足による売却取引の失敗テスト
-    - 期待する動作:
-        - ステータスコード400
-        - エラーメッセージを返却
+
+    期待する動作:
+    - ステータスコード400
+    - エラーメッセージを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
-    # 売却取引のテスト（保有数量ゼロで売却）
+    # 売却取引のテストデータ準備（保有数量ゼロで売却）
     transaction_data = {
         "symbol": "8058",
         "transaction_type": "sell",
@@ -93,9 +120,13 @@ async def test_create_transaction_insufficient_shares(client: AsyncClient, db_se
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 400
     assert response.json()["detail"] == "Insufficient shares"
 
@@ -103,10 +134,17 @@ async def test_create_transaction_insufficient_shares(client: AsyncClient, db_se
 @pytest.mark.asyncio
 async def test_create_transaction_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """存在しない銘柄による取引の失敗テスト
-    - 期待する動作:
-        - ステータスコード404
-        - エラーメッセージを返却
+
+    期待する動作:
+    - ステータスコード404
+    - エラーメッセージを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
+    # テストデータ準備
     transaction_data = {
         "symbol": "INVALID",
         "transaction_type": "buy",
@@ -117,9 +155,13 @@ async def test_create_transaction_stock_not_found(client: AsyncClient, db_sessio
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 404
     assert response.json()["detail"] == "Stock not found"
 
@@ -127,13 +169,19 @@ async def test_create_transaction_stock_not_found(client: AsyncClient, db_sessio
 @pytest.mark.asyncio
 async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """複数回の購入取引による平均取得単価の計算テスト
-    - 期待する動作:
-        - 1回目の購入: 10株@3000円
-        - 2回目の購入: 5株@4000円
-        - 保有数量: 15株
-        - 平均取得単価: ((10 * 3000) + (5 * 4000)) / 15 = 3333.33...円
+
+    期待する動作:
+    - 1回目の購入: 10株@3000円
+    - 2回目の購入: 5株@4000円
+    - 保有数量: 15株
+    - 平均取得単価: ((10 * 3000) + (5 * 4000)) / 15 = 3333.33...円
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
-    # 1回目の購入取引（10株@3000円）
+    # 1回目の購入取引データ準備（10株@3000円）
     first_buy = {
         "symbol": "8058",
         "transaction_type": "buy",
@@ -146,7 +194,7 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
     }
     await client.post("/api/v1/transactions/", json=first_buy, headers={"Authorization": f"Bearer {auth_token}"})
 
-    # 2回目の購入取引（5株@4000円）
+    # 2回目の購入取引データ準備（5株@4000円）
     second_buy = {
         "symbol": "8058",
         "transaction_type": "buy",
@@ -175,15 +223,21 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
 @pytest.mark.asyncio
 async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """購入後の一部売却時の売却益と保有株数の計算テスト
-    - 期待する動作:
-        - 1回目の購入: 100株@1000円 = 100,000円
-        - 一部売却: 60株@1500円
-            - 売却益: (1500円 - 1000円) * 60株 = 30,000円
-            - 残り保有数: 40株
-            - 平均取得単価: 1000円（変化なし）
-            - 残りの取得価額合計: 1000円 * 40株 = 40,000円
+
+    期待する動作:
+    - 1回目の購入: 100株@1000円 = 100,000円
+    - 一部売却: 60株@1500円
+        - 売却益: (1500円 - 1000円) * 60株 = 30,000円
+        - 残り保有数: 40株
+        - 平均取得単価: 1000円（変化なし）
+        - 残りの取得価額合計: 1000円 * 40株 = 40,000円
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
-    # 購入取引（100株@1000円）
+    # 購入取引データ準備（100株@1000円）
     buy_transaction = {
         "symbol": "7203",
         "transaction_type": "buy",
@@ -196,7 +250,7 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
     }
     await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
 
-    # 一部売却取引（60株@1500円）
+    # 一部売却取引データ準備（60株@1500円）
     sell_transaction = {
         "symbol": "7203",
         "transaction_type": "sell",
@@ -236,12 +290,19 @@ async def test_create_transaction_with_usd_price(
     client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
 ):
     """USD価格を含む取引の登録テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された取引情報を返却（USD価格を含む）
-        - AlphaVantage APIが適切に呼び出されること
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された取引情報を返却（USD価格を含む）
+    - AlphaVantage APIが適切に呼び出されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        mock_external_apis: モック化されたAPI
     """
-    # AlphaVantage APIのモックが呼び出されることを確認
+    # テストデータ準備
     transaction_data = {
         "symbol": "AAPL",
         "transaction_type": "buy",
@@ -253,9 +314,13 @@ async def test_create_transaction_with_usd_price(
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
@@ -269,9 +334,15 @@ async def test_create_transaction_with_usd_price(
 @pytest.mark.asyncio
 async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """取引履歴取得を確認するテスト
-    - 期待する動作:
-        - ステータスコード200
-        - 取引情報に銘柄名が含まれている
+
+    期待する動作:
+    - ステータスコード200
+    - 取引情報に銘柄名が含まれている
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 事前に購入取引を登録
     transaction_data = {

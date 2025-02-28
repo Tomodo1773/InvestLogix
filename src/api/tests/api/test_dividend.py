@@ -9,12 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 @pytest.mark.asyncio
 async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """配当情報の登録テスト
-    - 事前条件:
-        - 株式の購入取引
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された配当情報を返却
-        - 保有情報の配当総額が更新される
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された配当情報を返却
+    - 保有情報の配当総額が更新される
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 事前に購入取引を登録
     transaction_data = {
@@ -63,9 +67,14 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
 @pytest.mark.asyncio
 async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: str):
     """存在しない銘柄の配当情報登録テスト
-    - 期待する動作:
-        - ステータスコード404
-        - エラーメッセージを返却
+
+    期待する動作:
+    - ステータスコード404
+    - エラーメッセージを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
     """
     dividend_data = {
         "symbol": "INVALID",
@@ -78,6 +87,7 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
     response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
 
+    # レスポンス検証
     assert response.status_code == 404
     assert response.json()["detail"] == "Stock not found"
 
@@ -85,13 +95,16 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 @pytest.mark.asyncio
 async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """配当一覧取得テスト
-    - 事前条件:
-        - 株式の購入取引
-        - 複数の配当情報の登録
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された配当情報が支払日の降順で返却される
-        - 配当情報に銘柄名が含まれている
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された配当情報が支払日の降順で返却される
+    - 配当情報に銘柄名が含まれている
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 事前に購入取引を登録
     transaction_data = {

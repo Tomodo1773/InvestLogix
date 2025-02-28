@@ -7,11 +7,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @pytest.mark.asyncio
 async def test_recalculate_holding_pl_japanese_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    日本株の保有損益再計算テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 更新された保有情報を返却
+    """日本株の保有損益再計算テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 更新された保有情報を返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 購入取引を登録
     transaction_data = {
@@ -28,6 +33,8 @@ async def test_recalculate_holding_pl_japanese_stock(client: AsyncClient, db_ses
 
     # 保有損益再計算APIを呼び出し
     response = await client.post("/api/v1/holdings/7203/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "7203"
@@ -41,12 +48,18 @@ async def test_recalculate_holding_pl_japanese_stock(client: AsyncClient, db_ses
 async def test_recalculate_holding_pl_us_stock(
     client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
 ):
-    """
-    米国株の保有損益再計算テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 更新された保有情報を返却
-        - AlphaVantage APIのモックが呼び出されること
+    """米国株の保有損益再計算テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 更新された保有情報を返却
+    - AlphaVantage APIのモックが呼び出されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        mock_external_apis: モック化されたAPI
     """
     # 購入取引を登録
     transaction_data = {
@@ -64,6 +77,8 @@ async def test_recalculate_holding_pl_us_stock(
 
     # 保有損益再計算APIを呼び出し
     response = await client.post("/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
@@ -78,11 +93,16 @@ async def test_recalculate_holding_pl_us_stock(
 
 @pytest.mark.asyncio
 async def test_list_holdings(client: AsyncClient, db_session: AsyncSession, auth_token: str):
-    """
-    保有銘柄一覧取得を確認するテスト
-    - 期待する動作:
-        - ステータスコード200
-        - 保有銘柄情報に銘柄名が含まれている
+    """保有銘柄一覧取得を確認するテスト
+
+    期待する動作:
+    - ステータスコード200
+    - 保有銘柄情報に銘柄名が含まれている
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
     # 購入取引を登録
     transaction_data = {
@@ -100,7 +120,7 @@ async def test_list_holdings(client: AsyncClient, db_session: AsyncSession, auth
     # 保有銘柄一覧を取得
     response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
 
-    # レスポンスの検証
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0

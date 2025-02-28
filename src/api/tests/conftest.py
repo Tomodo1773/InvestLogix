@@ -38,7 +38,16 @@ test_postgres = factories.postgresql("test_db")
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
 async def setup_database(test_postgres):
-    """各テストで使用するデータベースの初期化を行うフィクスチャー"""
+    """各テストで使用するデータベースの初期化を行うフィクスチャー
+
+    各テスト実行前にデータベースを作成し、テスト終了後にクリーンアップを行います。
+
+    Args:
+        test_postgres: PostgreSQLのフィクスチャー
+
+    Yields:
+        SQLAlchemy AsyncEngine: テスト用の非同期エンジンインスタンス
+    """
     db_params = test_postgres.info
     db_name = "test_investlogix"
 
@@ -72,8 +81,16 @@ async def setup_database(test_postgres):
 
 @pytest_asyncio.fixture
 async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """非同期データベースセッションのフィクスチャー。
-    各テストは独立したトランザクション内で実行され、テスト終了後に自動的にロールバックされます。"""
+    """非同期データベースセッションのフィクスチャー
+
+    各テストは独立したトランザクション内で実行され、テスト終了後に自動的にロールバックされます。
+
+    Args:
+        setup_database: データベースセットアップのフィクスチャー
+
+    Yields:
+        AsyncSession: テスト用の非同期セッションインスタンス
+    """
     TestingSessionLocal = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
 
     async with TestingSessionLocal() as session:
@@ -86,7 +103,15 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
 @pytest_asyncio.fixture
 async def auth_token(client: AsyncClient, setup_database) -> str:
     """テスト用の認証トークンを取得するフィクスチャー
-    - 認証ユーザーを新規作成し、コミットすることで別セッションでも参照可能にする
+
+    認証ユーザーを新規作成し、コミットすることで別セッションでも参照可能にします。
+
+    Args:
+        client: 非同期HTTPクライアント
+        setup_database: データベースセットアップのフィクスチャー
+
+    Returns:
+        str: JWTアクセストークン
     """
     from sqlalchemy.orm import sessionmaker
 
@@ -98,7 +123,6 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
 
     # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
-        # テストユーザーを作成（コメント：ユーザー作成処理）
         await AuthService(session).create_user(UserCreate(**user_data))
         await session.commit()
 
@@ -109,7 +133,16 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
 
 @pytest_asyncio.fixture
 async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
-    """非同期HTTPクライアントのフィクスチャー"""
+    """非同期HTTPクライアントのフィクスチャー
+
+    テスト用のデータベース接続をオーバーライドした非同期HTTPクライアントを提供します。
+
+    Args:
+        setup_database: データベースセットアップのフィクスチャー
+
+    Yields:
+        AsyncClient: 非同期HTTPクライアントインスタンス
+    """
 
     async def override_get_db():
         # setup_databaseから新しいセッションファクトリを作成
@@ -127,7 +160,16 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
 
 @pytest.fixture
 def sync_client(setup_database) -> Generator[TestClient, None, None]:
-    """同期HTTPクライアントのフィクスチャー"""
+    """同期HTTPクライアントのフィクスチャー
+
+    テスト用のデータベース接続をオーバーライドした同期HTTPクライアントを提供します。
+
+    Args:
+        setup_database: データベースセットアップのフィクスチャー
+
+    Yields:
+        TestClient: 同期HTTPクライアントインスタンス
+    """
 
     def override_get_db():
         async def _override_get_db():
@@ -187,13 +229,29 @@ MOCK_JQUANTS_COMPANY_INFO = {
 
 @pytest_asyncio.fixture
 async def mocker(request):
-    """async版のmockerフィクスチャー"""
+    """非同期テスト用のmockerフィクスチャー
+
+    Args:
+        request: リクエストコンテキスト
+
+    Returns:
+        pytest_mock.MockFixture: モッキングユーティリティ
+    """
     return request.getfixturevalue("mocker")
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def mock_external_apis(mocker):
-    """外部APIの応答をモック化するフィクスチャー"""
+    """外部APIの応答をモック化するフィクスチャー
+
+    AlphaVantageやJQuantsなどの外部APIをモック化し、テスト環境で一貫した応答を返すようにします。
+
+    Args:
+        mocker: モッカーフィクスチャー
+
+    Returns:
+        dict: モックオブジェクトを含む辞書
+    """
     # AlphaVantage APIのモック（stock_service内で使用されるのでパスを変更）
     mock_overview = mocker.patch("stock.services.stock_service.fetch_us_stock_overview", autospec=True)
     mock_overview.return_value = MOCK_STOCK_OVERVIEW_RESPONSE

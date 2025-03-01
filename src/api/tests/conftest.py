@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import AsyncGenerator, Generator
 
 import pytest
@@ -195,11 +196,16 @@ MOCK_STOCK_OVERVIEW_RESPONSE = {
     "Industry": "Consumer Electronics",
 }
 
+# 株価モックデータ（holdings_serviceで使用）
+MOCK_JAPAN_STOCK_PRICE = Decimal("3100.0")  # 日本株価格
+MOCK_US_STOCK_PRICE = Decimal("240.0")  # 米国株価格（USD）
+MOCK_USD_JPY_RATE_RESPONSE = Decimal("150.0")  # 1 USD = 150.0 JPY
+
 MOCK_ETF_SEARCH_RESPONSE = {
     "bestMatches": [
         {
             "1. symbol": "SPYD",
-            "2. name": "SPDR(R) PORTFOLIO S&P 500 HIGH DIVIDEND ETF",  # 末尾のスペースを削除
+            "2. name": "SPDR(R) PORTFOLIO S&P 500 HIGH DIVIDEND ETF",
             "3. type": "ETF",
             "4. region": "United States",
             "5. marketOpen": "09:30",
@@ -210,8 +216,6 @@ MOCK_ETF_SEARCH_RESPONSE = {
         }
     ]
 }
-
-MOCK_USD_JPY_RATE_RESPONSE = 150.0
 
 # JQuantsのレスポンスをモック化
 MOCK_JQUANTS_COMPANY_INFO = {
@@ -227,6 +231,46 @@ MOCK_JQUANTS_COMPANY_INFO = {
 }
 
 
+@pytest_asyncio.fixture(autouse=True)
+async def mock_external_apis(mocker):
+    """外部APIの応答をモック化するフィクスチャー
+
+    以下の外部APIをモック化します：
+    - AlphaVantage API（為替レート取得）
+    - holdings_service（日本株・米国株の株価取得関数）
+
+    Args:
+        mocker: モッカーフィクスチャー
+
+    Returns:
+        dict: モックオブジェクトを含む辞書
+    """
+    # AlphaVantage APIのモック（stock_service内で使用）
+    mock_overview = mocker.patch("stock.services.stock_service.fetch_us_stock_overview", autospec=True)
+    mock_overview.return_value = MOCK_STOCK_OVERVIEW_RESPONSE
+
+    mock_search = mocker.patch("stock.services.stock_service.fetch_us_stock_search", autospec=True)
+    mock_search.return_value = MOCK_ETF_SEARCH_RESPONSE
+
+    # holdings_serviceの株価取得関数をモック化
+    mock_japan_price = mocker.patch("stock.services.holding_service.get_japan_stock_price", autospec=True)
+    mock_japan_price.return_value = MOCK_JAPAN_STOCK_PRICE
+
+    mock_us_price = mocker.patch("stock.services.holding_service.get_us_stock_price", autospec=True)
+    mock_us_price.return_value = MOCK_US_STOCK_PRICE * MOCK_USD_JPY_RATE_RESPONSE  # 円換算価格
+
+    mock_usdjpy = mocker.patch("stock.services.alphavantage_service.fetch_usdjpy_rate", autospec=True)
+    mock_usdjpy.return_value = MOCK_USD_JPY_RATE_RESPONSE
+
+    return {
+        "overview": mock_overview,
+        "search": mock_search,
+        "japan_price": mock_japan_price,
+        "us_price": mock_us_price,
+        "usdjpy": mock_usdjpy,
+    }
+
+
 @pytest_asyncio.fixture
 async def mocker(request):
     """非同期テスト用のmockerフィクスチャー
@@ -238,31 +282,6 @@ async def mocker(request):
         pytest_mock.MockFixture: モッキングユーティリティ
     """
     return request.getfixturevalue("mocker")
-
-
-@pytest_asyncio.fixture(autouse=True)
-async def mock_external_apis(mocker):
-    """外部APIの応答をモック化するフィクスチャー
-
-    AlphaVantageやJQuantsなどの外部APIをモック化し、テスト環境で一貫した応答を返すようにします。
-
-    Args:
-        mocker: モッカーフィクスチャー
-
-    Returns:
-        dict: モックオブジェクトを含む辞書
-    """
-    # AlphaVantage APIのモック（stock_service内で使用されるのでパスを変更）
-    mock_overview = mocker.patch("stock.services.stock_service.fetch_us_stock_overview", autospec=True)
-    mock_overview.return_value = MOCK_STOCK_OVERVIEW_RESPONSE
-
-    mock_search = mocker.patch("stock.services.stock_service.fetch_us_stock_search", autospec=True)
-    mock_search.return_value = MOCK_ETF_SEARCH_RESPONSE
-
-    return {
-        "overview": mock_overview,
-        "search": mock_search,
-    }
 
 
 @pytest_asyncio.fixture
@@ -413,8 +432,8 @@ async def setup_portfolio_test_data(setup_japanese_stock_data, setup_us_stock_da
         "symbol": "8058",
         "payment_date": "2024-01-01T00:00:00Z",
         "shares_owned": "100.0",
-        "total_amount": "2000.0",
-        "tax": "400.0",
+        "total_amount": "1000.0",
+        "tax": "200.0",
         "fee": "0.0",
     }
     jp_dividend = await create_dividend(japan_dividend)
@@ -424,8 +443,8 @@ async def setup_portfolio_test_data(setup_japanese_stock_data, setup_us_stock_da
         "symbol": "AAPL",
         "payment_date": "2024-01-01T00:00:00Z",
         "shares_owned": "10.0",
-        "total_amount": "3000.0",
-        "tax": "600.0",
+        "total_amount": "1500.0",
+        "tax": "300.0",
         "fee": "0.0",
     }
     apple_dividend = await create_dividend(us_dividend)

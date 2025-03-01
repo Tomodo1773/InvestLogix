@@ -24,8 +24,8 @@ async def setup_portfolio_test_data(
         "symbol": "8058",
         "payment_date": "2023-04-01T00:00:00Z",
         "shares_owned": "100.0",
-        "total_amount": "2000.0",
-        "tax": "400.0",
+        "total_amount": "1000.0",
+        "tax": "200.0",
         "fee": "0.0",
     }
     await create_dividend(japan_dividend)
@@ -35,8 +35,8 @@ async def setup_portfolio_test_data(
         "symbol": "AAPL",
         "payment_date": "2023-03-15T00:00:00Z",
         "shares_owned": "10.0",
-        "total_amount": "3000.0",
-        "tax": "600.0",
+        "total_amount": "1500.0",
+        "tax": "300.0",
         "fee": "0.0",
     }
     await create_dividend(us_dividend)
@@ -73,9 +73,9 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
     assert Decimal(str(data["total_realized_pl"])) == Decimal("0")
 
     # 配当総額のチェック（税引後）
-    # 日本株: 2000円 - 400円 = 1600円
-    # 米国株: 3000円 - 600円 = 2400円
-    assert Decimal(str(data["total_dividend"])) == Decimal("4000")
+    # 日本株: 1000円 - 200円 = 800円
+    # 米国株: 1500円 - 300円 = 1200円
+    assert Decimal(str(data["total_dividend"])) == Decimal("2000")
 
     # 市場別集計のチェック
     assert len(data["holdings_by_market"]) == 2
@@ -86,3 +86,75 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
     assert len(data["holdings_by_currency"]) == 2
     assert data["holdings_by_currency"]["JPY"] is not None
     assert data["holdings_by_currency"]["USD"] is not None
+
+
+@pytest.mark.asyncio
+async def test_portfolio_update_with_price_changes(
+    client, auth_token, setup_japanese_stock_data, setup_us_stock_data, create_dividend
+):
+    """ポートフォリオ更新機能のテスト (POST /api/v1/portfolio/summary)
+
+    トランザクションと配当を登録し、ホールディングを更新した後、
+    POSTメソッドでポートフォリオサマリーAPIにアクセスして正しく記録されることを確認します。
+
+    期待される動作:
+    - POSTリクエストが成功すること（ステータス200）
+    - 日本株: 3,100円 × 100株 = 310,000円
+    - 米国株: 240.0 USD × 10株 × 150.0 JPY = 360,000円
+    - 配当金額が正しく計上されていること
+    """
+    # 配当データを登録
+    japan_dividend = {
+        "symbol": "8058",
+        "payment_date": "2024-01-01T00:00:00Z",
+        "shares_owned": "100.0",
+        "total_amount": "1000.0",
+        "tax": "200.0",
+        "fee": "0.0",
+    }
+    us_dividend = {
+        "symbol": "AAPL",
+        "payment_date": "2024-01-01T00:00:00Z",
+        "shares_owned": "10.0",
+        "total_amount": "1500.0",
+        "tax": "300.0",
+        "fee": "0.0",
+    }
+    await create_dividend(japan_dividend)
+    await create_dividend(us_dividend)
+
+    # ホールディングの更新
+    await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post("/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # POST /api/v1/portfolio/summary を呼び出してポートフォリオ履歴を作成
+    response = await client.post("/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    created_summary = response.json()
+
+    # 期待値の確認
+    assert Decimal(str(created_summary["total_market_value"])) == Decimal("670000.00")  # 310,000 + 360,000
+    assert Decimal(str(created_summary["total_cost"])) == Decimal("660540.00")  # 取得価額の合計
+    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal(str(670000 - 660540))  # 時価総額 - 取得価額
+    assert Decimal(str(created_summary["total_dividend"])) == Decimal("2000.00")  # (1000 - 200) + (1500 - 300)
+
+    # 市場別保有額の確認
+    assert "JPX" in created_summary["holdings_by_market"]
+    assert "NASDAQ" in created_summary["holdings_by_market"]
+    assert Decimal(str(created_summary["holdings_by_market"]["JPX"])) == Decimal("310000.00")
+    assert Decimal(str(created_summary["holdings_by_market"]["NASDAQ"])) == Decimal("360000.00")
+
+    # 通貨別保有額の確認
+    assert "JPY" in created_summary["holdings_by_currency"]
+    assert "USD" in created_summary["holdings_by_currency"]
+
+    # データベースに正しく記録されたことを確認するために、GET でも確認
+    get_response = await client.get("/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"})
+    get_summary = get_response.json()
+
+    # POSTとGETの結果が一致することを確認
+    assert get_summary["total_market_value"] == created_summary["total_market_value"]
+    assert get_summary["total_cost"] == created_summary["total_cost"]
+    assert get_summary["total_dividend"] == created_summary["total_dividend"]

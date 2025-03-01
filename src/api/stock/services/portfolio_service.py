@@ -36,7 +36,10 @@ class PortfolioService:
             total_cost += holding.total_cost
             total_realized_pl += holding.realized_pl or 0
 
-        dividend_query = select(func.sum(models.Dividend.total_amount)).where(models.Dividend.user_id == user_id)
+        # 配当の集計（税引後金額を計算）
+        dividend_query = select(func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0))).where(
+            models.Dividend.user_id == user_id
+        )
         dividend_result = await self.db.execute(dividend_query)
         total_dividend = dividend_result.scalar() or 0
 

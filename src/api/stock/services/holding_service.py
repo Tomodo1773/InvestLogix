@@ -15,6 +15,36 @@ from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
 
 
+async def get_japan_stock_price(symbol: str) -> Decimal:
+    """
+    日本株の株価を取得します。
+
+    Args:
+        symbol (str): 証券コード
+
+    Returns:
+        Decimal: 最新株価。取得できない場合は0
+    """
+    try:
+        # 日本時間で1週間分のデータ期間を設定
+        jst = pytz.timezone("Asia/Tokyo")
+        now = datetime.now(jst)
+        end_date = now.strftime("%Y-%m-%d")
+        start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+
+        # 非同期でJ-Quants APIを呼び出し
+        prices = await jquants_client.get_prices(symbol=symbol, start_date=start_date, end_date=end_date)
+
+        # 最新の株価を返す
+        if prices and len(prices) > 0:
+            return Decimal(str(prices[0].get("Close", "0")))
+        return Decimal("0")
+
+    except Exception as e:
+        print(f"Error fetching Japan stock price for {symbol}: {str(e)}")
+        return Decimal("0")
+
+
 async def get_us_stock_price(symbol: str) -> Decimal:
     """
     米国株・ETFの株価を取得します。
@@ -68,19 +98,8 @@ async def get_current_price(stock: Stock) -> Decimal:
     """
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
-            # 日本株の場合はJ-Quants APIを使用
-            jst = pytz.timezone("Asia/Tokyo")
-            now = datetime.now(jst)
-            end_date = now.strftime("%Y-%m-%d")
-            start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-
-            # 非同期でJ-Quants APIを呼び出し
-            prices = await jquants_client.get_prices(symbol=stock.symbol, start_date=start_date, end_date=end_date)
-
-            # 最新の株価を返す
-            if prices and len(prices) > 0:
-                return Decimal(str(prices[0].get("Close", "0")))
-            return Decimal("0")
+            # 日本株の場合
+            return await get_japan_stock_price(stock.symbol)
         elif stock.currency == "USD":
             # 米国株の株価を取得
             return await get_us_stock_price(stock.symbol)

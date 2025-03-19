@@ -9,7 +9,7 @@ import pytz
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..jquants import jquants_client
+from .jquants_service import jquants_client
 from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service

@@ -160,7 +160,7 @@ class Transaction(Base):
     adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
     transaction_date = Column(DateTime(timezone=True), default=get_jst_now)  # [USER_INPUT] トランザクション日時（JST固定）
     account_type = Column(
-        Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", name="account_types"), nullable=False
+        Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)","特定", name="account_types"), nullable=False
     )  # [USER_INPUT] 預かり種別
     fee = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 手数料
     tax = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 税金

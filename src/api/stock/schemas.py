@@ -29,6 +29,8 @@ class AccountType(str, Enum):
     OLD_NISA = "旧NISA"
     NISA_TSUMITATE = "NISA(つみたて投資枠)"
     NISA_GROWTH = "NISA(成長投資枠)"
+    SPECIFIC = "特定"
+
 
 
 class StockBase(BaseModel):

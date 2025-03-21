@@ -100,7 +100,7 @@ async def test_portfolio_update_with_price_changes(
     期待される動作:
     - POSTリクエストが成功すること（ステータス200）
     - 日本株: 3,100円 × 100株 = 310,000円
-    - 米国株: 240.0 USD × 10株 × 150.0 JPY = 360,000円
+    - 米国株: 250.0 USD × 10株 × 150.0 JPY = 375,000円
     - 配当金額が正しく計上されていること
     """
     # 配当データを登録
@@ -135,16 +135,16 @@ async def test_portfolio_update_with_price_changes(
     created_summary = response.json()
 
     # 期待値の確認
-    assert Decimal(str(created_summary["total_market_value"])) == Decimal("670000.00")  # 310,000 + 360,000
+    assert Decimal(str(created_summary["total_market_value"])) == Decimal("685000.00")  # 310,000 + 375,000
     assert Decimal(str(created_summary["total_cost"])) == Decimal("660540.00")  # 取得価額の合計
-    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal(str(670000 - 660540))  # 時価総額 - 取得価額
+    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal("24460.00")  # 685,000 - 660,540
     assert Decimal(str(created_summary["total_dividend"])) == Decimal("2000.00")  # (1000 - 200) + (1500 - 300)
 
     # 市場別保有額の確認
     assert "JPX" in created_summary["holdings_by_market"]
     assert "NASDAQ" in created_summary["holdings_by_market"]
     assert Decimal(str(created_summary["holdings_by_market"]["JPX"])) == Decimal("310000.00")
-    assert Decimal(str(created_summary["holdings_by_market"]["NASDAQ"])) == Decimal("360000.00")
+    assert Decimal(str(created_summary["holdings_by_market"]["NASDAQ"])) == Decimal("375000.00")
 
     # 通貨別保有額の確認
     assert "JPY" in created_summary["holdings_by_currency"]

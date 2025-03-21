@@ -32,7 +32,6 @@ class AccountType(str, Enum):
     SPECIFIC = "特定"
 
 
-
 class StockBase(BaseModel):
     symbol: str
     name: str

@@ -196,9 +196,14 @@ MOCK_STOCK_OVERVIEW_RESPONSE = {
     "Industry": "Consumer Electronics",
 }
 
-# 株価モックデータ（holdings_serviceで使用）
-MOCK_JAPAN_STOCK_PRICE = Decimal("3100.0")  # 日本株価格
-MOCK_US_STOCK_PRICE = Decimal("240.0")  # 米国株価格（USD）
+# 株価モックデータ（初期価格）
+MOCK_JAPAN_STOCK_PRICE_INITIAL = Decimal("3000.0")  # 日本株価格（初期）
+MOCK_US_STOCK_PRICE_INITIAL = Decimal("240.0")  # 米国株価格（USD）（初期）
+
+# 株価モックデータ（更新後価格）
+MOCK_JAPAN_STOCK_PRICE_UPDATED = Decimal("3100.0")  # 日本株価格（更新後）
+MOCK_US_STOCK_PRICE_UPDATED = Decimal("250.0")  # 米国株価格（USD）（更新後）
+
 MOCK_USD_JPY_RATE_RESPONSE = Decimal("150.0")  # 1 USD = 150.0 JPY
 
 MOCK_ETF_SEARCH_RESPONSE = {
@@ -239,6 +244,15 @@ async def mock_external_apis(mocker):
     - AlphaVantage API（為替レート取得）
     - holdings_service（日本株・米国株の株価取得関数）
 
+    Note:
+        株価取得関数は呼び出し順序によって異なる値を返します：
+        - get_japan_stock_price:
+            1回目: MOCK_JAPAN_STOCK_PRICE_INITIAL (3000.0)
+            2回目以降: MOCK_JAPAN_STOCK_PRICE_UPDATED (3100.0)
+        - get_us_stock_price:
+            1回目: MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE (36000.0)
+            2回目以降: MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE (37500.0)
+
     Args:
         mocker: モッカーフィクスチャー
 
@@ -252,12 +266,14 @@ async def mock_external_apis(mocker):
     mock_search = mocker.patch("stock.services.stock_service.fetch_us_stock_search", autospec=True)
     mock_search.return_value = MOCK_ETF_SEARCH_RESPONSE
 
-    # holdings_serviceの株価取得関数をモック化
+    # holdings_serviceの株価取得関数をモック化（初回と2回目以降で異なる値を返す）
     mock_japan_price = mocker.patch("stock.services.holding_service.get_japan_stock_price", autospec=True)
-    mock_japan_price.return_value = MOCK_JAPAN_STOCK_PRICE
+    mock_japan_price.side_effect = [MOCK_JAPAN_STOCK_PRICE_INITIAL] + [MOCK_JAPAN_STOCK_PRICE_UPDATED] * 10
 
     mock_us_price = mocker.patch("stock.services.holding_service.get_us_stock_price", autospec=True)
-    mock_us_price.return_value = MOCK_US_STOCK_PRICE * MOCK_USD_JPY_RATE_RESPONSE  # 円換算価格
+    mock_us_price.side_effect = [MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE] + [
+        MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE
+    ] * 10
 
     mock_usdjpy = mocker.patch("stock.services.alphavantage_service.fetch_usdjpy_rate", autospec=True)
     mock_usdjpy.return_value = MOCK_USD_JPY_RATE_RESPONSE

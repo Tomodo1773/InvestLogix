@@ -2,8 +2,12 @@ from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .holding_service import update_single_holding_pl
+
 from .. import models, schemas
+from .holding_service import (
+    calculate_holding_from_transactions,
+    update_single_holding_pl,
+)
 from .stock_service import StockService
 
 
@@ -49,33 +53,40 @@ class TransactionService:
         return db_transaction
 
     async def _handle_buy_transaction(self, holding, transaction, user_id):
+        # トランザクション履歴から最新の保有情報を計算
+        new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
+            self.db, user_id, transaction.symbol
+        )
+
         if holding:
-            # 既存の保有がある場合は更新
-            new_quantity = holding.quantity + transaction.quantity
-            new_total_cost = holding.total_cost + (transaction.quantity * transaction.price)
+            # 既存の保有を更新
             holding.quantity = new_quantity
+            holding.average_cost = new_average_cost
             holding.total_cost = new_total_cost
-            holding.average_cost = new_total_cost / new_quantity
         else:
             # 新規保有の作成
             holding = models.Holding(
                 user_id=user_id,
                 symbol=transaction.symbol,
-                quantity=transaction.quantity,
-                average_cost=transaction.price,
-                total_cost=transaction.quantity * transaction.price,
+                quantity=new_quantity,
+                average_cost=new_average_cost,
+                total_cost=new_total_cost,
             )
             self.db.add(holding)
 
     async def _handle_sell_transaction(self, holding, transaction):
+        # トランザクション履歴から最新の保有情報を計算
+        new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
+            self.db, holding.user_id, transaction.symbol
+        )
+
         # 売却による実現損益の計算
         realized_pl_for_sale = (transaction.price - holding.average_cost) * transaction.quantity
 
-        # 保有数量の更新
-        holding.quantity -= transaction.quantity
-
-        # 残りの保有情報を更新（数量が0でも保持）
-        holding.total_cost = holding.average_cost * holding.quantity
+        # 保有情報の更新
+        holding.quantity = new_quantity
+        holding.average_cost = new_average_cost
+        holding.total_cost = new_total_cost
 
         # 実現損益の更新
         if holding.realized_pl is None:

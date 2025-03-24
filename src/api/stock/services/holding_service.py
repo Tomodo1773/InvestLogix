@@ -6,9 +6,10 @@ from typing import List
 import pandas as pd
 import pandas_datareader.data as web
 import pytz
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .. import models
 from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
@@ -107,48 +108,84 @@ async def get_current_price(stock: Stock) -> Decimal:
     return Decimal("0")
 
 
-async def calculate_holding_pl(db: AsyncSession, user_id: int, symbol: str, stock: Stock) -> Holding:
-    """
-    指定された銘柄の保有損益を計算します。
-    データベースへの保存は行いません。
+async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, symbol: str):
+    """トランザクション履歴から保有数量と取得価格を計算する"""
+    # 購入トランザクションの集計
+    buy_query = select(
+        func.sum(models.Transaction.quantity).label("total_quantity"),
+        func.sum(models.Transaction.quantity * models.Transaction.price).label("total_cost"),
+    ).where(
+        models.Transaction.user_id == user_id,
+        models.Transaction.symbol == symbol,
+        models.Transaction.transaction_type == "buy",
+    )
+    buy_result = await db.execute(buy_query)
+    buy_data = buy_result.fetchone()
+    total_buy_quantity = buy_data.total_quantity or 0
+    total_buy_cost = buy_data.total_cost or 0
 
-    Args:
-        db (AsyncSession): 非同期データベースセッション
-        user_id (int): ユーザーID
-        symbol (str): 銘柄コード
-        stock (Stock): 銘柄情報
+    # 売却トランザクションの集計
+    sell_query = select(func.sum(models.Transaction.quantity)).where(
+        models.Transaction.user_id == user_id,
+        models.Transaction.symbol == symbol,
+        models.Transaction.transaction_type == "sell",
+    )
+    sell_result = await db.execute(sell_query)
+    total_sell_quantity = sell_result.scalar() or 0
 
-    Returns:
-        Holding: 損益計算後の保有情報
-    """
-    # 保有情報を取得
-    stmt = select(Holding).filter(Holding.user_id == user_id, Holding.symbol == symbol)
-    result = await db.execute(stmt)
-    holding = result.scalar_one_or_none()
+    # 現在の保有数量と平均取得単価を計算
+    current_quantity = total_buy_quantity - total_sell_quantity
+    average_cost = total_buy_cost / total_buy_quantity if total_buy_quantity > 0 else 0
+    current_total_cost = current_quantity * average_cost
 
-    if not holding:
-        return None
+    return current_quantity, average_cost, current_total_cost
 
-    # 最新株価を取得
+
+async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> bool:
+    """保有銘柄の損益情報を計算して更新する"""
+    # 銘柄情報を取得
+    stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
+    stock_result = await db.execute(stock_query)
+    stock = stock_result.scalar_one_or_none()
+    if not stock:
+        return False
+
+    # トランザクション履歴から最新の保有情報を取得
+    new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
+        db, holding.user_id, holding.symbol
+    )
+
+    # 保有情報を更新（数量、平均取得単価、取得価格合計のみ）
+    holding.quantity = new_quantity
+    holding.average_cost = new_average_cost
+    holding.total_cost = new_total_cost
+
+    # 現在値を取得
     current_price = await get_current_price(stock)
+    if current_price > 0:
+        holding.current_price = current_price
 
-    # 現在値情報を更新
-    holding.current_price = current_price
-    holding.market_value = current_price * holding.quantity
-    holding.unrealized_pl = holding.market_value + holding.realized_pl + holding.total_dividend - holding.total_cost
+    # 現在値がない場合は損益計算をスキップ
+    if holding.current_price is None:
+        return False
 
-    # パーセンテージ計算（データベースの制約に合わせて範囲を制限）
-    if holding.total_cost != 0:
-        pl_percentage = holding.unrealized_pl / holding.total_cost * 100
-        if pl_percentage > Decimal("999.99"):
-            pl_percentage = Decimal("999.99")
-        elif pl_percentage < Decimal("-999.99"):
-            pl_percentage = Decimal("-999.99")
-        holding.unrealized_pl_percentage = pl_percentage
-    else:
-        holding.unrealized_pl_percentage = Decimal("0")
+    # 時価評価額の計算
+    holding.market_value = holding.current_price * holding.quantity
 
-    return holding
+    # 評価損益の計算（実現損益と配当は既存の値を使用）
+    holding.unrealized_pl = (
+        holding.market_value
+        + (holding.realized_pl or Decimal("0"))
+        + (holding.total_dividend or Decimal("0"))
+        - holding.total_cost
+    )
+
+    # 評価損益率の計算（取得価格が0の場合は0%とする）
+    holding.unrealized_pl_percentage = (
+        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
+    )
+
+    return True
 
 
 async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Holding:
@@ -163,16 +200,17 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     Returns:
         Holding: 更新された保有情報
     """
-    # 銘柄情報を取得
-    stmt = select(Stock).filter(Stock.symbol == symbol)
-    result = await db.execute(stmt)
-    stock = result.scalar_one_or_none()
+    # 保有情報を取得
+    holding_query = select(Holding).where(Holding.user_id == user_id, Holding.symbol == symbol)
+    result = await db.execute(holding_query)
+    holding = result.scalar_one_or_none()
 
-    if not stock:
+    if not holding:
         return None
 
-    holding = await calculate_holding_pl(db, user_id, symbol, stock)
-    if holding:
+    # 損益情報を更新
+    updated = await calculate_holding_pl(db, holding)
+    if updated:
         await db.commit()
         await db.refresh(holding)
 
@@ -194,19 +232,11 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
     holdings = await list_holdings(db, user_id)
     updated_holdings = []
 
-    # 銘柄情報を事前に取得
-    symbols = [h.symbol for h in holdings]
-    stmt = select(Stock).filter(Stock.symbol.in_(symbols))
-    result = await db.execute(stmt)
-    stocks = {stock.symbol: stock for stock in result.scalars()}
-
     # 各銘柄を更新
     for holding in holdings:
-        stock = stocks.get(holding.symbol)
-        if stock:
-            updated = await calculate_holding_pl(db, user_id, holding.symbol, stock)
-            if updated:
-                updated_holdings.append(updated)
+        updated = await calculate_holding_pl(db, holding)
+        if updated:
+            updated_holdings.append(holding)
 
     # 一括でコミット
     await db.commit()

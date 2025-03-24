@@ -3,6 +3,7 @@ import json
 import requests
 
 from ..database import settings
+from ..utils.cache import timed_cache
 
 
 async def fetch_us_stock_overview(symbol: str) -> dict:
@@ -21,9 +22,11 @@ async def fetch_us_stock_search(symbol: str) -> dict:
     return data
 
 
+@timed_cache(seconds=3600)  # 1時間キャッシュ
 async def fetch_usdjpy_rate() -> float | None:
     """
     Alpha Vantage APIを使用して現在のドル円レートを取得します
+    レートリミット対策として1時間キャッシュします
 
     Returns:
         float | None: 現在のドル円レート。エラーの場合はNone
@@ -32,11 +35,11 @@ async def fetch_usdjpy_rate() -> float | None:
     url = (
         f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey={api_key}"
     )
-    response = requests.get(url)
-    data = json.loads(response.text)
     try:
+        response = requests.get(url)
+        data = json.loads(response.text)
         return float(data["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
-    except (KeyError, ValueError):
+    except (KeyError, ValueError, requests.RequestException):
         return None
 
 

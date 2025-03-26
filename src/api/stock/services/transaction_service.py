@@ -1,7 +1,9 @@
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import func
 
 from .. import models, schemas
 from .holding_service import (
@@ -80,19 +82,24 @@ class TransactionService:
             self.db, holding.user_id, transaction.symbol
         )
 
-        # 売却による実現損益の計算
+        # 売却による実現損益の計算と保存
         realized_pl_for_sale = (transaction.price - holding.average_cost) * transaction.quantity
+        transaction.realized_pl = realized_pl_for_sale
 
         # 保有情報の更新
         holding.quantity = new_quantity
         holding.average_cost = new_average_cost
         holding.total_cost = new_total_cost
 
-        # 実現損益の更新
-        if holding.realized_pl is None:
-            holding.realized_pl = realized_pl_for_sale
-        else:
-            holding.realized_pl += realized_pl_for_sale
+        # 実現損益の再計算
+        realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
+            models.Transaction.user_id == holding.user_id,
+            models.Transaction.symbol == holding.symbol,
+            models.Transaction.transaction_type == "sell",
+        )
+        result = await self.db.execute(realized_pl_query)
+        total_realized_pl = result.scalar() or Decimal("0")
+        holding.realized_pl = total_realized_pl
 
     async def list_transactions(self, user_id: int) -> List[models.Transaction]:
         query = (

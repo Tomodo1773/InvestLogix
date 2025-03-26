@@ -112,7 +112,7 @@ class HoldingBase(BaseModel):
 class Holding(HoldingBase):
     user_id: int
     last_updated: datetime
-    stock_name: Optional[str] = None  # 銘柄名を追加
+    stock_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -126,6 +126,7 @@ class TransactionBase(BaseModel):
     account_type: AccountType
     fee: Decimal
     tax: Decimal
+    realized_pl: Optional[Decimal] = None
 
 
 class Transaction(TransactionBase):

@@ -165,6 +165,11 @@ class Transaction(Base):
     )  # [USER_INPUT] 預かり種別
     fee = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 手数料
     tax = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 税金
+    realized_pl = Column(
+        Numeric(10, 2),
+        default=Decimal("0"),
+        nullable=False,
+    )  # [AUTO_CALC] この取引での実現損益（売却時のみ。買付時は0）
 
     user = relationship("User", back_populates="transactions")
     stock = relationship("Stock", back_populates="transactions")

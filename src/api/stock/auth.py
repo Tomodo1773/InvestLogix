@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -19,7 +19,8 @@ SECRET_KEY = settings.JWT_SECRET_KEY
 ALGORITHM = settings.JWT_ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/token")
+# OAuth2スキームを更新してOAuthエンドポイントを指すように
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oauth/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -87,23 +88,36 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 async def get_current_user(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    token: Annotated[str | None, Depends(oauth2_scheme)] = None,
+    access_token_cookie: Annotated[str | None, Cookie()] = None,
+    authorization: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
 ) -> schemas.User:
     """
-    現在のユーザーを取得する
-    - token: リクエストから取得したJWTトークン
-    - db: データベースセッション
-    - 戻り値: 認証されたユーザー情報
-    - エラー: 認証失敗時は401 Unauthorized
+    現在のユーザーを取得する。以下の順序で認証を試みる：
+    1. Bearerトークン（OAuth2）
+    2. クッキーのアクセストークン
+    3. Authorizationヘッダー
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+    # トークンの取得を試みる（優先順位順）
+    if token:
+        jwt_token = token
+    elif access_token_cookie:
+        # クッキーからBearerプレフィックスを除去
+        jwt_token = access_token_cookie.replace("Bearer ", "")
+    elif authorization and authorization.startswith("Bearer "):
+        jwt_token = authorization.replace("Bearer ", "")
+    else:
+        raise credentials_exception
+
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception

@@ -253,6 +253,13 @@ class PortfolioSummary(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """ログインリクエスト用のスキーマ"""
+
+    username: str
+    password: str
+
+
+class LoginRequest(BaseModel):
     """ログインリクエスト"""
 
     username: str

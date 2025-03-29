@@ -127,8 +127,9 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
         await AuthService(session).create_user(UserCreate(**user_data))
         await session.commit()
 
-    # ログインして認証トークンを取得
-    response = await client.post("/api/v1/token", data={"username": user_data["username"], "password": user_data["password"]})
+    # ログインして認証トークンを取得（JSON形式でリクエスト）
+    login_data = {"username": user_data["username"], "password": user_data["password"]}
+    response = await client.post("/api/v1/token", json=login_data)
     return response.json()["access_token"]
 
 

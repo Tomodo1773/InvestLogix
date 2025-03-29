@@ -78,8 +78,9 @@ async def test_login(client: AsyncClient, db_session: AsyncSession):
     # ユーザーを作成
     await AuthService(db_session).create_user(UserCreate(**user_data))
 
-    # ログイン
-    response = await client.post("/api/v1/token", data={"username": user_data["username"], "password": user_data["password"]})
+    # ログイン（JSON形式でリクエスト）
+    login_data = {"username": user_data["username"], "password": user_data["password"]}
+    response = await client.post("/api/v1/token", json=login_data)
 
     # レスポンス検証
     assert response.status_code == 200
@@ -102,8 +103,8 @@ async def test_login_invalid_credentials(client: AsyncClient):
     # テストデータ準備
     invalid_credentials = {"username": "nonexistent", "password": "wrongpassword"}
 
-    # ログイン試行
-    response = await client.post("/api/v1/token", data=invalid_credentials)
+    # ログイン試行（JSON形式でリクエスト）
+    response = await client.post("/api/v1/token", json=invalid_credentials)
 
     # レスポンス検証
     assert response.status_code == 401

@@ -44,7 +44,7 @@ class TransactionService:
         elif transaction.transaction_type == "sell":
             if not holding or holding.quantity < transaction.quantity:
                 return None
-            await self._handle_sell_transaction(holding, transaction)
+            await self._handle_sell_transaction(holding, transaction, db_transaction)
 
         await self.db.commit()
         await self.db.refresh(db_transaction)
@@ -76,7 +76,7 @@ class TransactionService:
             )
             self.db.add(holding)
 
-    async def _handle_sell_transaction(self, holding, transaction):
+    async def _handle_sell_transaction(self, holding, transaction, db_transaction):
         # トランザクション履歴から最新の保有情報を計算
         new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
             self.db, holding.user_id, transaction.symbol
@@ -84,7 +84,8 @@ class TransactionService:
 
         # 売却による実現損益の計算と保存
         realized_pl_for_sale = (transaction.price - holding.average_cost) * transaction.quantity
-        transaction.realized_pl = realized_pl_for_sale
+        # TransactionCreateオブジェクトではなく、DBモデルに実現損益を設定
+        db_transaction.realized_pl = realized_pl_for_sale
 
         # 保有情報の更新
         holding.quantity = new_quantity

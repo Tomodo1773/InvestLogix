@@ -2,7 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import authenticate_user, create_access_token  # この参照は親モジュールからなので変更なし
+from ..auth import (  # get_current_userをインポート
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+)
 from ..database import get_db  # この参照は親モジュールからなので変更なし
 from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
@@ -78,3 +82,14 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     except ValueError:
         # ValueErrorの内容に関わらず統一したエラーメッセージを返す
         raise HTTPException(status_code=400, detail="Username or email already registered")
+
+
+@router.get("/me", response_model=User)
+async def verify_token(current_user: User = Depends(get_current_user)):
+    """
+    現在のユーザーの認証状態を確認する
+    - トークンはCookieから取得（get_current_userで処理）
+    - 認証成功時: ユーザー情報を返却
+    - 認証失敗時: 401 Unauthorized（get_current_user内で例外発生）
+    """
+    return current_user

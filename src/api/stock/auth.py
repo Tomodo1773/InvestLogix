@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header, HTTPException, status
+from fastapi import Cookie, Depends, Header, HTTPException, status, Request # Request をインポート
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -88,8 +88,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 async def get_current_user(
-    token: Annotated[str | None, Depends(oauth2_scheme)] = None,
-    access_token_cookie: Annotated[str | None, Cookie()] = None,
+    request: Request, # Requestオブジェクトを先頭に移動
+    access_token_cookie: Annotated[str | None, Cookie(alias="token")] = None,
+    # token: Annotated[str | None, Depends(oauth2_scheme)] = None, # 一時的にコメントアウト
     authorization: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
 ) -> schemas.User:
@@ -99,6 +100,15 @@ async def get_current_user(
     2. クッキーのアクセストークン
     3. Authorizationヘッダー
     """
+    # デバッグ情報の追加
+    print("=== get_current_user called ===")
+    # print(f"token: {token}") # NameErrorが発生するためコメントアウト
+    print(f"access_token_cookie: {access_token_cookie}")
+    print(f"access_token_cookie type: {type(access_token_cookie)}")
+    if access_token_cookie:
+        print(f"access_token_cookie starts with 'Bearer ': {access_token_cookie.startswith('Bearer ')}")
+    print(f"authorization: {authorization}")
+    
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -106,26 +116,57 @@ async def get_current_user(
     )
 
     # トークンの取得を試みる（優先順位順）
-    if token:
-        jwt_token = token
-    elif access_token_cookie:
-        # クッキーからBearerプレフィックスを除去
-        jwt_token = access_token_cookie.replace("Bearer ", "")
+    # if token: # 一時的にコメントアウト
+    #     jwt_token = token
+    #     print("OAuth2トークンを使用")
+    # el
+    jwt_token = None  # 初期化して未定義エラーを防止
+    
+    if access_token_cookie: # if に変更
+        # クッキーからトークンを取得（Bearerプレフィックスがある場合は削除）
+        if access_token_cookie.startswith("Bearer "):
+            jwt_token = access_token_cookie.replace("Bearer ", "")
+        else:
+            jwt_token = access_token_cookie
+        print("クッキートークンを使用")
+        print(f"クッキートークン: {jwt_token}")
     elif authorization and authorization.startswith("Bearer "):
         jwt_token = authorization.replace("Bearer ", "")
+        print("Authorizationヘッダートークンを使用")
     else:
+        print("認証情報が見つかりません")
         raise credentials_exception
 
+    # すべてのリクエストヘッダーを表示
+    print("=== リクエストヘッダー ===")
+    # from fastapi import Request # 不要なので削除
+    # request = Request.context.get("request") # 引数のrequestを使う
+    if request: # 引数のrequestをチェック
+        print("Request headers:")
+        for key, value in request.headers.items(): # 引数のrequest.headersを使用
+            print(f"{key}: {value}")
+    else:
+        print("Request object not available")
+
     try:
+        if not jwt_token:
+            print("jwt_tokenが空です")
+            raise credentials_exception
+            
+        print(f"JWT Token: {jwt_token}")
         payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
+            print("トークンにユーザー名が含まれていません")
             raise credentials_exception
         token_data = schemas.TokenData(username=username)
-    except JWTError:
+    except JWTError as e:
+        print(f"JWTエラー: {e}")
         raise credentials_exception
 
     user = await get_user(db, username=token_data.username)
     if user is None:
+        print(f"ユーザーが見つかりません: {token_data.username}")
         raise credentials_exception
+    print(f"認証成功: ユーザー {user.username}")
     return user

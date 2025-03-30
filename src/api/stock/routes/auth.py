@@ -22,6 +22,7 @@ async def login_for_access_token(response: Response, login_data: LoginRequest, d
     - 認証成功時: アクセストークンを返却（レスポンスボディとクッキーの両方）
     - 認証失敗時: 401 Unauthorized
     """
+    print("=== login_for_access_token ===")
     user = await authenticate_user(db, login_data.username, login_data.password)
     if not user:
         raise HTTPException(
@@ -32,13 +33,16 @@ async def login_for_access_token(response: Response, login_data: LoginRequest, d
     access_token = create_access_token(data={"sub": user.username})
 
     # HTTPOnlyクッキーにトークンを設定
+    # ローカル環境でもSecure=Trueを設定するとブラウザによってはクッキーが拒否される可能性があるため、
+    # 開発環境ではSameSite="lax"を使用し、本番環境ではSameSite="none"とSecure=Trueを使用することを推奨
     response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
+        key="token",
+        value=access_token,  # Bearer プレフィックスを削除
         httponly=True,
-        secure=True,  # HTTPS環境での使用を想定
-        samesite="strict",
+        secure=False,  # ローカル環境ではfalse
+        samesite="lax",  # ローカル環境では"lax"に戻す
         max_age=3600,  # 1時間
+        path="/",  # パスを追加
     )
 
     return {"access_token": access_token, "token_type": "bearer"}

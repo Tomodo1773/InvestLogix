@@ -46,7 +46,7 @@ async def update_portfolio_summary(
 async def get_portfolio_history(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     """
     ポートフォリオの過去の履歴をすべて取得する
-    - 日付順（降順）でソートされた履歴データを返却
+    - 日付順（昇順）でソートされた履歴データを返却
     - 各履歴には以下の情報が含まれる:
         - 記録日時
         - 総コスト

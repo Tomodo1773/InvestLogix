@@ -60,11 +60,14 @@ class PortfolioService:
         return schemas.PortfolioSummary(**summary)
 
     async def get_portfolio_history(self, user_id: int) -> List[models.PortfolioHistory]:
-        """ポートフォリオの履歴一覧を取得"""
+        """ポートフォリオの履歴一覧を取得
+
+        日付の昇順（古い順）でポートフォリオの履歴を返します。
+        """
         query = (
             select(models.PortfolioHistory)
             .where(models.PortfolioHistory.user_id == user_id)
-            .order_by(models.PortfolioHistory.date.desc())
+            .order_by(models.PortfolioHistory.date.asc())  # 降順(desc)から昇順(asc)に変更
         )
         result = await self.db.execute(query)
         return result.scalars().all()

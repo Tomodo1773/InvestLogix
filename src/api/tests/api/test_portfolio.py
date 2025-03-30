@@ -168,7 +168,7 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
     - まずPOSTでポートフォリオ履歴を複数レコード作成
     - 履歴取得APIを呼び出してステータスコード200を確認
     - 返されたデータが配列であることを確認
-    - データが日付降順でソートされていることを確認
+    - データが日付昇順でソートされていることを確認
     - 各履歴レコードの構造と値が正しいことを確認
 
     Args:
@@ -198,9 +198,9 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
     # 少なくとも3つの履歴レコードがあることを確認
     assert len(data) >= 3
 
-    # 日付降順でソートされていることを確認
+    # 日付昇順でソートされていることを確認
     for i in range(len(data) - 1):
-        assert data[i]["date"] >= data[i + 1]["date"]
+        assert data[i]["date"] <= data[i + 1]["date"]
 
     # 各レコードの構造を確認
     for record in data:

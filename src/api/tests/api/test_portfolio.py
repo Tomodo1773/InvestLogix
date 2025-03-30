@@ -158,3 +158,63 @@ async def test_portfolio_update_with_price_changes(
     assert get_summary["total_market_value"] == created_summary["total_market_value"]
     assert get_summary["total_cost"] == created_summary["total_cost"]
     assert get_summary["total_dividend"] == created_summary["total_dividend"]
+
+
+@pytest.mark.asyncio
+async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_data):
+    """ポートフォリオ履歴取得APIのテスト
+
+    期待する動作:
+    - まずPOSTでポートフォリオ履歴を複数レコード作成
+    - 履歴取得APIを呼び出してステータスコード200を確認
+    - 返されたデータが配列であることを確認
+    - データが日付降順でソートされていることを確認
+    - 各履歴レコードの構造と値が正しいことを確認
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
+        setup_portfolio_test_data: テストデータ準備用フィクスチャー
+    """
+    # まず複数の履歴データを作成（3回ポートフォリオを更新）
+    for _ in range(3):
+        # ホールディングの更新
+        await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+        await client.post("/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+
+        # ポートフォリオ履歴を作成
+        await client.post("/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # 履歴取得APIを呼び出す
+    response = await client.get("/api/v1/portfolio/history", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+
+    # データが配列であることを確認
+    assert isinstance(data, list)
+
+    # 少なくとも3つの履歴レコードがあることを確認
+    assert len(data) >= 3
+
+    # 日付降順でソートされていることを確認
+    for i in range(len(data) - 1):
+        assert data[i]["date"] >= data[i + 1]["date"]
+
+    # 各レコードの構造を確認
+    for record in data:
+        assert "date" in record
+        assert "total_cost" in record
+        assert "total_market_value" in record
+        assert "total_unrealized_pl" in record
+        assert "total_unrealized_pl_percentage" in record
+        assert "total_realized_pl" in record
+        assert "total_dividend" in record
+
+    # 値の正確性をチェック（最新のレコードを使用）
+    latest_record = data[0]
+    assert Decimal(str(latest_record["total_cost"])) == Decimal("660540.00")
+    assert Decimal(str(latest_record["total_market_value"])) == Decimal("685000.00")
+    assert Decimal(str(latest_record["total_unrealized_pl"])) == Decimal("24460.00")
+    assert Decimal(str(latest_record["total_dividend"])) == Decimal("2000.00")

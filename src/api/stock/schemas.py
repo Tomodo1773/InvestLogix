@@ -169,6 +169,21 @@ class Dividend(DividendBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class PortfolioHistoryResponse(BaseModel):
+    """ポートフォリオ履歴のレスポンスモデル"""
+
+    date: datetime
+    total_cost: float
+    total_market_value: float
+    total_unrealized_pl: float
+    total_unrealized_pl_percentage: float
+    total_realized_pl: float
+    total_dividend: float
+
+    class Config:
+        from_attributes = True
+
+
 # レスポンスモデル
 class StockWithRelations(Stock):
     jpx_detail: Optional[StockJPXDetail] = None

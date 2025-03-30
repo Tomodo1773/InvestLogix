@@ -55,7 +55,7 @@ class PortfolioService:
         }
 
     async def get_portfolio_summary(self, user_id: int) -> schemas.PortfolioSummary:
-        """ポートフォリオのサマリー情報を取得"""
+        """ポートフォリオのサマリー情報を計算して取得"""
         summary = await self._calculate_portfolio_summary(user_id)
         return schemas.PortfolioSummary(**summary)
 
@@ -70,7 +70,7 @@ class PortfolioService:
         return result.scalars().all()
 
     async def create_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
-        """現在のポートフォリオ状態を履歴として保存"""
+        """現在のポートフォリオ状態を計算して履歴として保存"""
         summary = await self._calculate_portfolio_summary(user_id)
 
         portfolio_history = models.PortfolioHistory(

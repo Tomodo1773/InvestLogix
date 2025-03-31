@@ -58,13 +58,18 @@ class DividendService:
 
         return db_dividend
 
-    async def list_dividends(self, user_id: int) -> List[models.Dividend]:
+    async def list_dividends(self, user_id: int, symbol: Optional[str] = None) -> List[models.Dividend]:
         query = (
             select(models.Dividend, models.Stock.name)
             .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
             .where(models.Dividend.user_id == user_id)
-            .order_by(models.Dividend.payment_date.desc())
         )
+
+        # シンボルが指定されている場合は、フィルタリングを追加
+        if symbol:
+            query = query.where(models.Dividend.symbol == symbol)
+
+        query = query.order_by(models.Dividend.payment_date.desc())
         result = await self.db.execute(query)
         dividends = []
         for row in result:

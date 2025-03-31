@@ -102,7 +102,7 @@ class TransactionService:
         total_realized_pl = result.scalar() or Decimal("0")
         holding.realized_pl = total_realized_pl
 
-    async def list_transactions(self, user_id: int) -> List[models.Transaction]:
+    async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
         # ホールディングテーブルを結合して現在価格を取得するクエリに変更
         query = (
             select(models.Transaction, models.Stock.name, models.Holding.current_price)
@@ -112,8 +112,13 @@ class TransactionService:
                 (models.Holding.user_id == models.Transaction.user_id) & (models.Holding.symbol == models.Transaction.symbol),
             )
             .where(models.Transaction.user_id == user_id)
-            .order_by(models.Transaction.transaction_date.desc())
         )
+
+        # シンボルが指定されている場合は、フィルタリングを追加
+        if symbol:
+            query = query.where(models.Transaction.symbol == symbol)
+
+        query = query.order_by(models.Transaction.transaction_date.desc())
         result = await self.db.execute(query)
         transactions = []
         for row in result:

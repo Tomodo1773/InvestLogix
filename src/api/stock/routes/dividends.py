@@ -1,6 +1,6 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
@@ -33,13 +33,18 @@ async def create_dividend(
 
 
 @router.get("/", response_model=List[Dividend])
-async def list_dividends(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def list_dividends(
+    current_user: Annotated[User, Depends(get_current_user)],
+    symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
+    db: AsyncSession = Depends(get_db),
+):
     """
     ユーザーの配当履歴を取得する
     - 成功時: 配当情報のリストを返却（支払日降順）
+    - symbolパラメータを指定すると、該当する銘柄のみをフィルタリングして返却
     """
     dividend_service = DividendService(db)
-    return await dividend_service.list_dividends(current_user.user_id)
+    return await dividend_service.list_dividends(current_user.user_id, symbol)
 
 
 @router.get("/monthly", response_model=List[MonthlyDividend])

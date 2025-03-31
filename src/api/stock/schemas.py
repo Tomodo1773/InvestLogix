@@ -184,6 +184,13 @@ class PortfolioHistoryResponse(BaseModel):
         from_attributes = True
 
 
+class MonthlySummary(BaseModel):
+    """月次トランザクション集計のレスポンスモデル"""
+    year: int
+    month: int
+    total_purchase: dict[str, float]
+
+
 # レスポンスモデル
 class StockWithRelations(Stock):
     jpx_detail: Optional[StockJPXDetail] = None

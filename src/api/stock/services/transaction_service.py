@@ -1,7 +1,7 @@
 from decimal import Decimal
-from typing import List, Optional
+from typing import Dict, List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import func
 
@@ -116,3 +116,71 @@ class TransactionService:
             transaction.stock_name = row[1]
             transactions.append(transaction)
         return transactions
+
+    async def get_monthly_summary(self, user_id: int) -> List[Dict]:
+        """
+        ユーザーの月次トランザクション集計を取得する
+
+        Returns:
+            List[Dict]: 年月ごとの口座種別別購入金額集計
+        """
+        # 購入取引（transaction_type='buy'）のみを対象に集計
+        query = (
+            select(
+                extract("year", models.Transaction.transaction_date).label("year"),
+                extract("month", models.Transaction.transaction_date).label("month"),
+                models.Transaction.account_type,
+                func.sum(models.Transaction.price * models.Transaction.quantity).label("total_amount"),
+            )
+            .where(models.Transaction.user_id == user_id, models.Transaction.transaction_type == "buy")
+            .group_by(
+                extract("year", models.Transaction.transaction_date),
+                extract("month", models.Transaction.transaction_date),
+                models.Transaction.account_type,
+            )
+            .order_by("year", "month", models.Transaction.account_type)
+        )
+
+        result = await self.db.execute(query)
+        raw_data = result.all()
+
+        # 集計結果をまとめる
+        summary = {}
+        for row in raw_data:
+            year = int(row.year)
+            month = int(row.month)
+            account_type = row.account_type
+            amount = float(row.total_amount)
+
+            # アカウント名をAPIレスポンス用に変換
+            account_name = self._convert_account_type_name(account_type)
+
+            key = (year, month)
+            if key not in summary:
+                summary[key] = {
+                    "year": year,
+                    "month": month,
+                    "total_purchase": {
+                        "juniorNISA": 0.0,
+                        "oldNISA": 0.0,
+                        "NISAAccumulation": 0.0,
+                        "NISAGrowth": 0.0,
+                        "specific": 0.0,
+                    },
+                }
+
+            summary[key]["total_purchase"][account_name] = amount
+
+        # 日付順にソートして返す
+        return [summary[key] for key in sorted(summary.keys())]
+
+    def _convert_account_type_name(self, account_type: str) -> str:
+        """アカウント種別名をAPIレスポンス用に変換する"""
+        mapping = {
+            "ジュニアNISA": "juniorNISA",
+            "旧NISA": "oldNISA",
+            "NISA(つみたて投資枠)": "NISAAccumulation",
+            "NISA(成長投資枠)": "NISAGrowth",
+            "特定": "specific",
+        }
+        return mapping.get(account_type, account_type)

@@ -5,7 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import MonthlySummary, Transaction, TransactionCreate, User
+from ..schemas import (
+    MonthlySummary,
+    Transaction,
+    TransactionCreate,
+    User,
+    YearlySummary,
+)
 from ..services.stock_service import StockNotFoundError
 from ..services.transaction_service import TransactionService
 
@@ -57,3 +63,17 @@ async def get_monthly_transaction_summary(
     """
     transaction_service = TransactionService(db)
     return await transaction_service.get_monthly_summary(current_user.user_id)
+
+
+@router.get("/yearly-summary", response_model=List[YearlySummary])
+async def get_yearly_transaction_summary(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
+    """
+    年ごとのトランザクション集計を取得する
+
+    Returns:
+        List[YearlySummary]: 年ごとの口座種別別購入金額集計
+    """
+    transaction_service = TransactionService(db)
+    return await transaction_service.get_yearly_summary(current_user.user_id)

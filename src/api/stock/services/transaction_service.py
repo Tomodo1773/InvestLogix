@@ -174,6 +174,58 @@ class TransactionService:
         # 日付順にソートして返す
         return [summary[key] for key in sorted(summary.keys())]
 
+    async def get_yearly_summary(self, user_id: int) -> List[Dict]:
+        """
+        ユーザーの年次トランザクション集計を取得する
+
+        Returns:
+            List[Dict]: 年ごとの口座種別別購入金額集計
+        """
+        # 購入取引（transaction_type='buy'）のみを対象に集計
+        query = (
+            select(
+                extract("year", models.Transaction.transaction_date).label("year"),
+                models.Transaction.account_type,
+                func.sum(models.Transaction.price * models.Transaction.quantity).label("total_amount"),
+            )
+            .where(models.Transaction.user_id == user_id, models.Transaction.transaction_type == "buy")
+            .group_by(
+                extract("year", models.Transaction.transaction_date),
+                models.Transaction.account_type,
+            )
+            .order_by("year", models.Transaction.account_type)
+        )
+
+        result = await self.db.execute(query)
+        raw_data = result.all()
+
+        # 集計結果をまとめる
+        summary = {}
+        for row in raw_data:
+            year = int(row.year)
+            account_type = row.account_type
+            amount = float(row.total_amount)
+
+            # アカウント名をAPIレスポンス用に変換
+            account_name = self._convert_account_type_name(account_type)
+
+            if year not in summary:
+                summary[year] = {
+                    "year": year,
+                    "total_purchase": {
+                        "juniorNISA": 0.0,
+                        "oldNISA": 0.0,
+                        "NISAAccumulation": 0.0,
+                        "NISAGrowth": 0.0,
+                        "specific": 0.0,
+                    },
+                }
+
+            summary[year]["total_purchase"][account_name] = amount
+
+        # 年順にソートして返す
+        return [summary[year] for year in sorted(summary.keys())]
+
     def _convert_account_type_name(self, account_type: str) -> str:
         """アカウント種別名をAPIレスポンス用に変換する"""
         mapping = {

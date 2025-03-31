@@ -190,3 +190,46 @@ async def test_create_duplicate_stock(client: AsyncClient, db_session: AsyncSess
     # 2回目の登録でAPIが呼び出されないことを確認
     mock_external_apis["overview"].assert_not_called()
     mock_external_apis["search"].assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, auth_token: str):
+    """銘柄一覧取得テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 銘柄情報のリストを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        setup_portfolio_test_data: 事前に設定されたテストデータ
+        auth_token: 認証トークン
+    """
+    # setup_portfolio_test_dataにより既に日本株と米国株が登録されている
+
+    # 銘柄一覧を取得
+    response = await client.get("/api/v1/stocks/", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンス検証
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 2  # 最低2つの銘柄が登録されているはず
+
+    # 銘柄シンボルを抽出してチェック
+    symbols = {stock["symbol"] for stock in data}
+    assert "8058" in symbols  # 三菱商事
+    assert "AAPL" in symbols  # Apple
+
+    # 各銘柄の基本情報が含まれていることを確認
+    for stock in data:
+        if stock["symbol"] == "8058":
+            assert stock["name"] == "三菱商事"
+            assert stock["market"] == "JPX"
+            assert stock["security_type"] == "STOCK"
+            assert stock["currency"] == "JPY"
+        elif stock["symbol"] == "AAPL":
+            assert stock["name"] == "Apple Inc"
+            assert stock["market"] == "NASDAQ"
+            assert stock["security_type"] == "STOCK"
+            assert stock["currency"] == "USD"

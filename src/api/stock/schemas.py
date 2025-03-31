@@ -186,9 +186,25 @@ class PortfolioHistoryResponse(BaseModel):
 
 class MonthlySummary(BaseModel):
     """月次トランザクション集計のレスポンスモデル"""
+
     year: int
     month: int
     total_purchase: dict[str, float]
+
+
+class YearlySummary(BaseModel):
+    """年次トランザクション集計のレスポンスモデル"""
+
+    year: int
+    total_purchase: dict[str, float]
+
+
+class MonthlyDividend(BaseModel):
+    """月次配当集計のレスポンスモデル"""
+
+    year: int
+    month: int
+    total_dividend: float
 
 
 # レスポンスモデル

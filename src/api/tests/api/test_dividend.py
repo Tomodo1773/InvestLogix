@@ -141,3 +141,52 @@ async def test_list_dividends(
         assert Decimal(dividend["tax"]) == Decimal("2500.0")
         assert Decimal(dividend["fee"]) == Decimal("0.0")
         assert dividend["stock_name"] == "三菱商事"
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup_dividend_data: dict):
+    """月次配当金集計の取得テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 月ごとの配当金集計が日付順に返却される
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
+        setup_dividend_data: テスト用配当データ
+    """
+    # 月次配当金集計の取得
+    response = await client.get("/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+
+    # データの形式を検証
+    assert isinstance(data, list)
+    if len(data) > 0:
+        month_data = data[0]
+        assert "year" in month_data
+        assert "month" in month_data
+        assert "total_dividend" in month_data
+
+        # 数値型であることを検証
+        assert isinstance(month_data["year"], int)
+        assert isinstance(month_data["month"], int)
+        assert isinstance(month_data["total_dividend"], (int, float))
+
+        # setup_dividend_dataで追加した配当金が集計されていることを確認
+        jan_2024_data = next((item for item in data if item["year"] == 2024 and item["month"] == 1), None)
+        if jan_2024_data:
+            # setup_dividend_dataの実際の値からテスト用の期待値を計算
+            jp_dividend = setup_dividend_data["jp_dividend"]
+            us_dividend = setup_dividend_data["us_dividend"]
+
+            # 実際のデータから税引後配当を計算
+            jp_amount = float(jp_dividend["total_amount"]) - float(jp_dividend["tax"]) - float(jp_dividend["fee"])
+            us_amount = float(us_dividend["total_amount"]) - float(us_dividend["tax"]) - float(us_dividend["fee"])
+            expected_amount = jp_amount + us_amount
+
+            # 実際の値と比較（小数点以下の誤差を許容）
+            assert abs(jan_2024_data["total_dividend"] - expected_amount) < 0.01

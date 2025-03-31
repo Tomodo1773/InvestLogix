@@ -1,6 +1,6 @@
 from typing import List, Optional
 
-from sqlalchemy import select
+from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
@@ -72,3 +72,39 @@ class DividendService:
             dividend.stock_name = row[1]
             dividends.append(dividend)
         return dividends
+
+    async def get_monthly_dividends(self, user_id: int) -> List[dict]:
+        """月次の配当金集計を取得する
+
+        Args:
+            user_id: ユーザーID
+
+        Returns:
+            List[dict]: 月ごとの配当金集計のリスト（年月と配当金額）
+        """
+        # 月ごとに配当金を集計するクエリ
+        query = (
+            select(
+                extract("year", models.Dividend.payment_date).label("year"),
+                extract("month", models.Dividend.payment_date).label("month"),
+                func.sum(
+                    models.Dividend.total_amount
+                    - func.coalesce(models.Dividend.tax, 0)
+                    - func.coalesce(models.Dividend.fee, 0)
+                ).label("total_dividend"),
+            )
+            .where(models.Dividend.user_id == user_id)
+            .group_by(extract("year", models.Dividend.payment_date), extract("month", models.Dividend.payment_date))
+            .order_by(extract("year", models.Dividend.payment_date), extract("month", models.Dividend.payment_date))
+        )
+
+        result = await self.db.execute(query)
+
+        # 結果をディクショナリのリストとして返す
+        monthly_dividends = []
+        for row in result:
+            monthly_dividends.append(
+                {"year": int(row.year), "month": int(row.month), "total_dividend": float(row.total_dividend)}
+            )
+
+        return monthly_dividends

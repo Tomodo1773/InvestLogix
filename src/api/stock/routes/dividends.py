@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import Dividend, DividendCreate, User
+from ..schemas import Dividend, DividendCreate, MonthlyDividend, User
 from ..services.dividend_service import DividendService
 from ..services.stock_service import StockNotFoundError
 
@@ -40,3 +40,13 @@ async def list_dividends(current_user: Annotated[User, Depends(get_current_user)
     """
     dividend_service = DividendService(db)
     return await dividend_service.list_dividends(current_user.user_id)
+
+
+@router.get("/monthly", response_model=List[MonthlyDividend])
+async def get_monthly_dividends(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+    """
+    月次の配当金集計を取得する
+    - 成功時: 月ごとの配当金集計のリスト（年月と配当金額）を返却
+    """
+    dividend_service = DividendService(db)
+    return await dividend_service.get_monthly_dividends(current_user.user_id)

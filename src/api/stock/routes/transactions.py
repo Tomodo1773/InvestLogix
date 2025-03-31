@@ -46,6 +46,7 @@ async def list_transactions(current_user: Annotated[User, Depends(get_current_us
     """
     ユーザーの取引履歴を取得する
     - 成功時: 取引情報のリストを返却（日付降順）
+    - 返却データには、銘柄名(stock_name)と現在価格(current_price)も含まれる
     """
     transaction_service = TransactionService(db)
     return await transaction_service.list_transactions(current_user.user_id)

@@ -127,8 +127,8 @@ class PortfolioService:
             "total_dividend": portfolio_history.total_dividend,
         }
 
-        # LINE通知を送信
-        notification_sent = await NotificationService.send_line_notification(user_id, portfolio_data)
+        # LINE通知を送信（DBセッションも渡す）
+        notification_sent = await NotificationService.send_line_notification(user_id, portfolio_data, self.db)
 
         # ポートフォリオサマリーを取得
         summary = await self.get_portfolio_summary(user_id)

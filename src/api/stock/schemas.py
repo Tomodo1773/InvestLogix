@@ -93,6 +93,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     user_id: int
     created_at: datetime
+    line_user_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -303,3 +304,10 @@ class LoginRequest(BaseModel):
 
     username: str
     password: str
+
+
+# LINE UserID登録用のスキーマを追加
+class LineUserIdUpdate(BaseModel):
+    """LINE UserID更新リクエスト"""
+
+    line_user_id: str

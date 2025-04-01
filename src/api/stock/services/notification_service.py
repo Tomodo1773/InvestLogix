@@ -2,11 +2,15 @@ import logging
 import os
 from datetime import datetime
 from decimal import Decimal
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 import pytz
 from dotenv import load_dotenv
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import models
 
 # 環境変数のロード
 load_dotenv()
@@ -18,13 +22,14 @@ class NotificationService:
     """LINE通知サービス"""
 
     @staticmethod
-    async def send_line_notification(user_id: int, portfolio_data: Dict[str, Any]) -> bool:
+    async def send_line_notification(user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None) -> bool:
         """
         ポートフォリオ情報をLINEに通知する
 
         Args:
             user_id (int): ユーザーID
             portfolio_data (Dict[str, Any]): 通知するポートフォリオデータ
+            db (AsyncSession, optional): データベースセッション。指定がない場合は環境変数のLINE_USER_IDを使用
 
         Returns:
             bool: 通知が成功したかどうか
@@ -32,10 +37,16 @@ class NotificationService:
         try:
             # LINE APIの設定
             line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-            line_user_id = os.environ.get("LINE_USER_ID")
 
-            if not line_token or not line_user_id:
-                logger.error("LINE_CHANNEL_ACCESS_TOKEN または LINE_USER_ID が設定されていません")
+            if not line_token:
+                logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
+                return False
+
+            # ユーザーのLINE UserIDを取得
+            line_user_id = await NotificationService.get_line_user_id(user_id, db)
+
+            if not line_user_id:
+                logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
                 return False
 
             # 日本時間の現在時刻
@@ -211,6 +222,33 @@ class NotificationService:
         except Exception as e:
             logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
             return False
+
+    @staticmethod
+    async def get_line_user_id(user_id: int, db: AsyncSession = None) -> Optional[str]:
+        """
+        指定されたユーザーIDに対応するLINE UserIDを取得する
+
+        Args:
+            user_id (int): ユーザーID
+            db (AsyncSession, optional): データベースセッション
+
+        Returns:
+            Optional[str]: LINE UserID。設定されていない場合はNone
+        """
+        # DBセッションが渡されていない場合はNoneを返す
+        if db is None:
+            return None
+
+        # データベースからユーザー情報を取得
+        query = select(models.User).where(models.User.user_id == user_id)
+        result = await db.execute(query)
+        user = result.scalar_one_or_none()
+
+        if not user or not user.line_user_id:
+            # ユーザーが存在しないか、LINE UserIDが設定されていない場合
+            return None
+
+        return user.line_user_id
 
 
 def _format_currency(value: Decimal) -> str:

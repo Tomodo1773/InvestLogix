@@ -99,6 +99,7 @@ class User(Base):
     email: メールアドレス
     password_hash: パスワードのハッシュ値
     created_at: 登録日時
+    line_user_id: LINE UserID（通知送信先）
     """
 
     __tablename__ = "users"
@@ -108,6 +109,7 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)  # [USER_INPUT] メールアドレス
     password_hash = Column(String(255), nullable=False)  # [SYSTEM] パスワードのハッシュ値
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
+    line_user_id = Column(String(100), unique=True)  # [USER_INPUT] LINE UserID
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

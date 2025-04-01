@@ -248,18 +248,25 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
     return updated_holdings
 
 
-async def list_holdings(db: AsyncSession, user_id: int) -> List[Holding]:
+async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:
     """
     ユーザーの保有銘柄一覧を銘柄名と共に取得します。
+    symbolが指定された場合は、その銘柄の情報のみを返します。
 
     Args:
         db (AsyncSession): 非同期データベースセッション
         user_id (int): ユーザーID
+        symbol (str, optional): 銘柄コード。指定された場合はその銘柄の情報のみを返します。
 
     Returns:
         List[Holding]: 銘柄名を含む保有銘柄情報のリスト
     """
     query = select(Holding, Stock.name).join(Stock, Holding.symbol == Stock.symbol).where(Holding.user_id == user_id)
+
+    # symbolが指定された場合は、条件を追加
+    if symbol:
+        query = query.where(Holding.symbol == symbol)
+
     result = await db.execute(query)
     holdings = []
     for row in result:

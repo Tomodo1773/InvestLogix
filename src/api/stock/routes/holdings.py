@@ -1,6 +1,6 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
@@ -34,12 +34,17 @@ async def recalculate_holding_pl(
 
 
 @router.get("/", response_model=List[Holding])
-async def list_holdings(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def list_holdings(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+    symbol: Optional[str] = Query(None, description="フィルタリングする銘柄コード"),
+):
     """
     ユーザーの保有銘柄一覧を取得する
+    - symbol: 特定の銘柄コードでフィルタリングする場合に指定（オプション）
     - 成功時: 保有銘柄情報のリストを返却
     """
-    return await holding_service.list_holdings(db, current_user.user_id)
+    return await holding_service.list_holdings(db, current_user.user_id, symbol)
 
 
 @router.post("/recalculate-all", response_model=List[Holding])

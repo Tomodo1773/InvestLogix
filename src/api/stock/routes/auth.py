@@ -1,15 +1,22 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import (  # get_current_userをインポート
+from ..auth import (
     authenticate_user,
     create_access_token,
     get_current_user,
 )
-from ..database import get_db  # この参照は親モジュールからなので変更なし
+from ..database import get_db
 from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
+
+# 環境変数の読み込み
+load_dotenv()
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 router = APIRouter()
 
@@ -32,15 +39,16 @@ async def login_for_access_token(response: Response, login_data: LoginRequest, d
         )
     access_token = create_access_token(data={"sub": user.username})
 
-    # HTTPOnlyクッキーにトークンを設定
-    # ローカル環境でもSecure=Trueを設定するとブラウザによってはクッキーが拒否される可能性があるため、
-    # 開発環境ではSameSite="lax"を使用し、本番環境ではSameSite="none"とSecure=Trueを使用することを推奨
+    # 環境に応じてCookie設定を変更
+    # 本番環境ではSameSite="none"とSecure=Trueを使用し、開発環境ではSameSite="lax"とSecure=Falseを使用
+    is_production = ENVIRONMENT.lower() == "production"
+
     response.set_cookie(
         key="token",
-        value=access_token,  # Bearer プレフィックスを削除
+        value=access_token,
         httponly=True,
-        secure=False,  # ローカル環境ではfalse
-        samesite="lax",  # ローカル環境では"lax"に戻す
+        secure=is_production,  # 本番環境ではtrue、開発環境ではfalse
+        samesite="none" if is_production else "lax",  # 本番環境ではnone、開発環境ではlax
         max_age=3600,  # 1時間
         path="/",  # パスを追加
     )

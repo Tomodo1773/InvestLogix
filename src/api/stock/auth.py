@@ -88,9 +88,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 async def get_current_user(
-    request: Request, # Requestオブジェクトを先頭に移動
+    request: Request,
     access_token_cookie: Annotated[str | None, Cookie(alias="token")] = None,
-    # token: Annotated[str | None, Depends(oauth2_scheme)] = None, # 一時的にコメントアウト
     authorization: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
 ) -> schemas.User:
@@ -102,7 +101,6 @@ async def get_current_user(
     """
     # デバッグ情報の追加
     print("=== get_current_user called ===")
-    # print(f"token: {token}") # NameErrorが発生するためコメントアウト
     print(f"access_token_cookie: {access_token_cookie}")
     print(f"access_token_cookie type: {type(access_token_cookie)}")
     if access_token_cookie:
@@ -115,11 +113,6 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # トークンの取得を試みる（優先順位順）
-    # if token: # 一時的にコメントアウト
-    #     jwt_token = token
-    #     print("OAuth2トークンを使用")
-    # el
     jwt_token = None  # 初期化して未定義エラーを防止
     
     if access_token_cookie: # if に変更
@@ -139,11 +132,9 @@ async def get_current_user(
 
     # すべてのリクエストヘッダーを表示
     print("=== リクエストヘッダー ===")
-    # from fastapi import Request # 不要なので削除
-    # request = Request.context.get("request") # 引数のrequestを使う
     if request: # 引数のrequestをチェック
         print("Request headers:")
-        for key, value in request.headers.items(): # 引数のrequest.headersを使用
+        for key, value in request.headers.items():
             print(f"{key}: {value}")
     else:
         print("Request object not available")

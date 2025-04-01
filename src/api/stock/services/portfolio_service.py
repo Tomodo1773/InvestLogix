@@ -1,10 +1,12 @@
 from datetime import datetime
-from typing import List
+from typing import Dict, List
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
+from ..services.holding_service import update_all_holdings_pl
+from ..services.notification_service import NotificationService
 
 
 class PortfolioService:
@@ -98,3 +100,41 @@ class PortfolioService:
         )
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
+
+    async def update_and_notify(self, user_id: int) -> Dict:
+        """
+        ポートフォリオの全銘柄を更新し、履歴を保存し、LINEに通知する
+
+        Args:
+            user_id (int): ユーザーID
+
+        Returns:
+            Dict: 処理結果とポートフォリオサマリー
+        """
+        # 全銘柄の最新株価を取得して更新
+        await update_all_holdings_pl(self.db, user_id)
+
+        # ポートフォリオの状態を履歴に保存
+        portfolio_history = await self.create_portfolio_history(user_id)
+
+        # SQLAlchemy modelをPythonの辞書に変換
+        portfolio_data = {
+            "total_cost": portfolio_history.total_cost,
+            "total_market_value": portfolio_history.total_market_value,
+            "total_unrealized_pl": portfolio_history.total_unrealized_pl,
+            "total_unrealized_pl_percentage": portfolio_history.total_unrealized_pl_percentage,
+            "total_realized_pl": portfolio_history.total_realized_pl,
+            "total_dividend": portfolio_history.total_dividend,
+        }
+
+        # LINE通知を送信
+        notification_sent = await NotificationService.send_line_notification(user_id, portfolio_data)
+
+        # ポートフォリオサマリーを取得
+        summary = await self.get_portfolio_summary(user_id)
+
+        return {
+            "summary": summary,
+            "notification_sent": notification_sent,
+            "timestamp": datetime.now().isoformat(),
+        }

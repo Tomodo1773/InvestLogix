@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated, Dict, List
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,3 +57,22 @@ async def get_portfolio_history(current_user: Annotated[User, Depends(get_curren
     """
     portfolio_service = PortfolioService(db)
     return await portfolio_service.get_portfolio_history(current_user.user_id)
+
+
+@router.post("/update-and-notify", response_model=Dict)
+async def update_portfolio_and_notify(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
+    """
+    ポートフォリオの更新とLINE通知を実行する
+    - 全銘柄の株価を最新に更新
+    - ポートフォリオの現在の状態をデータベースに保存
+    - LINEにポートフォリオの状態を通知
+    - 以下の情報を返却:
+        - 更新された銘柄数
+        - 最新のポートフォリオサマリー
+        - 通知送信結果
+        - タイムスタンプ
+    """
+    portfolio_service = PortfolioService(db)
+    return await portfolio_service.update_and_notify(current_user.user_id)

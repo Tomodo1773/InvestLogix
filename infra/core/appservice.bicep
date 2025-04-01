@@ -30,13 +30,6 @@ param numberOfWorkers int = -1
 param scmDoBuildDuringDeployment bool = false
 param ftpsState string = 'FtpsOnly'
 param healthCheckPath string = ''
-param cosmosDbAccountName string
-param cosmosDbResourceGroupName string
-
-resource CosmosAccounts 'Microsoft.DocumentDB/databaseAccounts@2024-02-15-preview' existing = {
-  name: cosmosDbAccountName
-  scope: resourceGroup(cosmosDbResourceGroupName)
-}
 
 resource appService 'Microsoft.Web/sites@2022-03-01' = {
   name: name
@@ -81,9 +74,6 @@ resource appsettings 'Microsoft.Web/sites/config@2022-03-01' = {
   parent: appService
   properties: union(appSettings,
       {
-        COSMOS_DB_ACCOUNT_KEY: CosmosAccounts.listKeys().primaryMasterKey
-        COSMOS_DB_ACCOUNT_URL: CosmosAccounts.properties.documentEndpoint
-        COSMOS_DB_DATABASE_NAME: 'DEMO'
         SCM_DO_BUILD_DURING_DEPLOYMENT: string(scmDoBuildDuringDeployment)
         ENABLE_ORYX_BUILD: string(enableOryxBuild)
       })

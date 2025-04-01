@@ -1,7 +1,14 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header, HTTPException, status, Request # Request をインポート
+from fastapi import (  # Request をインポート
+    Cookie,
+    Depends,
+    Header,
+    HTTPException,
+    Request,
+    status,
+)
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -14,10 +21,11 @@ from .database import get_db, settings
 # パスワードハッシュ化のための設定
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# JWT設定を settings から取得
+# JWT設定
 SECRET_KEY = settings.JWT_SECRET_KEY
-ALGORITHM = settings.JWT_ALGORITHM
-ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
+# アルゴリズムとトークン有効期限は固定値として定義
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # OAuth2スキームを更新してOAuthエンドポイントを指すように
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oauth/token")
@@ -106,7 +114,7 @@ async def get_current_user(
     if access_token_cookie:
         print(f"access_token_cookie starts with 'Bearer ': {access_token_cookie.startswith('Bearer ')}")
     print(f"authorization: {authorization}")
-    
+
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -114,8 +122,8 @@ async def get_current_user(
     )
 
     jwt_token = None  # 初期化して未定義エラーを防止
-    
-    if access_token_cookie: # if に変更
+
+    if access_token_cookie:  # if に変更
         # クッキーからトークンを取得（Bearerプレフィックスがある場合は削除）
         if access_token_cookie.startswith("Bearer "):
             jwt_token = access_token_cookie.replace("Bearer ", "")
@@ -132,7 +140,7 @@ async def get_current_user(
 
     # すべてのリクエストヘッダーを表示
     print("=== リクエストヘッダー ===")
-    if request: # 引数のrequestをチェック
+    if request:  # 引数のrequestをチェック
         print("Request headers:")
         for key, value in request.headers.items():
             print(f"{key}: {value}")
@@ -143,7 +151,7 @@ async def get_current_user(
         if not jwt_token:
             print("jwt_tokenが空です")
             raise credentials_exception
-            
+
         print(f"JWT Token: {jwt_token}")
         payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")

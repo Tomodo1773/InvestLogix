@@ -1,5 +1,5 @@
 [project]
-name = "api"
+name = "stock"
 version = "0.1.0"
 description = "Investment Management API"
 readme = "README.md"

@@ -299,13 +299,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class LoginRequest(BaseModel):
-    """ログインリクエスト"""
-
-    username: str
-    password: str
-
-
 # LINE UserID登録用のスキーマを追加
 class LineUserIdUpdate(BaseModel):
     """LINE UserID更新リクエスト"""

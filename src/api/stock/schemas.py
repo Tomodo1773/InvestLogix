@@ -29,6 +29,7 @@ class AccountType(str, Enum):
     OLD_NISA = "旧NISA"
     NISA_TSUMITATE = "NISA(つみたて投資枠)"
     NISA_GROWTH = "NISA(成長投資枠)"
+    SPECIFIC = "特定"
 
 
 class StockBase(BaseModel):
@@ -92,6 +93,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     user_id: int
     created_at: datetime
+    line_user_id: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -111,7 +113,7 @@ class HoldingBase(BaseModel):
 class Holding(HoldingBase):
     user_id: int
     last_updated: datetime
-    stock_name: Optional[str] = None  # 銘柄名を追加
+    stock_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -125,6 +127,7 @@ class TransactionBase(BaseModel):
     account_type: AccountType
     fee: Decimal
     tax: Decimal
+    realized_pl: Optional[Decimal] = None
 
 
 class Transaction(TransactionBase):
@@ -132,6 +135,7 @@ class Transaction(TransactionBase):
     user_id: int
     transaction_date: datetime
     stock_name: Optional[str] = None  # 銘柄名を追加
+    current_price: Optional[Decimal] = None  # 現在価格を追加
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -165,6 +169,44 @@ class Dividend(DividendBase):
     user_id: int
     stock_name: Optional[str] = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
+
+
+class PortfolioHistoryResponse(BaseModel):
+    """ポートフォリオ履歴のレスポンスモデル"""
+
+    date: datetime
+    total_cost: float
+    total_market_value: float
+    total_unrealized_pl: float
+    total_unrealized_pl_percentage: float
+    total_realized_pl: float
+    total_dividend: float
+
+    class Config:
+        from_attributes = True
+
+
+class MonthlySummary(BaseModel):
+    """月次トランザクション集計のレスポンスモデル"""
+
+    year: int
+    month: int
+    total_purchase: dict[str, float]
+
+
+class YearlySummary(BaseModel):
+    """年次トランザクション集計のレスポンスモデル"""
+
+    year: int
+    total_purchase: dict[str, float]
+
+
+class MonthlyDividend(BaseModel):
+    """月次配当集計のレスポンスモデル"""
+
+    year: int
+    month: int
+    total_dividend: float
 
 
 # レスポンスモデル
@@ -251,7 +293,21 @@ class PortfolioSummary(BaseModel):
 
 
 class LoginRequest(BaseModel):
+    """ログインリクエスト用のスキーマ"""
+
+    username: str
+    password: str
+
+
+class LoginRequest(BaseModel):
     """ログインリクエスト"""
 
     username: str
     password: str
+
+
+# LINE UserID登録用のスキーマを追加
+class LineUserIdUpdate(BaseModel):
+    """LINE UserID更新リクエスト"""
+
+    line_user_id: str

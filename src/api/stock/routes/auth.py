@@ -1,26 +1,70 @@
-from typing import Annotated
+import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from dotenv import load_dotenv
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import authenticate_user, create_access_token  # この参照は親モジュールからなので変更なし
-from ..database import get_db  # この参照は親モジュールからなので変更なし
-from ..schemas import Token, User, UserCreate
+from ..auth import (
+    authenticate_user,
+    create_access_token,
+    get_current_user,
+)
+from ..database import get_db
+from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
+
+# 環境変数の読み込み
+load_dotenv()
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 router = APIRouter()
 
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: AsyncSession = Depends(get_db)
-):
+async def login_for_access_token(response: Response, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
     """
     ログイントークンを取得する
-    - form_data: ユーザー名とパスワード
+    - login_data: ユーザー名とパスワード（JSON形式）
+    - 認証成功時: アクセストークンを返却（レスポンスボディとクッキーの両方）
+    - 認証失敗時: 401 Unauthorized
+    """
+    print("=== login_for_access_token ===")
+    user = await authenticate_user(db, login_data.username, login_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = create_access_token(data={"sub": user.username})
+
+    # 環境に応じてCookie設定を変更
+    # 本番環境ではSameSite="none"とSecure=Trueを使用し、開発環境ではSameSite="lax"とSecure=Falseを使用
+    is_production = ENVIRONMENT.lower() == "production"
+
+    response.set_cookie(
+        key="token",
+        value=access_token,
+        httponly=True,
+        secure=is_production,  # 本番環境ではtrue、開発環境ではfalse
+        samesite="none" if is_production else "lax",  # 本番環境ではnone、開発環境ではlax
+        max_age=3600,  # 1時間
+        path="/",  # パスを追加
+    )
+
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/oauth/token", response_model=Token)
+async def login_for_access_token_oauth(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    """
+    OAuth2形式でログイントークンを取得する（/docsでの認証用）
+    - form_data: ユーザー名とパスワード（application/x-www-form-urlencoded形式）
     - 認証成功時: アクセストークンを返却
     - 認証失敗時: 401 Unauthorized
+
+    このエンドポイントはFastAPIの/docsページの「authorize」ボタンで使用するための最小限の実装です。
     """
     user = await authenticate_user(db, form_data.username, form_data.password)
     if not user:
@@ -30,6 +74,8 @@ async def login_for_access_token(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(data={"sub": user.username})
+
+    # シンプルなトークンレスポンスのみを返す
     return {"access_token": access_token, "token_type": "bearer"}
 
 
@@ -48,3 +94,14 @@ async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
     except ValueError:
         # ValueErrorの内容に関わらず統一したエラーメッセージを返す
         raise HTTPException(status_code=400, detail="Username or email already registered")
+
+
+@router.get("/me", response_model=User)
+async def verify_token(current_user: User = Depends(get_current_user)):
+    """
+    現在のユーザーの認証状態を確認する
+    - トークンはCookieから取得（get_current_userで処理）
+    - 認証成功時: ユーザー情報を返却
+    - 認証失敗時: 401 Unauthorized（get_current_user内で例外発生）
+    """
+    return current_user

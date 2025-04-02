@@ -7,28 +7,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data):
     """配当情報の登録テスト
-    - 事前条件:
-        - 株式の購入取引
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された配当情報を返却
-        - 保有情報の配当総額が更新される
-    """
-    # 事前に購入取引を登録
-    transaction_data = {
-        "symbol": "8058",
-        "transaction_type": "buy",
-        "quantity": "100.0",
-        "price": "3000.0",
-        "account_type": "NISA(成長投資枠)",
-        "fee": "0.0",
-        "tax": "0.0",
-        "transaction_date": "2024-01-01T00:00:00",
-    }
-    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
 
+    期待する動作:
+    - ステータスコード200
+    - 登録された配当情報を返却
+    - 保有情報の配当総額が更新される
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株のテストデータ
+    """
     # 配当情報の登録
     dividend_data = {
         "symbol": "8058",
@@ -63,9 +55,14 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
 @pytest.mark.asyncio
 async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: str):
     """存在しない銘柄の配当情報登録テスト
-    - 期待する動作:
-        - ステータスコード404
-        - エラーメッセージを返却
+
+    期待する動作:
+    - ステータスコード404
+    - エラーメッセージを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
     """
     dividend_data = {
         "symbol": "INVALID",
@@ -78,34 +75,29 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
     response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
 
+    # レスポンス検証
     assert response.status_code == 404
     assert response.json()["detail"] == "Stock not found"
 
 
 @pytest.mark.asyncio
-async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_list_dividends(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data, create_dividend
+):
     """配当一覧取得テスト
-    - 事前条件:
-        - 株式の購入取引
-        - 複数の配当情報の登録
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された配当情報が支払日の降順で返却される
-        - 配当情報に銘柄名が含まれている
-    """
-    # 事前に購入取引を登録
-    transaction_data = {
-        "symbol": "8058",
-        "transaction_type": "buy",
-        "quantity": "100.0",
-        "price": "3000.0",
-        "account_type": "NISA(成長投資枠)",
-        "fee": "0.0",
-        "tax": "0.0",
-        "transaction_date": "2024-01-01T00:00:00",
-    }
-    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
 
+    期待する動作:
+    - ステータスコード200
+    - 登録された配当情報が支払日の降順で返却される
+    - 配当情報に銘柄名が含まれている
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株のテストデータ
+        create_dividend: 配当登録用フィクスチャー
+    """
     # 複数の配当情報を登録
     dividend_data_list = [
         {
@@ -127,7 +119,7 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
     ]
 
     for dividend_data in dividend_data_list:
-        await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
+        await create_dividend(dividend_data)
 
     # 配当一覧を取得
     response = await client.get("/api/v1/dividends/", headers={"Authorization": f"Bearer {auth_token}"})
@@ -149,3 +141,52 @@ async def test_list_dividends(client: AsyncClient, db_session: AsyncSession, aut
         assert Decimal(dividend["tax"]) == Decimal("2500.0")
         assert Decimal(dividend["fee"]) == Decimal("0.0")
         assert dividend["stock_name"] == "三菱商事"
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup_dividend_data: dict):
+    """月次配当金集計の取得テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 月ごとの配当金集計が日付順に返却される
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 認証トークン
+        setup_dividend_data: テスト用配当データ
+    """
+    # 月次配当金集計の取得
+    response = await client.get("/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+
+    # データの形式を検証
+    assert isinstance(data, list)
+    if len(data) > 0:
+        month_data = data[0]
+        assert "year" in month_data
+        assert "month" in month_data
+        assert "total_dividend" in month_data
+
+        # 数値型であることを検証
+        assert isinstance(month_data["year"], int)
+        assert isinstance(month_data["month"], int)
+        assert isinstance(month_data["total_dividend"], (int, float))
+
+        # setup_dividend_dataで追加した配当金が集計されていることを確認
+        jan_2024_data = next((item for item in data if item["year"] == 2024 and item["month"] == 1), None)
+        if jan_2024_data:
+            # setup_dividend_dataの実際の値からテスト用の期待値を計算
+            jp_dividend = setup_dividend_data["jp_dividend"]
+            us_dividend = setup_dividend_data["us_dividend"]
+
+            # 実際のデータから税引後配当を計算
+            jp_amount = float(jp_dividend["total_amount"]) - float(jp_dividend["tax"]) - float(jp_dividend["fee"])
+            us_amount = float(us_dividend["total_amount"]) - float(us_dividend["tax"]) - float(us_dividend["fee"])
+            expected_amount = jp_amount + us_amount
+
+            # 実際の値と比較（小数点以下の誤差を許容）
+            assert abs(jan_2024_data["total_dividend"] - expected_amount) < 0.01

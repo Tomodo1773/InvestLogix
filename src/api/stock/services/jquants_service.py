@@ -12,7 +12,7 @@ import aiohttp
 from dotenv import load_dotenv
 from jquantsapi.client import Client
 
-from .database import settings
+from ..database import settings
 
 
 class JQuantsClient:

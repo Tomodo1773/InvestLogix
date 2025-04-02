@@ -8,9 +8,6 @@ param appServicePlanId string
 param appSettings object = {}
 param serviceName string = 'api'
 
-param cosmosDbAccountName string
-param cosmosDbResourceGroupName string
-
 param alwaysOn bool
 module api '../core/appservice.bicep' = {
   name: 'api'
@@ -20,8 +17,6 @@ module api '../core/appservice.bicep' = {
     tags: union(tags, { 'azd-service-name': serviceName })
     appCommandLine: appCommandLine
     appServicePlanId: appServicePlanId
-    cosmosDbAccountName: cosmosDbAccountName
-    cosmosDbResourceGroupName: cosmosDbResourceGroupName
     appSettings: appSettings
     runtimeName: 'python'
     runtimeVersion: '3.11'

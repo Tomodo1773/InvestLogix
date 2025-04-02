@@ -1,11 +1,17 @@
-from typing import Annotated, List
+from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import Transaction, TransactionCreate, User
+from ..schemas import (
+    MonthlySummary,
+    Transaction,
+    TransactionCreate,
+    User,
+    YearlySummary,
+)
 from ..services.stock_service import StockNotFoundError
 from ..services.transaction_service import TransactionService
 
@@ -36,10 +42,44 @@ async def create_transaction(
 
 
 @router.get("/", response_model=List[Transaction])
-async def list_transactions(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def list_transactions(
+    current_user: Annotated[User, Depends(get_current_user)],
+    symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
+    db: AsyncSession = Depends(get_db),
+):
     """
     ユーザーの取引履歴を取得する
     - 成功時: 取引情報のリストを返却（日付降順）
+    - 返却データには、銘柄名(stock_name)と現在価格(current_price)も含まれる
+    - symbolパラメータを指定すると、該当する銘柄のみをフィルタリングして返却
     """
     transaction_service = TransactionService(db)
-    return await transaction_service.list_transactions(current_user.user_id)
+    return await transaction_service.list_transactions(current_user.user_id, symbol)
+
+
+@router.get("/monthly-summary", response_model=List[MonthlySummary])
+async def get_monthly_transaction_summary(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
+    """
+    月ごとのトランザクション集計を取得する
+
+    Returns:
+        List[MonthlySummary]: 月ごとの口座種別別購入金額集計
+    """
+    transaction_service = TransactionService(db)
+    return await transaction_service.get_monthly_summary(current_user.user_id)
+
+
+@router.get("/yearly-summary", response_model=List[YearlySummary])
+async def get_yearly_transaction_summary(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
+    """
+    年ごとのトランザクション集計を取得する
+
+    Returns:
+        List[YearlySummary]: 年ごとの口座種別別購入金額集計
+    """
+    transaction_service = TransactionService(db)
+    return await transaction_service.get_yearly_summary(current_user.user_id)

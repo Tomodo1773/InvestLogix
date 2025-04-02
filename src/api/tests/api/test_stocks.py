@@ -7,16 +7,26 @@ from stock.schemas import StockCreate
 
 @pytest.mark.asyncio
 async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """日本株銘柄登録のテスト
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された日本株情報を返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
-    日本株銘柄登録のテスト
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された日本株情報を返却
-    """
+    # テストデータ準備
     stock_data = StockCreate(symbol="8058")  # 三菱商事のシンボル
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "8058"
@@ -27,17 +37,28 @@ async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSessi
 
 @pytest.mark.asyncio
 async def test_create_us_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
+    """米国株銘柄登録のテスト（AlphaVantage APIをモック使用）
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された米国株情報を返却
+    - モックされたAPIが呼び出されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        mock_external_apis: モック化されたAPI
     """
-    米国株銘柄登録のテスト（AlphaVantage APIをモック使用）
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された米国株情報を返却
-        - モックされたAPIが呼び出されること
-    """
+    # テストデータ準備
     stock_data = StockCreate(symbol="AAPL")  # Appleのシンボル
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
@@ -52,20 +73,31 @@ async def test_create_us_stock(client: AsyncClient, db_session: AsyncSession, au
 
 @pytest.mark.asyncio
 async def test_create_us_etf(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
-    """
-    米国ETF銘柄登録のテスト（AlphaVantage APIをモック使用）
-    - 期待する動作:
-        - ステータスコード200
-        - 登録されたETF情報を返却
-        - 株式の詳細情報が取得できない場合、Symbol Searchが呼び出されること
+    """米国ETF銘柄登録のテスト（AlphaVantage APIをモック使用）
+
+    期待する動作:
+    - ステータスコード200
+    - 登録されたETF情報を返却
+    - 株式の詳細情報が取得できない場合、Symbol Searchが呼び出されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        mock_external_apis: モック化されたAPI
     """
     # OVERVIEWのモックを空のレスポンスに設定（ETFの場合）
     mock_external_apis["overview"].return_value = {}
 
+    # テストデータ準備
     stock_data = StockCreate(symbol="SPYD")
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "SPYD"
@@ -80,16 +112,26 @@ async def test_create_us_etf(client: AsyncClient, db_session: AsyncSession, auth
 
 @pytest.mark.asyncio
 async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """投資信託登録のテスト
+
+    期待する動作:
+    - ステータスコード200
+    - 登録された投資信託情報を返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
     """
-    投資信託登録のテスト
-    - 期待する動作:
-        - ステータスコード200
-        - 登録された投資信託情報を返却
-    """
+    # テストデータ準備
     stock_data = StockCreate(symbol="JP90C000J569")  # 投資信託のシンボル
+
+    # APIリクエスト実行
     response = await client.post(
         "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
     )
+
+    # レスポンス検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "JP90C000J569"
@@ -99,12 +141,18 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_create_duplicate_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
-    """
-    銘柄の重複登録テスト
-    - 期待する動作:
-        - ステータスコード200
-        - 既に登録済みの銘柄情報を返却
-        - 2回目の登録で外部APIは呼び出されないこと
+    """銘柄の重複登録テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 既に登録済みの銘柄情報を返却
+    - 2回目の登録で外部APIは呼び出されないこと
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        mock_external_apis: モック化されたAPI
     """
     # 米国株で検証（APIコールの検証が可能）
     stock_data = StockCreate(symbol="AAPL")  # Appleのシンボル
@@ -142,3 +190,46 @@ async def test_create_duplicate_stock(client: AsyncClient, db_session: AsyncSess
     # 2回目の登録でAPIが呼び出されないことを確認
     mock_external_apis["overview"].assert_not_called()
     mock_external_apis["search"].assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, auth_token: str):
+    """銘柄一覧取得テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 銘柄情報のリストを返却
+
+    Args:
+        client: 非同期HTTPクライアント
+        setup_portfolio_test_data: 事前に設定されたテストデータ
+        auth_token: 認証トークン
+    """
+    # setup_portfolio_test_dataにより既に日本株と米国株が登録されている
+
+    # 銘柄一覧を取得
+    response = await client.get("/api/v1/stocks/", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンス検証
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 2  # 最低2つの銘柄が登録されているはず
+
+    # 銘柄シンボルを抽出してチェック
+    symbols = {stock["symbol"] for stock in data}
+    assert "8058" in symbols  # 三菱商事
+    assert "AAPL" in symbols  # Apple
+
+    # 各銘柄の基本情報が含まれていることを確認
+    for stock in data:
+        if stock["symbol"] == "8058":
+            assert stock["name"] == "三菱商事"
+            assert stock["market"] == "JPX"
+            assert stock["security_type"] == "STOCK"
+            assert stock["currency"] == "JPY"
+        elif stock["symbol"] == "AAPL":
+            assert stock["name"] == "Apple Inc"
+            assert stock["market"] == "NASDAQ"
+            assert stock["security_type"] == "STOCK"
+            assert stock["currency"] == "USD"

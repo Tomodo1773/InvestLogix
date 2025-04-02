@@ -5,7 +5,7 @@ import os
 import pytest
 from dotenv import load_dotenv
 
-from stock.jquants import JQuantsClient
+from api.stock.services.jquants_service import JQuantsClient
 
 
 @pytest.fixture

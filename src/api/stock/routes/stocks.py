@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import Stock, StockCreate, StockWithRelations, User
+from ..schemas import Stock, StockCreate, User
 from ..services.stock_service import StockService
 
 router = APIRouter()
@@ -32,7 +32,7 @@ async def create_stock(
         raise HTTPException(status_code=404, detail="Stock not found")
 
 
-@router.get("/", response_model=List[StockWithRelations])
+@router.get("/", response_model=List[Stock])
 async def list_stocks(
     current_user: Annotated[User, Depends(get_current_user)],
     market: str | None = None,

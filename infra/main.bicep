@@ -11,8 +11,6 @@ param location string
 
 param resourceGroupName string = ''
 
-param cosmosDbAccountName string = ''
-param cosmosDbResourceGroupName string = ''
 param appServicePlanName string = ''
 param appServicePlanResourceGroupName string = ''
 
@@ -29,31 +27,6 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
-
-// ****************************************************************
-// CosmosDB
-// ****************************************************************
-
-resource existingCosmosDB 'Microsoft.DocumentDB/databaseAccounts@2021-04-15' existing = if (!empty(cosmosDbAccountName)) {
-  name: cosmosDbAccountName
-  scope: resourceGroup(cosmosDbResourceGroupName)
-}
-
-module CosmosDB 'core/cosmos.bicep' = if (empty(cosmosDbAccountName)) {
-  name: 'CosmosDB'
-  scope: rg
-  params: {
-    name: '${abbrs.documentDBDatabaseAccounts}${resourceToken}'
-    location: location
-    tags: {
-      defaultExperience: 'Core (SQL)'
-      'hidden-cosmos-mmspecial': ''
-      'azd-env-name': environmentName
-    }
-    enableFreeTier: true
-    totalThroughputLimit: 1000
-  }
-}
 
 // ****************************************************************
 // AppServicePlan
@@ -93,22 +66,22 @@ module AppService './app/api.bicep' = {
     location: location
     tags: tags
     appServicePlanId: empty(appServicePlanName) ? AppServicePlan.outputs.id : existingAppServicePlan.id
-    cosmosDbAccountName: empty(cosmosDbAccountName) ? CosmosDB.outputs.name : existingCosmosDB.name
-    cosmosDbResourceGroupName: empty(cosmosDbResourceGroupName) ? rg.name : cosmosDbResourceGroupName
     alwaysOn: true
     appSettings: {
-      LANGCHAIN_API_KEY: appSettings.LANGCHAIN_API_KEY
+      ENVIRONMENT: appSettings.ENVIRONMENT
+      DB_USER: appSettings.DB_USER
+      DB_PASSWORD: appSettings.DB_PASSWORD
+      DB_HOST: appSettings.DB_HOST
+      DB_PORT: appSettings.DB_PORT
+      DB_NAME: appSettings.DB_NAME
+      JWT_SECRET_KEY: appSettings.JWT_SECRET_KEY
+      JQUANTS_MAIL_ADDRESS: appSettings.JQUANTS_MAIL_ADDRESS
+      JQUANTS_PASSWORD: appSettings.JQUANTS_PASSWORD
+      ALPHAVANTAGE_API_KEY: appSettings.ALPHAVANTAGE_API_KEY
       LINE_CHANNEL_ACCESS_TOKEN: appSettings.LINE_CHANNEL_ACCESS_TOKEN
-      LINE_CHANNEL_SECRET: appSettings.LINE_CHANNEL_SECRET
-      GOOGLE_API_KEY: appSettings.GOOGLE_API_KEY
-      TAVILY_API_KEY: appSettings.TAVILY_API_KEY
-      OPENAI_API_KEY: appSettings.OPENAI_API_KEY
+      CORS_ORIGINS: appSettings.CORS_ORIGINS
     }
   }
-  dependsOn:[
-    AppServicePlan
-    CosmosDB
-  ]
 }
 
 

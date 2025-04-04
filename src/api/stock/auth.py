@@ -169,3 +169,27 @@ async def get_current_user(
         raise credentials_exception
     print(f"認証成功: ユーザー {user.username}")
     return user
+
+
+async def check_admin_privileges(current_user: schemas.User) -> bool:
+    """
+    ユーザーが管理者権限を持っているかチェックする
+    - current_user: 現在のユーザー
+    - 戻り値: 管理者の場合はTrue、それ以外はFalse
+    """
+    return current_user.is_admin
+
+
+async def get_admin_user(
+    current_user: schemas.User = Depends(get_current_user),
+) -> schemas.User:
+    """
+    管理者権限を持つユーザーを取得する
+    - 権限がない場合は403エラーを返す
+    """
+    if not await check_admin_privileges(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to perform this action",
+        )
+    return current_user

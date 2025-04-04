@@ -120,7 +120,7 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
 
     # テストユーザーのデータ
-    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword"}
+    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword", "is_admin": False}
 
     # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
@@ -129,6 +129,39 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
 
     # ログインして認証トークンを取得（JSON形式でリクエスト）
     login_data = {"username": user_data["username"], "password": user_data["password"]}
+    response = await client.post("/api/v1/token", json=login_data)
+    return response.json()["access_token"]
+
+
+@pytest_asyncio.fixture
+async def auth_admin_token(client: AsyncClient, setup_database) -> str:
+    """テスト用の管理者権限トークンを取得するフィクスチャー
+
+    管理者権限を持つユーザーを新規作成し、コミットすることで別セッションでも参照可能にします。
+
+    Args:
+        client: 非同期HTTPクライアント
+        setup_database: データベースセットアップのフィクスチャー
+
+    Returns:
+        str: 管理者権限のJWTアクセストークン
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    # setup_databaseから新しいセッションファクトリを作成
+    TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+
+    # 管理者ユーザーのデータ
+    admin_user_data = {"username": "adminuser", "email": "admin@example.com", "password": "adminpassword"}
+
+    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
+    async with TestingSessionLocalFunc() as session:
+        # is_admin=Trueを明示的に渡す
+        await AuthService(session).create_user(UserCreate(**admin_user_data), is_admin=True)
+        await session.commit()
+
+    # ログインして認証トークンを取得（JSON形式でリクエスト）
+    login_data = {"username": admin_user_data["username"], "password": admin_user_data["password"]}
     response = await client.post("/api/v1/token", json=login_data)
     return response.json()["access_token"]
 

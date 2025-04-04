@@ -5,11 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import (
-    authenticate_user,
-    create_access_token,
-    get_current_user,
-)
+from ..auth import authenticate_user, create_access_token, get_current_user
 from ..database import get_db
 from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
@@ -80,20 +76,28 @@ async def login_for_access_token_oauth(form_data: OAuth2PasswordRequestForm = De
 
 
 @router.post("/users/", response_model=User)
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
-    新規ユーザーを登録する
+    新規ユーザーを登録する（管理者のみ実行可能）
     - user: ユーザー情報（ユーザー名、メールアドレス、パスワード）
     - 登録成功時: 作成されたユーザー情報を返却
     - ユーザー名/メールアドレス重複時: 400 Bad Request
+    - 管理者権限がない場合: 403 Forbidden
     """
+    # まず管理者権限をチェック
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator privileges required",
+        )
+
+    # 管理者確認後、ユーザー作成処理を実行
     auth_service = AuthService(db)
     try:
         db_user = await auth_service.create_user(user)
         return db_user
-    except ValueError:
-        # ValueErrorの内容に関わらず統一したエラーメッセージを返す
-        raise HTTPException(status_code=400, detail="Username or email already registered")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/me", response_model=User)

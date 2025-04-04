@@ -94,6 +94,7 @@ class User(UserBase):
     user_id: int
     created_at: datetime
     line_user_id: Optional[str] = None
+    is_admin: bool = False
     model_config = ConfigDict(from_attributes=True)
 
 

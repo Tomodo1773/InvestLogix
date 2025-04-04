@@ -12,22 +12,29 @@ class AuthService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_user(self, user: UserCreate) -> User:
+    async def create_user(self, user: UserCreate, is_admin: bool = False) -> User:
         """
         新規ユーザーを作成する
         - user: ユーザー作成情報
+        - is_admin: 管理者権限を付与するかどうか（デフォルトはFalse）
         - 戻り値: 作成されたユーザーエンティティ
         """
         # 既存ユーザーの確認
         result = await self.db.execute(select(User).where((User.username == user.username) | (User.email == user.email)))
         if result.scalar_one_or_none():
-            raise ValueError("Username or email already exists")
+            raise ValueError("Username or email already registered")
 
         # パスワードのハッシュ化
         hashed_password = get_password_hash(user.password)
 
-        # ユーザーの作成
-        db_user = User(username=user.username, email=user.email, password_hash=hashed_password, created_at=get_jst_now())
+        # ユーザーの作成（is_admin フラグも設定）
+        db_user = User(
+            username=user.username,
+            email=user.email,
+            password_hash=hashed_password,
+            created_at=get_jst_now(),
+            is_admin=is_admin,
+        )
         self.db.add(db_user)
         await self.db.commit()
         return db_user

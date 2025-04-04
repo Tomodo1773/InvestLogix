@@ -100,6 +100,7 @@ class User(Base):
     password_hash: パスワードのハッシュ値
     created_at: 登録日時
     line_user_id: LINE UserID（通知送信先）
+    is_admin: 管理者権限フラグ
     """
 
     __tablename__ = "users"
@@ -110,6 +111,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)  # [SYSTEM] パスワードのハッシュ値
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
     line_user_id = Column(String(100), unique=True)  # [USER_INPUT] LINE UserID
+    is_admin = Column(Boolean, default=False)  # [SYSTEM] 管理者権限フラグ
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

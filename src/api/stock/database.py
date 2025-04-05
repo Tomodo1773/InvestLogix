@@ -4,8 +4,8 @@ from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 
 
 class LogLevel(str, Enum):
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     DB_PORT: str = "5432"
     DB_NAME: str = "investlogix"
     DATABASE_URL: str | None = None
+    DB_ECHO: bool = False
+    DB_POOL_SIZE: int = 20
+    DB_MAX_OVERFLOW: int = 10
+    DB_POOL_TIMEOUT: int = 30
+    DB_POOL_RECYCLE: int = 1800
 
     # 認証設定
     JWT_SECRET_KEY: str = "dev_secret_key"
@@ -78,7 +83,7 @@ class Settings(BaseSettings):
             return int(v)
         return v
 
-    @field_validator("RELOAD", mode="before")
+    @field_validator("DB_ECHO", "RELOAD", mode="before")
     @classmethod
     def parse_boolean(cls, v: str | bool) -> bool:
         """文字列をブール値に変換"""
@@ -108,11 +113,25 @@ settings = Settings()
 # データベース接続設定
 engine_config = {"echo": True}
 
-# データベースエンジンの設定
-engine = create_async_engine(settings.SQLALCHEMY_DATABASE_URL, **engine_config)
+# エンジンの作成時にプール設定を最適化
+engine = create_async_engine(
+    settings.SQLALCHEMY_DATABASE_URL,
+    echo=settings.DB_ECHO,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
+    pool_timeout=settings.DB_POOL_TIMEOUT,
+    pool_recycle=settings.DB_POOL_RECYCLE,
+    pool_pre_ping=True,
+    poolclass=AsyncAdaptedQueuePool,
+)
 
-# セッションファクトリの設定
-AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+AsyncSessionLocal = async_sessionmaker(
+    engine,
+    expire_on_commit=False,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+)
 
 
 async def get_db():

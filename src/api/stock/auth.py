@@ -1,14 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import (  # Request をインポート
-    Cookie,
-    Depends,
-    Header,
-    HTTPException,
-    Request,
-    status,
-)
+from fastapi import Cookie, Depends, Header, HTTPException, Request, status  # Request をインポート
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -57,9 +50,13 @@ async def get_user(db: AsyncSession, username: str):
     - username: 検索対象のユーザー名
     - 戻り値: 該当ユーザーが存在する場合はUserモデル、存在しない場合はNone
     """
+    print(f"=== get_user called for username: {username} ===")
     query = select(models.User).where(models.User.username == username)
+    print("Executing database query...")
     result = await db.execute(query)
-    return result.scalar_one_or_none()
+    user = result.scalar_one_or_none()
+    print(f"User found: {'Yes' if user else 'No'}")
+    return user
 
 
 async def authenticate_user(db: AsyncSession, username: str, password: str):
@@ -70,11 +67,20 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
     - password: 認証対象のパスワード
     - 戻り値: 認証成功時はUserモデル、失敗時はFalse
     """
+    print(f"=== authenticate_user started for username: {username} ===")
+    print("Attempting to get user from database...")
     user = await get_user(db, username)
+
     if not user:
+        print("User not found in database")
         return False
+
+    print("Verifying password...")
     if not verify_password(password, user.password_hash):
+        print("Password verification failed")
         return False
+
+    print("Authentication successful")
     return user
 
 
@@ -85,13 +91,26 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     - expires_delta: トークンの有効期限（オプション）
     - 戻り値: 生成されたJWTトークン
     """
+    print("=== create_access_token started ===")
+    print(f"Input data: {data}")
+
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    print(f"Token expiry time set to: {expire}")
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+    print("Encoding JWT token...")
+    try:
+        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+        print("JWT token encoded successfully")
+    except Exception as e:
+        print(f"Error encoding JWT token: {e}")
+        raise
+
     return encoded_jwt
 
 

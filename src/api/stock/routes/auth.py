@@ -25,30 +25,43 @@ async def login_for_access_token(response: Response, login_data: LoginRequest, d
     - 認証成功時: アクセストークンを返却（レスポンスボディとクッキーの両方）
     - 認証失敗時: 401 Unauthorized
     """
-    print("=== login_for_access_token ===")
+    print("=== /token endpoint called ===")
+    print(f"Username: {login_data.username}")
+    print("Attempting to authenticate user...")
+
     user = await authenticate_user(db, login_data.username, login_data.password)
+    print(f"Authentication result: {'Success' if user else 'Failed'}")
+
     if not user:
+        print("Authentication failed - raising 401")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    print("Generating access token...")
     access_token = create_access_token(data={"sub": user.username})
+    print("Access token generated successfully")
 
     # 環境に応じてCookie設定を変更
-    # 本番環境ではSameSite="none"とSecure=Trueを使用し、開発環境ではSameSite="lax"とSecure=Falseを使用
+    print(f"Current environment: {ENVIRONMENT}")
     is_production = ENVIRONMENT.lower() == "production"
+    print(f"Is production?: {is_production}")
 
+    print("Setting cookie with token...")
     response.set_cookie(
         key="token",
         value=access_token,
         httponly=True,
-        secure=is_production,  # 本番環境ではtrue、開発環境ではfalse
-        samesite="none" if is_production else "lax",  # 本番環境ではnone、開発環境ではlax
-        max_age=3600,  # 1時間
-        path="/",  # パスを追加
+        secure=is_production,
+        samesite="none" if is_production else "lax",
+        max_age=3600,
+        path="/",
     )
+    print("Cookie set successfully")
 
+    print("=== /token endpoint completed ===")
     return {"access_token": access_token, "token_type": "bearer"}
 
 

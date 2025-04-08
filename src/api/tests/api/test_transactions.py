@@ -12,6 +12,7 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     期待する動作:
     - ステータスコード200
     - 登録された取引情報を返却
+    - ホールディングテーブルに保有情報が正しく反映されていること
 
     Args:
         client: 非同期HTTPクライアント
@@ -42,6 +43,16 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     assert data["transaction_type"] == "buy"
     assert Decimal(data["quantity"]) == Decimal("10.0")
     assert Decimal(data["price"]) == Decimal("3000.0")
+
+    # ホールディングテーブルの状態を確認（指定銘柄のみ）
+    holdings_response = await client.get("/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"})
+    assert holdings_response.status_code == 200
+    holdings = holdings_response.json()
+    holding = holdings[0]
+    assert holding["symbol"] == "8058"
+    assert Decimal(holding["quantity"]) == Decimal("10.0")  # トランザクションで登録した数量と一致すること
+    assert Decimal(holding["average_cost"]) == Decimal("3000.0")  # 平均取得単価が正しいこと
+    assert Decimal(holding["total_cost"]) == Decimal("30000.0")  # 総取得価額が正しいこと
 
 
 @pytest.mark.asyncio

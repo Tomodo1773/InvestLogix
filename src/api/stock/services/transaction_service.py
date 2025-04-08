@@ -30,6 +30,7 @@ class TransactionService:
         transaction_dict = transaction.model_dump()
         db_transaction = models.Transaction(**transaction_dict, user_id=user_id)
         self.db.add(db_transaction)
+        await self.db.flush()
 
         # 保有情報の更新
         holding_query = select(models.Holding).where(

@@ -25,6 +25,7 @@ class DividendService:
         # 配当情報の登録
         db_dividend = models.Dividend(**dividend.model_dump(), user_id=user_id)
         self.db.add(db_dividend)
+        await self.db.flush()
 
         # Holdingsテーブルのtotal_dividendを更新
         holdings_query = select(models.Holding).where(

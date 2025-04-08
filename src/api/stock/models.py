@@ -130,7 +130,7 @@ class Holding(Base):
     symbol = Column(String(15), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
 
     # 保有情報
-    quantity = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 保有数量
+    quantity = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有数量
     average_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 平均取得単価（取得価格合計 / 保有数量）
     total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価格合計（Transactionから取得）
 
@@ -158,7 +158,7 @@ class Transaction(Base):
     transaction_type = Column(
         Enum("buy", "sell", name="transaction_types"), nullable=False
     )  # [USER_INPUT] トランザクションタイプ (例: "buy", "sell")
-    quantity = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 数量
+    quantity = Column(Numeric(10, 4), nullable=False)  # [USER_INPUT] 数量
     price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
     usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
     adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
@@ -208,7 +208,7 @@ class Dividend(Base):
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
     symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
     payment_date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [USER_INPUT] 支払日（JST固定）
-    shares_owned = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 保有株数
+    shares_owned = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有株数
     total_amount = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 配当金総額
     tax = Column(Numeric(10, 2))  # [USER_INPUT] 税金
     fee = Column(Numeric(10, 2))  # [USER_INPUT] 手数料

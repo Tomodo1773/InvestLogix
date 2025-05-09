@@ -23,3 +23,9 @@ build/
 
 # Docker volumes
 postgres_data/
+
+scripts/
+dividends.csv
+trades.csv
+transactions.csv
+

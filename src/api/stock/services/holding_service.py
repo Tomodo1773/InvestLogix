@@ -38,7 +38,7 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
 
         # 最新の株価を返す
         if prices and len(prices) > 0:
-            return Decimal(str(prices[0].get("Close", "0")))
+            return Decimal(str(prices[-1].get("Close", "0")))
         return Decimal("0")
 
     except Exception as e:

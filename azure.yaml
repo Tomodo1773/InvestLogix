@@ -1,8 +1,8 @@
-name: demo-app
+name: investlogix
 infra:
   provider: bicep
-services:
-  api:
-    project: ./src/api
-    language: python
-    host: appservice
+# services:
+#   api:
+#     project: ./src/api
+#     language: python
+#     host: appservice

@@ -92,6 +92,9 @@ class TransactionService:
         holding.average_cost = new_average_cost
         holding.total_cost = new_total_cost
 
+        # autoflush=False のため、集計前に最新の売却データをDBへ反映させる
+        await self.db.flush()
+
         # 実現損益の再計算
         realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
             models.Transaction.user_id == holding.user_id,

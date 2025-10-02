@@ -106,6 +106,15 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     assert Decimal(data["quantity"]) == Decimal("5.0")
     assert Decimal(data["price"]) == Decimal("3500.0")
 
+    # 売却後のホールディングの実現損益を確認
+    holdings_response = await client.get(
+        "/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert holdings_response.status_code == 200
+    holdings = holdings_response.json()
+    holding = holdings[0]
+    assert Decimal(holding["realized_pl"]) == Decimal("2500.0")
+
 
 @pytest.mark.asyncio
 async def test_create_transaction_insufficient_shares(client: AsyncClient, db_session: AsyncSession, auth_token: str):

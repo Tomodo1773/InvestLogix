@@ -109,7 +109,17 @@ async def get_current_price(stock: Stock) -> Decimal:
 
 
 async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, symbol: str):
-    """トランザクション履歴から保有数量と取得価格を計算する"""
+    """
+    トランザクション履歴から保有数量と取得価格を計算する
+
+    Args:
+        db (AsyncSession): データベースセッション
+        user_id (int): ユーザーID
+        symbol (str): 銘柄コード
+
+    Returns:
+        tuple[Decimal, Decimal, Decimal]: 保有数量、平均取得単価、取得価格合計
+    """
     # 購入トランザクションの集計
     buy_query = select(
         func.sum(models.Transaction.quantity).label("total_quantity"),
@@ -141,8 +151,39 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     return current_quantity, average_cost, current_total_cost
 
 
+async def calculate_realized_pl_from_transactions(db: AsyncSession, user_id: int, symbol: str) -> Decimal:
+    """
+    売却取引の実現損益合計を取得する
+
+    Args:
+        db (AsyncSession): データベースセッション
+        user_id (int): ユーザーID
+        symbol (str): 銘柄コード
+
+    Returns:
+        Decimal: 売却取引の実現損益合計（該当がなければ0）
+    """
+
+    realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
+        models.Transaction.user_id == user_id,
+        models.Transaction.symbol == symbol,
+        models.Transaction.transaction_type == "sell",
+    )
+    result = await db.execute(realized_pl_query)
+    return result.scalar() or Decimal("0")
+
+
 async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> bool:
-    """保有銘柄の損益情報を計算して更新する"""
+    """
+    保有銘柄の損益情報を計算して更新する
+
+    Args:
+        db (AsyncSession): データベースセッション
+        holding (models.Holding): 更新対象のホールディング
+
+    Returns:
+        bool: 更新に成功した場合は True、必要情報が不足した場合は False
+    """
     # 銘柄情報を取得
     stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
     stock_result = await db.execute(stock_query)
@@ -159,6 +200,9 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     holding.quantity = new_quantity
     holding.average_cost = new_average_cost
     holding.total_cost = new_total_cost
+
+    # 実現損益をトランザクションから再集計
+    holding.realized_pl = await calculate_realized_pl_from_transactions(db, holding.user_id, holding.symbol)
 
     # 現在値を取得
     current_price = await get_current_price(stock)

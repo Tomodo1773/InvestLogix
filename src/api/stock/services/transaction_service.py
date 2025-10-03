@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Dict, List, Optional
 
 from sqlalchemy import extract, func, select
@@ -7,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models, schemas
 from .holding_service import (
     calculate_holding_from_transactions,
+    calculate_realized_pl_from_transactions,
     update_single_holding_pl,
 )
 from .stock_service import StockService
@@ -96,14 +96,7 @@ class TransactionService:
         await self.db.flush()
 
         # 実現損益の再計算
-        realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
-            models.Transaction.user_id == holding.user_id,
-            models.Transaction.symbol == holding.symbol,
-            models.Transaction.transaction_type == "sell",
-        )
-        result = await self.db.execute(realized_pl_query)
-        total_realized_pl = result.scalar() or Decimal("0")
-        holding.realized_pl = total_realized_pl
+        holding.realized_pl = await calculate_realized_pl_from_transactions(self.db, holding.user_id, holding.symbol)
 
     async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
         # ホールディングテーブルを結合して現在価格を取得するクエリに変更

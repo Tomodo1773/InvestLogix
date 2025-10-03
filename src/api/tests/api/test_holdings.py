@@ -2,13 +2,11 @@ from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..conftest import (
-    MOCK_JAPAN_STOCK_PRICE_UPDATED,
-    MOCK_US_STOCK_PRICE_UPDATED,
-    MOCK_USD_JPY_RATE_RESPONSE,
-)
+from ...stock.models import Holding
+from ..conftest import MOCK_JAPAN_STOCK_PRICE_UPDATED, MOCK_US_STOCK_PRICE_UPDATED, MOCK_USD_JPY_RATE_RESPONSE
 
 
 @pytest.mark.asyncio
@@ -144,3 +142,55 @@ async def test_recalculate_all_holdings_pl(
     assert Decimal(us_holding["market_value"]) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE * Decimal("10.0")
     assert us_holding["unrealized_pl"] is not None
     assert us_holding["unrealized_pl_percentage"] is not None
+
+
+@pytest.mark.asyncio
+async def test_recalculate_holding_pl_updates_realized_pl(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    create_transaction,
+):
+    """再計算APIがホールディングの実現損益を更新することを検証する"""
+
+    # 取引を登録（10株購入後に5株売却）
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "buy",
+            "quantity": "10.0",
+            "price": "3000.0",
+            "account_type": "NISA(成長投資枠)",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-01-01T00:00:00",
+        }
+    )
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "sell",
+            "quantity": "5.0",
+            "price": "3500.0",
+            "account_type": "NISA(成長投資枠)",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-02-01T00:00:00",
+        }
+    )
+
+    # 既存ホールディングの実現損益を0にリセットして過去データを再現
+    result = await db_session.execute(select(Holding).where(Holding.symbol == "8058"))
+    holding = result.scalar_one()
+    await db_session.execute(
+        update(Holding)
+        .where(Holding.user_id == holding.user_id, Holding.symbol == holding.symbol)
+        .values(realized_pl=Decimal("0"))
+    )
+    await db_session.commit()
+
+    # 再計算APIを呼び出し、実現損益が更新されることを確認
+    response = await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    assert response.status_code == 200
+    data = response.json()
+    assert Decimal(data["realized_pl"]) == Decimal("2500.0")

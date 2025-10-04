@@ -194,3 +194,105 @@ async def test_recalculate_holding_pl_updates_realized_pl(
     assert response.status_code == 200
     data = response.json()
     assert Decimal(data["realized_pl"]) == Decimal("2500.0")
+
+
+@pytest.mark.asyncio
+async def test_recalculate_holding_pl_delisted_stock(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    create_transaction,
+    create_dividend,
+    mocker,
+):
+    """上場廃止銘柄でも実現損益と配当を反映した評価損益が計算されることを検証する
+
+    期待する動作:
+    - 株価が取得できない（0）場合でも、unrealized_pl が null にならない
+    - unrealized_pl = market_value(0) + realized_pl + total_dividend - total_cost が計算される
+    - 売却益と配当が正しく反映される
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        create_transaction: 取引作成フィクスチャ
+        create_dividend: 配当作成フィクスチャ
+        mocker: モックフィクスチャ
+    """
+    # 株価取得関数を上場廃止状態（価格=0）にモック
+    mocker.patch("stock.services.holding_service.get_japan_stock_price", return_value=Decimal("0"))
+
+    # 取引を登録（10株購入、3000円/株）
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "buy",
+            "quantity": "10.0",
+            "price": "3000.0",
+            "account_type": "NISA(成長投資枠)",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-01-01T00:00:00",
+        }
+    )
+
+    # 5株売却（3500円/株、実現損益=+2500円）
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "sell",
+            "quantity": "5.0",
+            "price": "3500.0",
+            "account_type": "NISA(成長投資枠)",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-02-01T00:00:00",
+        }
+    )
+
+    # 配当受取（1000円）
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-03-01T00:00:00",
+            "shares_owned": "5.0",
+            "total_amount": "1000.0",
+            "tax": "200.0",
+            "fee": "0.0",
+        }
+    )
+
+    # 株価取得が0を返す状態で保有損益を再計算
+    response = await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+
+    # レスポンス検証
+    assert response.status_code == 200
+    data = response.json()
+
+    # 保有数量: 5株
+    assert Decimal(data["quantity"]) == Decimal("5.0")
+
+    # 現在価格: 0（上場廃止）
+    assert Decimal(data["current_price"]) == Decimal("0")
+
+    # 時価評価額: 0
+    assert Decimal(data["market_value"]) == Decimal("0")
+
+    # 実現損益: +2500円
+    assert Decimal(data["realized_pl"]) == Decimal("2500.0")
+
+    # 配当総額: 1000円
+    assert Decimal(data["total_dividend"]) == Decimal("1000.0")
+
+    # 取得価格合計: 5株 × 3000円 = 15000円
+    assert Decimal(data["total_cost"]) == Decimal("15000.0")
+
+    # unrealized_pl が null ではなく計算されていることを確認
+    assert data["unrealized_pl"] is not None
+
+    # unrealized_pl = market_value(0) + realized_pl(2500) + total_dividend(1000) - total_cost(15000)
+    #                = 0 + 2500 + 1000 - 15000
+    #                = -11500
+    expected_unrealized_pl = Decimal("0") + Decimal("2500") + Decimal("1000") - Decimal("15000")
+    assert Decimal(data["unrealized_pl"]) == expected_unrealized_pl

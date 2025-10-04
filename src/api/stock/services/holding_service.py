@@ -208,9 +208,14 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     current_price = await get_current_price(stock)
     if current_price > 0:
         holding.current_price = current_price
+    elif current_price == 0 and holding.current_price is None:
+        # 上場廃止などで株価が取得できない場合は0を設定
+        holding.current_price = Decimal("0")
 
-    # 現在値がない場合は損益計算をスキップ
+    # 現在値がない場合でも、初回取得時以外は既存の価格で計算を続行
+    # 上場廃止銘柄でも実現損益と配当を反映するため、損益計算は必ず実行
     if holding.current_price is None:
+        # 完全に価格情報がない初回のみスキップ
         return False
 
     # 時価評価額の計算

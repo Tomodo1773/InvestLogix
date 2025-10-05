@@ -1213,22 +1213,6 @@ wheels = [
 ]
 
 [[package]]
-name = "pytest-postgresql"
-version = "6.1.1"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mirakuru" },
-    { name = "port-for" },
-    { name = "psycopg" },
-    { name = "pytest" },
-    { name = "setuptools" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/88/51/d56a56fd852f0e3da5d001cb90815c793f904e387495e63e22ea90d2de1d/pytest_postgresql-6.1.1.tar.gz", hash = "sha256:f996637367e6aecebba1349da52eea95340bdb434c90e4b79739e62c656056e2", size = 47500 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/db/c8/ca523b7dac9253cbfd60466aa0993b4fe5c558844585e7a0c0ad21d00bec/pytest_postgresql-6.1.1-py3-none-any.whl", hash = "sha256:bd4c0970d25685ac3d34d42263fcbfbf134bf02d22519fce7e1ccf4122d8b99a", size = 40529 },
-]
-
-[[package]]
 name = "python-dateutil"
 version = "2.9.0.post0"
 source = { registry = "https://pypi.org/simple" }

@@ -173,6 +173,26 @@ async def calculate_realized_pl_from_transactions(db: AsyncSession, user_id: int
     return result.scalar() or Decimal("0")
 
 
+async def calculate_total_dividend_after_tax(db: AsyncSession, user_id: int, symbol: str) -> Decimal:
+    """指定銘柄の配当総額（税・手数料控除後）を取得する
+
+    Args:
+        db (AsyncSession): データベースセッション
+        user_id (int): ユーザーID
+        symbol (str): 銘柄コード
+
+    Returns:
+        Decimal: 税・手数料控除後の配当総額（該当がなければ0）
+    """
+
+    dividend_query = select(
+        func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0) - func.coalesce(models.Dividend.fee, 0))
+    ).where(models.Dividend.user_id == user_id, models.Dividend.symbol == symbol)
+
+    result = await db.execute(dividend_query)
+    return result.scalar() or Decimal("0")
+
+
 async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> bool:
     """
     保有銘柄の損益情報を計算して更新する
@@ -203,6 +223,9 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
 
     # 実現損益をトランザクションから再集計
     holding.realized_pl = await calculate_realized_pl_from_transactions(db, holding.user_id, holding.symbol)
+
+    # 配当総額を配当テーブルから再集計（税・手数料控除後）
+    holding.total_dividend = await calculate_total_dividend_after_tax(db, holding.user_id, holding.symbol)
 
     # 現在値を取得
     current_price = await get_current_price(stock)

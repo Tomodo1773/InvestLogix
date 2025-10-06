@@ -2,6 +2,7 @@
 .env
 .dockervenv
 __pycache__
+.secrets
 
 # Python packaging
 *.egg-info/

@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+ユーザからの問いかけには必ず日本語で返答してください。
 
 ## プロジェクト概要
 

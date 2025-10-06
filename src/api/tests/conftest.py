@@ -1,14 +1,17 @@
+import asyncio
+import uuid
 from decimal import Decimal
 from typing import AsyncGenerator, Generator
 
+import psycopg
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from pytest_postgresql import factories
-from pytest_postgresql.janitor import DatabaseJanitor
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.engine import URL, make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+from testcontainers.postgres import PostgresContainer
 
 from stock.app import app
 from stock.database import get_db
@@ -19,65 +22,116 @@ from stock.services.auth_service import AuthService
 # pytest-asyncioのデフォルトスコープを設定
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
-# pytest-postgresqlのデフォルトスコープを設定
-factories.postgresql.DEFAULT_FIXTURE_SCOPE = "function"
-factories.postgresql_proc.DEFAULT_FIXTURE_SCOPE = "function"
 
-# テスト用のDBのURL設定
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:postgres@localhost:5433/test_investlogix"
+@pytest.fixture(scope="session")
+def event_loop():
+    """session スコープの event_loop フィクスチャ"""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
 
-# テスト用のエンジン設定
-engine = create_async_engine(TEST_DATABASE_URL, echo=True, pool_size=5, max_overflow=10)
 
-# テスト用のセッションファクトリ
-TestingSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+def _render_url(url: URL) -> str:
+    return url.render_as_string(hide_password=False)
 
-# テスト用の一時的なPostgreSQLインスタンスを設定
-test_db = factories.postgresql_proc(host="localhost", port=5433, password="postgres")
-test_postgres = factories.postgresql("test_db")
+
+def _admin_connection_url(base_connection_url: str) -> str:
+    url = make_url(base_connection_url)
+    url = url.set(database="postgres")
+    # psycopg3はドライバ指定子を含まない形式を要求するため、postgresql://に変更
+    url = url.set(drivername="postgresql")
+    return _render_url(url)
+
+
+def _async_db_url(base_connection_url: str, database: str) -> str:
+    url = make_url(base_connection_url)
+    url = url.set(drivername="postgresql+asyncpg")
+    url = url.set(database=database)
+    return _render_url(url)
+
+
+@pytest.fixture(scope="session")
+def base_connection_url() -> Generator[str, None, None]:
+    container = PostgresContainer("postgres:16-alpine")
+    container.start()
+    try:
+        yield container.get_connection_url()
+    finally:
+        container.stop()
+
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str, None]:
+    template_db_name = "template_investlogix"
+    admin_url = _admin_connection_url(base_connection_url)
+
+    def _prepare_template_database() -> None:
+        with psycopg.connect(admin_url, autocommit=True) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (template_db_name,))
+                exists = cur.fetchone()
+            if not exists:
+                conn.execute(f'CREATE DATABASE "{template_db_name}"')
+
+    await asyncio.to_thread(_prepare_template_database)
+
+    template_async_url = _async_db_url(base_connection_url, template_db_name)
+    # poolclass=NullPoolでコネクションプールを無効化し、engine.dispose()で確実に接続を閉じる
+    from sqlalchemy.pool import NullPool
+
+    engine = create_async_engine(template_async_url, echo=True, poolclass=NullPool)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+        # テンプレート作成後、即座にengineを破棄して接続を確実に閉じる
+        await engine.dispose()
+        yield template_db_name
+    finally:
+
+        def _drop_template_database() -> None:
+            with psycopg.connect(admin_url, autocommit=True) as conn:
+                conn.execute(f'DROP DATABASE IF EXISTS "{template_db_name}" WITH (FORCE)')
+
+        await asyncio.to_thread(_drop_template_database)
+
+
+@pytest.fixture(scope="function")
+def db_url(base_connection_url: str, bootstrap_schema: str) -> Generator[str, None, None]:
+    template_db_name = bootstrap_schema
+    admin_url = _admin_connection_url(base_connection_url)
+    db_name = f"t_{uuid.uuid4().hex[:8]}"
+
+    with psycopg.connect(admin_url, autocommit=True) as conn:
+        conn.execute(f'CREATE DATABASE "{db_name}" TEMPLATE "{template_db_name}"')
+
+    database_url = _async_db_url(base_connection_url, db_name)
+    try:
+        yield database_url
+    finally:
+        with psycopg.connect(admin_url, autocommit=True) as conn:
+            conn.execute(f'DROP DATABASE IF EXISTS "{db_name}" WITH (FORCE)')
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
-async def setup_database(test_postgres):
+async def setup_database(db_url: str) -> AsyncGenerator[AsyncEngine, None]:
     """各テストで使用するデータベースの初期化を行うフィクスチャー
 
     各テスト実行前にデータベースを作成し、テスト終了後にクリーンアップを行います。
 
     Args:
-        test_postgres: PostgreSQLのフィクスチャー
+        db_url: テスト用のデータベースURL
 
     Yields:
         SQLAlchemy AsyncEngine: テスト用の非同期エンジンインスタンス
     """
-    db_params = test_postgres.info
-    db_name = "test_investlogix"
-
-    janitor = DatabaseJanitor(
-        user=db_params.user,
-        host=db_params.host,
-        port=db_params.port,
-        password="postgres",
-        dbname=db_name,
-        version=14,
-    )
+    test_engine = create_async_engine(db_url, echo=True, pool_size=5, max_overflow=10)
 
     try:
-        janitor.init()
-
-        # 非同期エンジンの設定
-        db_url = f"postgresql+asyncpg://{db_params.user}:postgres@{db_params.host}:{db_params.port}/{db_name}"
-        test_engine = create_async_engine(db_url, echo=True, pool_size=5, max_overflow=10)
-
-        # テーブルの作成（テストケースごとに実行）
-        async with test_engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-
         yield test_engine
-
-        # テスト終了時のクリーンアップ
-        await test_engine.dispose()
     finally:
-        janitor.drop()
+        await test_engine.dispose()
 
 
 @pytest_asyncio.fixture

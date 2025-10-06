@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy import extract, func, select
@@ -35,18 +36,18 @@ class DividendService:
         holding = holdings_result.scalar_one_or_none()
 
         if holding:
-            # total_dividendに新しい配当金額を加算
-            net_dividend = dividend.total_amount
+            # total_dividend に配当の純額（税・手数料控除後）を加算
+            net_dividend = Decimal(dividend.total_amount)
             if dividend.tax is not None:
-                net_dividend -= dividend.tax
+                net_dividend -= Decimal(dividend.tax)
             if dividend.fee is not None:
-                net_dividend -= dividend.fee
+                net_dividend -= Decimal(dividend.fee)
 
-            holding.total_dividend = (holding.total_dividend or 0) + net_dividend
+            holding.total_dividend = (holding.total_dividend or Decimal("0")) + net_dividend
             # 未実現損益の更新
             if holding.market_value is not None:
                 holding.unrealized_pl = (
-                    holding.market_value + (holding.realized_pl or 0) + holding.total_dividend - holding.total_cost
+                    holding.market_value + (holding.realized_pl or Decimal("0")) + holding.total_dividend - holding.total_cost
                 )
                 if holding.total_cost > 0:
                     holding.unrealized_pl_percentage = (holding.unrealized_pl / holding.total_cost) * 100

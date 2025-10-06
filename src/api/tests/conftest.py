@@ -22,6 +22,16 @@ from stock.services.auth_service import AuthService
 # pytest-asyncioのデフォルトスコープを設定
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """session スコープの event_loop フィクスチャ"""
+    policy = asyncio.get_event_loop_policy()
+    loop = policy.new_event_loop()
+    yield loop
+    loop.close()
+
+
 def _render_url(url: URL) -> str:
     return url.render_as_string(hide_password=False)
 
@@ -29,6 +39,8 @@ def _render_url(url: URL) -> str:
 def _admin_connection_url(base_connection_url: str) -> str:
     url = make_url(base_connection_url)
     url = url.set(database="postgres")
+    # psycopg3はドライバ指定子を含まない形式を要求するため、postgresql://に変更
+    url = url.set(drivername="postgresql")
     return _render_url(url)
 
 
@@ -65,14 +77,18 @@ async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str, None
     await asyncio.to_thread(_prepare_template_database)
 
     template_async_url = _async_db_url(base_connection_url, template_db_name)
-    engine = create_async_engine(template_async_url, echo=True, pool_size=5, max_overflow=10)
+    # poolclass=NullPoolでコネクションプールを無効化し、engine.dispose()で確実に接続を閉じる
+    from sqlalchemy.pool import NullPool
+
+    engine = create_async_engine(template_async_url, echo=True, poolclass=NullPool)
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
+        # テンプレート作成後、即座にengineを破棄して接続を確実に閉じる
+        await engine.dispose()
         yield template_db_name
     finally:
-        await engine.dispose()
 
         def _drop_template_database() -> None:
             with psycopg.connect(admin_url, autocommit=True) as conn:

@@ -48,7 +48,7 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
     holdings = holdings_response.json()
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
     assert holding is not None
-    # 配当金の純額（25000 - 2500 = 22500）が反映されていることを確認
+    # 配当金の純額（税引き後）= 22500 が反映されていることを確認
     assert Decimal(holding["total_dividend"]) == Decimal("22500.0")
 
 

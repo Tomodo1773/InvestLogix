@@ -23,15 +23,6 @@ from stock.services.auth_service import AuthService
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """session スコープの event_loop フィクスチャ"""
-    policy = asyncio.get_event_loop_policy()
-    loop = policy.new_event_loop()
-    yield loop
-    loop.close()
-
-
 def _render_url(url: URL) -> str:
     return url.render_as_string(hide_password=False)
 
@@ -61,7 +52,7 @@ def base_connection_url() -> Generator[str, None, None]:
         container.stop()
 
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
+@pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
 async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str, None]:
     template_db_name = "template_investlogix"
     admin_url = _admin_connection_url(base_connection_url)

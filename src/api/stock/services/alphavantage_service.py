@@ -73,7 +73,6 @@ if __name__ == "__main__":
         details = await fetch_us_stock_overview(symbol)
         if not details:
             details = await fetch_us_stock_search(symbol)
-        print(details)
         # ドル円レートのテスト
         rate = await fetch_usdjpy_rate()
         if rate:

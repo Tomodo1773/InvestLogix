@@ -29,6 +29,6 @@ jobs:
         working-directory: src/api
         run: uv sync --frozen
 
-      - name: Run pytest
+      - name: Run pytest (parallel)
         working-directory: src/api
-        run: uv run pytest
+        run: uv run pytest -n auto

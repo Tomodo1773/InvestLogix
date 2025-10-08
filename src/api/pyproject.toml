@@ -29,6 +29,7 @@ dependencies = [
     "testcontainers[postgres]>=4.9.1",
     "psycopg2-binary>=2.9.10",
     "psycopg>=3.2.4",
+    "pytest-xdist>=3.8.0",
 ]
 
 [tool.uv]

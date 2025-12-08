@@ -194,8 +194,13 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
 
 @pytest.mark.asyncio
 async def test_get_monthly_dividends_respects_jst_boundary(client: AsyncClient, auth_token: str, create_dividend):
-    """JST 月初0時の配当が正しく当月に集計されることを確認する"""
+    """JST 月初0時の配当が正しく当月に集計されることを確認する
 
+    このテストは、タイムゾーン境界でのエッジケースを検証します:
+    - JST で 2024-12-01 00:00:00 は UTC では 2024-11-30 15:00:00
+    - UTC 基準で集計すると 11月に誤って集計される可能性がある
+    - JST 基準で正しく 12月に集計されることを確認する
+    """
     boundary_dividend = {
         "symbol": "8058",
         "payment_date": "2024-12-01T00:00:00+09:00",  # JST で 12/1 0:00 は UTC では 11/30 15:00

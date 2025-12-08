@@ -89,7 +89,8 @@ class DividendService:
         Returns:
             List[dict]: 月ごとの配当金集計のリスト（年月と配当金額）
         """
-        # JST に正規化した支払日を基準に月ごとに配当金を集計するクエリ
+        # payment_date を JST に変換して月ごとに配当金を集計するクエリ
+        # ※ payment_date は DB では UTC で保存されているため、JST への変換が必要
         payment_date_jst = models.Dividend.payment_date.op("AT TIME ZONE")("Asia/Tokyo")
         year = extract("year", payment_date_jst).label("year")
         month = extract("month", payment_date_jst).label("month")

@@ -190,3 +190,36 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
 
             # 実際の値と比較（小数点以下の誤差を許容）
             assert abs(jan_2024_data["total_dividend"] - expected_amount) < 0.01
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_dividends_respects_jst_boundary(client: AsyncClient, auth_token: str, create_dividend):
+    """JST 月初0時の配当が正しく当月に集計されることを確認する
+
+    このテストは、タイムゾーン境界でのエッジケースを検証します:
+    - JST で 2024-12-01 00:00:00 は UTC では 2024-11-30 15:00:00
+    - UTC 基準で集計すると 11月に誤って集計される可能性がある
+    - JST 基準で正しく 12月に集計されることを確認する
+    """
+    boundary_dividend = {
+        "symbol": "8058",
+        "payment_date": "2024-12-01T00:00:00+09:00",  # JST で 12/1 0:00 は UTC では 11/30 15:00
+        "shares_owned": "50.0",
+        "total_amount": "3000.0",
+        "tax": "300.0",
+        "fee": "0.0",
+    }
+    await create_dividend(boundary_dividend)
+
+    response = await client.get("/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"})
+    assert response.status_code == 200
+    data = response.json()
+
+    dec_entry = next((item for item in data if item["year"] == 2024 and item["month"] == 12), None)
+    assert dec_entry is not None
+    expected_amount = 3000.0 - 300.0
+    assert abs(dec_entry["total_dividend"] - expected_amount) < 0.01
+
+    # UTC 基準で集計されている場合に誤って 11 月へ入らないことを検証
+    nov_entry = next((item for item in data if item["year"] == 2024 and item["month"] == 11), None)
+    assert nov_entry is None

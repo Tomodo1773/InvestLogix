@@ -89,11 +89,15 @@ class DividendService:
         Returns:
             List[dict]: 月ごとの配当金集計のリスト（年月と配当金額）
         """
-        # 月ごとに配当金を集計するクエリ
+        # JST に正規化した支払日を基準に月ごとに配当金を集計するクエリ
+        payment_date_jst = models.Dividend.payment_date.op("AT TIME ZONE")("Asia/Tokyo")
+        year = extract("year", payment_date_jst).label("year")
+        month = extract("month", payment_date_jst).label("month")
+
         query = (
             select(
-                extract("year", models.Dividend.payment_date).label("year"),
-                extract("month", models.Dividend.payment_date).label("month"),
+                year,
+                month,
                 func.sum(
                     models.Dividend.total_amount
                     - func.coalesce(models.Dividend.tax, 0)
@@ -101,8 +105,8 @@ class DividendService:
                 ).label("total_dividend"),
             )
             .where(models.Dividend.user_id == user_id)
-            .group_by(extract("year", models.Dividend.payment_date), extract("month", models.Dividend.payment_date))
-            .order_by(extract("year", models.Dividend.payment_date), extract("month", models.Dividend.payment_date))
+            .group_by(year, month)
+            .order_by(year, month)
         )
 
         result = await self.db.execute(query)

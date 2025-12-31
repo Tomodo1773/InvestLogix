@@ -163,11 +163,29 @@ uv run pytest tests/api/test_transactions.py::test_function_name -v
 - `setup_japanese_stock_data`, `setup_us_stock_data`: テスト用の取引データ作成
 - `create_transaction`, `create_dividend`: テストデータ登録用のユーティリティフィクスチャ
 
-#### 認証の仕組み
+#### 認証認可
 
-- JWT トークンベースの認証
-- `auth.py` の `get_current_user` で認証ユーザーを取得（キャッシュ機能あり、TTL=5分）
-- 管理者権限が必要なエンドポイントは `get_current_admin_user` で保護
+##### 想定クライアント
+
+| クライアント | 認証方法 | 用途 |
+|-------------|---------|------|
+| Webフロントエンド | Cookie（httponly） | ブラウザからのアクセス |
+| ユーザー端末からの直接API呼び出し | Authorization ヘッダー | スクリプトや CLI からのアクセス |
+| Swagger UI (/docs) | OAuth2形式 | API テスト・開発 |
+
+##### 認証（Authentication）
+
+- **JWT トークンベース**: `python-jose` でトークン生成・検証、有効期限30分
+- **パスワード管理**: `passlib` + `bcrypt` でハッシュ化
+- **トークン取得**: `POST /api/v1/token` にユーザー名・パスワードを送信
+- **認証済みリクエスト**: Cookie の `token` または `Authorization: Bearer {token}` ヘッダーを使用
+- **関連コード**: `auth.py` の `get_current_user` で認証ユーザーを取得（キャッシュ機能あり、TTL=5分）
+
+##### 認可（Authorization）
+
+- **エンドポイント保護**: 保護が必要なエンドポイントは `Depends(get_current_user)` で認証ユーザーを取得
+- **データアクセス制御**: サービス層で `user_id` によるフィルタリングを実施（RLSは未使用）
+- **管理者権限**: `get_current_admin_user` で管理者限定エンドポイントを保護
 
 #### データベース接続
 

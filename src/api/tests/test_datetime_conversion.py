@@ -5,9 +5,6 @@
 """
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
-
-import pytest
 
 from stock.schemas import Dividend, DividendBase, Transaction, TransactionCreate
 from stock.utils.datetime import JST, UTC, from_jst_input, to_jst

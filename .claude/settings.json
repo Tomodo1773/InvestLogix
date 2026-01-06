@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run format && uv run ruff check --fix"
+          }
+        ]
+      }
+    ]
+  }
+}

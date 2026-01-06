@@ -48,7 +48,7 @@ dev = [
 ]
 
 [tool.ruff]
-# Allow lines to be as long as 120.
+# Allow lines to be as long as 110.
 line-length = 110
 
 [tool.setuptools]

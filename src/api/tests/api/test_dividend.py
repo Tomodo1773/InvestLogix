@@ -41,7 +41,10 @@ async def test_create_dividend(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == dividend_data["symbol"]
-    assert datetime.fromisoformat(data["payment_date"]).strftime("%Y-%m-%dT%H:%M:%S") == "2024-03-15T00:00:00"
+    # レスポンスがJST形式（+09:00）であることを確認
+    assert "+09:00" in data["payment_date"]
+    parsed_dt = datetime.fromisoformat(data["payment_date"])
+    assert parsed_dt.strftime("%Y-%m-%dT%H:%M:%S") == "2024-03-15T00:00:00"
     assert Decimal(data["total_amount"]) == Decimal(dividend_data["total_amount"])
     assert Decimal(data["tax"]) == Decimal(dividend_data["tax"])
     assert Decimal(data["fee"]) == Decimal(dividend_data["fee"])

@@ -7,6 +7,7 @@ updates:
       interval: weekly
     labels:
       - "dependencies"
+      - "uv"
     groups:
       dependencies:
         patterns:
@@ -15,3 +16,18 @@ updates:
       prefix: "deps"
       prefix-development: "deps"
       include: "scope"
+  # GitHub Actionsの更新設定
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    groups:
+      # すべてのGitHub Actionsを1つのPRにグループ化
+      github-actions:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "github-actions"

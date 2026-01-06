@@ -14,7 +14,9 @@ class DividendService:
         self.db = db
         self.stock_service = StockService(db)
 
-    async def create_dividend(self, dividend: schemas.DividendCreate, user_id: int) -> Optional[models.Dividend]:
+    async def create_dividend(
+        self, dividend: schemas.DividendCreate, user_id: int
+    ) -> Optional[models.Dividend]:
         # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == dividend.symbol)
         stock_result = await self.db.execute(stock_query)
@@ -47,7 +49,10 @@ class DividendService:
             # 未実現損益の更新
             if holding.market_value is not None:
                 holding.unrealized_pl = (
-                    holding.market_value + (holding.realized_pl or Decimal("0")) + holding.total_dividend - holding.total_cost
+                    holding.market_value
+                    + (holding.realized_pl or Decimal("0"))
+                    + holding.total_dividend
+                    - holding.total_cost
                 )
                 if holding.total_cost > 0:
                     holding.unrealized_pl_percentage = (holding.unrealized_pl / holding.total_cost) * 100

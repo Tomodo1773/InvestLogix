@@ -48,7 +48,9 @@ async def list_dividends(
 
 
 @router.get("/monthly", response_model=List[MonthlyDividend])
-async def get_monthly_dividends(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def get_monthly_dividends(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
     """
     月次の配当金集計を取得する
     - 成功時: 月ごとの配当金集計のリスト（年月と配当金額）を返却

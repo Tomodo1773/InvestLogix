@@ -22,7 +22,9 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
 
     # 銘柄名を取得
-    name_elem = soup.select_one("body > div:nth-of-type(4) > div > div > div:nth-of-type(1) > div:nth-of-type(1) > h3")
+    name_elem = soup.select_one(
+        "body > div:nth-of-type(4) > div > div > div:nth-of-type(1) > div:nth-of-type(1) > h3"
+    )
     name = name_elem.text.strip() if name_elem else None
 
     return {

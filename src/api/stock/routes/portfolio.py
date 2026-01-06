@@ -12,7 +12,9 @@ router = APIRouter()
 
 
 @router.get("/summary", response_model=PortfolioSummary)
-async def get_portfolio_summary(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def get_portfolio_summary(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
     """
     ポートフォリオのサマリー情報を取得する
     - 取得情報:
@@ -43,7 +45,9 @@ async def update_portfolio_summary(
 
 
 @router.get("/history", response_model=List[PortfolioHistoryResponse])
-async def get_portfolio_history(current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+async def get_portfolio_history(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
     """
     ポートフォリオの過去の履歴をすべて取得する
     - 日付順（昇順）でソートされた履歴データを返却

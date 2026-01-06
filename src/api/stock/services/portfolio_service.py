@@ -39,9 +39,9 @@ class PortfolioService:
             total_realized_pl += holding.realized_pl or 0
 
         # 配当の集計（税引後金額を計算）
-        dividend_query = select(func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0))).where(
-            models.Dividend.user_id == user_id
-        )
+        dividend_query = select(
+            func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0))
+        ).where(models.Dividend.user_id == user_id)
         dividend_result = await self.db.execute(dividend_query)
         total_dividend = dividend_result.scalar() or 0
 
@@ -49,7 +49,9 @@ class PortfolioService:
             "total_cost": total_cost,
             "total_market_value": total_market_value,
             "total_unrealized_pl": total_market_value - total_cost,
-            "total_unrealized_pl_percentage": (total_market_value - total_cost) / total_cost * 100 if total_cost > 0 else 0,
+            "total_unrealized_pl_percentage": (total_market_value - total_cost) / total_cost * 100
+            if total_cost > 0
+            else 0,
             "total_realized_pl": total_realized_pl,
             "total_dividend": total_dividend,
             "holdings_by_market": holdings_by_market,

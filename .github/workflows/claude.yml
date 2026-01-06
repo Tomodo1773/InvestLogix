@@ -30,6 +30,13 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Install uv and Python
+        id: setup-uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.9.21"
+          python-version: "3.11"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -54,9 +61,10 @@ jobs:
           #   --system-prompt "Follow our coding standards. Ensure all new code has tests. Use TypeScript for new files."
 
           # Optional: Advanced settings configuration
-          # settings: |
-          #   {
-          #     "env": {
-          #       "NODE_ENV": "test"
-          #     }
-          #   }
+          settings: |
+            {
+              "env": {
+                "JQUANTS_MAIL_ADDRESS": "${{ secrets.JQUANTS_MAIL_ADDRESS }}",
+                "JQUANTS_PASSWORD": "${{ secrets.JQUANTS_PASSWORD }}"
+              }
+            }

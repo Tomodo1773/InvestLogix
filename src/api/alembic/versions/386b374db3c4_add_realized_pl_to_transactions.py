@@ -28,7 +28,9 @@ def upgrade() -> None:
     op.execute("UPDATE transactions SET realized_pl = 0.00 WHERE realized_pl IS NULL")
 
     # 3. NOT NULL制約を設定
-    op.alter_column("transactions", "realized_pl", existing_type=sa.Numeric(precision=10, scale=2), nullable=False)
+    op.alter_column(
+        "transactions", "realized_pl", existing_type=sa.Numeric(precision=10, scale=2), nullable=False
+    )
     # ### end Alembic commands ###
 
 

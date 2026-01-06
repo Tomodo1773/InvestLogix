@@ -13,7 +13,9 @@ router = APIRouter()
 
 @router.put("/me/line-user-id", response_model=UserSchema)
 async def update_line_user_id(
-    line_data: LineUserIdUpdate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    line_data: LineUserIdUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ):
     """
     現在ログインしているユーザーのLINE UserIDを更新する
@@ -27,7 +29,12 @@ async def update_line_user_id(
         User: 更新されたユーザー情報
     """
     # 現在のユーザー情報を更新
-    stmt = update(User).where(User.user_id == current_user.user_id).values(line_user_id=line_data.line_user_id).returning(User)
+    stmt = (
+        update(User)
+        .where(User.user_id == current_user.user_id)
+        .values(line_user_id=line_data.line_user_id)
+        .returning(User)
+    )
 
     result = await db.execute(stmt)
     updated_user = result.scalar_one_or_none()

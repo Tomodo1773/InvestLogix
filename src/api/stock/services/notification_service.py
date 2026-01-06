@@ -22,7 +22,9 @@ class NotificationService:
     """LINE通知サービス"""
 
     @staticmethod
-    async def send_line_notification(user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None) -> bool:
+    async def send_line_notification(
+        user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None
+    ) -> bool:
         """
         ポートフォリオ情報をLINEに通知する
 
@@ -85,7 +87,13 @@ class NotificationService:
                                 }
                             ],
                         },
-                        {"type": "text", "text": "資産サマリ", "weight": "bold", "size": "xxl", "margin": "md"},
+                        {
+                            "type": "text",
+                            "text": "資産サマリ",
+                            "weight": "bold",
+                            "size": "xxl",
+                            "margin": "md",
+                        },
                         {"type": "text", "text": today, "size": "xs", "color": "#aaaaaa", "wrap": True},
                         {"type": "separator", "margin": "xxl"},
                         {
@@ -100,7 +108,12 @@ class NotificationService:
                                     "layout": "horizontal",
                                     "margin": "sm",
                                     "contents": [
-                                        {"type": "text", "text": "取得価格", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "取得価格",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "size": "sm",
@@ -114,7 +127,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "時価総額", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "時価総額",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_market_value}円",
@@ -128,7 +146,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "評価損益", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "評価損益",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_unrealized_pl}円 ({total_unrealized_pl_percentage}%)",
@@ -144,7 +167,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "実現損益", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "実現損益",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_realized_pl}円",
@@ -158,7 +186,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "配当総額", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "配当総額",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_dividend}円",
@@ -200,7 +233,11 @@ class NotificationService:
                 "styles": {"footer": {"separator": True}},
             }
 
-            flex_message = {"type": "flex", "altText": "ポートフォリオの更新情報をお知らせします", "contents": flex_contents}
+            flex_message = {
+                "type": "flex",
+                "altText": "ポートフォリオの更新情報をお知らせします",
+                "contents": flex_contents,
+            }
 
             headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
 
@@ -208,7 +245,9 @@ class NotificationService:
 
             # LINE Message APIにリクエストを送信
             async with httpx.AsyncClient() as client:
-                response = await client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data)
+                response = await client.post(
+                    "https://api.line.me/v2/bot/message/push", headers=headers, json=data
+                )
 
             # レスポンス処理
             if response.status_code == 200:

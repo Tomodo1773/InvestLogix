@@ -36,7 +36,9 @@ async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSessi
 
 
 @pytest.mark.asyncio
-async def test_create_us_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
+async def test_create_us_stock(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
     """米国株銘柄登録のテスト（AlphaVantage APIをモック使用）
 
     期待する動作:
@@ -72,7 +74,9 @@ async def test_create_us_stock(client: AsyncClient, db_session: AsyncSession, au
 
 
 @pytest.mark.asyncio
-async def test_create_us_etf(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
+async def test_create_us_etf(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
     """米国ETF銘柄登録のテスト（AlphaVantage APIをモック使用）
 
     期待する動作:
@@ -140,7 +144,9 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_create_duplicate_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis):
+async def test_create_duplicate_stock(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
     """銘柄の重複登録テスト
 
     期待する動作:

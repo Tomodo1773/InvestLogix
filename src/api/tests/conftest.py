@@ -165,7 +165,12 @@ async def auth_token(client: AsyncClient, setup_database) -> str:
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
 
     # テストユーザーのデータ
-    user_data = {"username": "testuser", "email": "test@example.com", "password": "testpassword", "is_admin": False}
+    user_data = {
+        "username": "testuser",
+        "email": "test@example.com",
+        "password": "testpassword",
+        "is_admin": False,
+    }
 
     # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
@@ -226,7 +231,9 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
 
     async def override_get_db():
         # setup_databaseから新しいセッションファクトリを作成
-        TestingSessionLocalFunction = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+        TestingSessionLocalFunction = sessionmaker(
+            setup_database, class_=AsyncSession, expire_on_commit=False
+        )
         async with TestingSessionLocalFunction() as session:
             yield session
 
@@ -254,7 +261,9 @@ def sync_client(setup_database) -> Generator[TestClient, None, None]:
     def override_get_db():
         async def _override_get_db():
             # setup_databaseから新しいセッションファクトリを作成
-            TestingSessionLocalFunction = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
+            TestingSessionLocalFunction = sessionmaker(
+                setup_database, class_=AsyncSession, expire_on_commit=False
+            )
             async with TestingSessionLocalFunction() as session:
                 yield session
 

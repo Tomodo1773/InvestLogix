@@ -24,7 +24,9 @@ async def test_create_user(client: AsyncClient, auth_admin_token: str, db_sessio
     user_data = {"username": "testuser2", "email": "test2@example.com", "password": "testpassword"}
 
     # APIリクエスト実行（Authorizationヘッダーを追加）
-    response = await client.post("/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"})
+    response = await client.post(
+        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 200
@@ -52,10 +54,14 @@ async def test_create_duplicate_user(client: AsyncClient, auth_admin_token: str,
     user_data = {"username": "testuser3", "email": "test3@example.com", "password": "testpassword"}
 
     # 1人目のユーザーを作成
-    await client.post("/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"})
+    await client.post(
+        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
+    )
 
     # 同じユーザー名で2人目を作成
-    response = await client.post("/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"})
+    response = await client.post(
+        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 400
@@ -63,7 +69,9 @@ async def test_create_duplicate_user(client: AsyncClient, auth_admin_token: str,
 
 
 @pytest.mark.asyncio
-async def test_create_user_without_admin_privileges(client: AsyncClient, auth_token: str, db_session: AsyncSession):
+async def test_create_user_without_admin_privileges(
+    client: AsyncClient, auth_token: str, db_session: AsyncSession
+):
     """管理者権限なしでのユーザー登録のテスト
 
     期待する動作:
@@ -79,7 +87,9 @@ async def test_create_user_without_admin_privileges(client: AsyncClient, auth_to
     user_data = {"username": "newuser", "email": "newuser@example.com", "password": "newpassword"}
 
     # 管理者権限なしでリクエスト実行
-    response = await client.post("/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 403
@@ -99,7 +109,12 @@ async def test_login(client: AsyncClient, db_session: AsyncSession):
         db_session: テスト用DBセッション
     """
     # テストデータ準備
-    user_data = {"username": "admin", "email": "test_admin@example.com", "password": "adminpassword", "is_admin": True}
+    user_data = {
+        "username": "admin",
+        "email": "test_admin@example.com",
+        "password": "adminpassword",
+        "is_admin": True,
+    }
 
     # ユーザーを作成
     await AuthService(db_session).create_user(UserCreate(**user_data))

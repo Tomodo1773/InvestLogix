@@ -16,5 +16,5 @@
 		},
 		"editor.defaultFormatter": "charliermarsh.ruff"
 	},
-	"ruff.lineLength": 127
+	"ruff.lineLength": 110
 }

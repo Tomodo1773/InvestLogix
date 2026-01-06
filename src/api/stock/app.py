@@ -33,7 +33,11 @@ async def root():
     APIのルートエンドポイント
     - 戻り値: APIの基本情報
     """
-    return {"name": "InvestLogix API", "version": "1.0.0", "description": "株式投資ポートフォリオ管理APIサービス"}
+    return {
+        "name": "InvestLogix API",
+        "version": "1.0.0",
+        "description": "株式投資ポートフォリオ管理APIサービス",
+    }
 
 
 # 認証関連のエンドポイント（トークン取得とユーザー登録）

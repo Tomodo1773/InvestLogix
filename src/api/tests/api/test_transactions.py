@@ -45,7 +45,9 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     assert Decimal(data["price"]) == Decimal("3000.0")
 
     # ホールディングテーブルの状態を確認（指定銘柄のみ）
-    holdings_response = await client.get("/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get(
+        "/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = holdings[0]
@@ -79,7 +81,9 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # 売却取引のテストデータ準備
     transaction_data = {
@@ -107,7 +111,9 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     assert Decimal(data["price"]) == Decimal("3500.0")
 
     # 売却後のホールディングの実現損益を確認
-    holdings_response = await client.get("/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get(
+        "/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = holdings[0]
@@ -115,7 +121,9 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_create_transaction_insufficient_shares(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_transaction_insufficient_shares(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
     """保有株数不足による売却取引の失敗テスト
 
     期待する動作:
@@ -150,7 +158,9 @@ async def test_create_transaction_insufficient_shares(client: AsyncClient, db_se
 
 
 @pytest.mark.asyncio
-async def test_create_transaction_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_transaction_stock_not_found(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
     """存在しない銘柄による取引の失敗テスト
 
     期待する動作:
@@ -185,7 +195,9 @@ async def test_create_transaction_stock_not_found(client: AsyncClient, db_sessio
 
 
 @pytest.mark.asyncio
-async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_multiple_buy_transactions_average_cost(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
     """複数回の購入取引による平均取得単価の計算テスト
 
     期待する動作:
@@ -210,7 +222,9 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=first_buy, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=first_buy, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # 2回目の購入取引データ準備（5株@4000円）
     second_buy = {
@@ -223,10 +237,14 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
         "tax": "0.0",
         "transaction_date": "2024-01-02T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=second_buy, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=second_buy, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # ポートフォリオから保有情報を取得して確認
-    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get(
+        "/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
 
@@ -239,7 +257,9 @@ async def test_multiple_buy_transactions_average_cost(client: AsyncClient, db_se
 
 
 @pytest.mark.asyncio
-async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_buy_and_partial_sell_calculation(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
     """購入後の一部売却時の売却益と保有株数の計算テスト
 
     期待する動作:
@@ -266,7 +286,9 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # 一部売却取引データ準備（60株@1500円）
     sell_transaction = {
@@ -279,10 +301,14 @@ async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session:
         "tax": "0.0",
         "transaction_date": "2024-01-02T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # ポートフォリオから保有情報を取得して確認
-    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get(
+        "/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
 
@@ -373,7 +399,9 @@ async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, 
         "tax": "0.0",
         "transaction_date": "2024-01-01T00:00:00",
     }
-    await client.post("/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post(
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # 取引履歴を取得
     response = await client.get("/api/v1/transactions/", headers={"Authorization": f"Bearer {auth_token}"})

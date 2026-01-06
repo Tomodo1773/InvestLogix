@@ -111,7 +111,9 @@ def test_api():
 
     try:
         # 株価情報の取得
-        prices = asyncio.run(jquants_client.get_prices(symbol=test_symbol, start_date="2024-01-01", end_date="2024-02-01"))
+        prices = asyncio.run(
+            jquants_client.get_prices(symbol=test_symbol, start_date="2024-01-01", end_date="2024-02-01")
+        )
         print("\n=== 株価情報 ===")
         print(f"取得件数: {len(prices)}")
         if prices:

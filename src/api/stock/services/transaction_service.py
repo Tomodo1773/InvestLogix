@@ -17,7 +17,9 @@ class TransactionService:
         self.db = db
         self.stock_service = StockService(db)
 
-    async def create_transaction(self, transaction: schemas.TransactionCreate, user_id: int) -> Optional[models.Transaction]:
+    async def create_transaction(
+        self, transaction: schemas.TransactionCreate, user_id: int
+    ) -> Optional[models.Transaction]:
         # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == transaction.symbol)
         stock_result = await self.db.execute(stock_query)
@@ -96,7 +98,9 @@ class TransactionService:
         await self.db.flush()
 
         # 実現損益の再計算
-        holding.realized_pl = await calculate_realized_pl_from_transactions(self.db, holding.user_id, holding.symbol)
+        holding.realized_pl = await calculate_realized_pl_from_transactions(
+            self.db, holding.user_id, holding.symbol
+        )
 
     async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
         # ホールディングテーブルを結合して現在価格を取得するクエリに変更
@@ -105,7 +109,8 @@ class TransactionService:
             .join(models.Stock, models.Transaction.symbol == models.Stock.symbol)
             .outerjoin(
                 models.Holding,
-                (models.Holding.user_id == models.Transaction.user_id) & (models.Holding.symbol == models.Transaction.symbol),
+                (models.Holding.user_id == models.Transaction.user_id)
+                & (models.Holding.symbol == models.Transaction.symbol),
             )
             .where(models.Transaction.user_id == user_id)
         )

@@ -27,7 +27,9 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("name_en", sa.String(length=100), nullable=True),
         sa.Column("market", sa.String(length=20), nullable=False),
-        sa.Column("security_type", sa.Enum("STOCK", "ETF", "REIT", "FUND", name="security_types"), nullable=False),
+        sa.Column(
+            "security_type", sa.Enum("STOCK", "ETF", "REIT", "FUND", name="security_types"), nullable=False
+        ),
         sa.Column("currency", sa.String(length=3), nullable=False),
         sa.Column("last_updated", sa.DateTime(timezone=True), nullable=True),
         sa.PrimaryKeyConstraint("symbol"),
@@ -150,7 +152,9 @@ def upgrade() -> None:
         sa.Column("transaction_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "account_type",
-            sa.Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", name="account_types"),
+            sa.Enum(
+                "ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", name="account_types"
+            ),
             nullable=False,
         ),
         sa.Column("fee", sa.Numeric(precision=10, scale=2), nullable=False),

@@ -26,7 +26,9 @@ async def test_recalculate_holding_pl_japanese_stock(
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有損益再計算APIを呼び出し
-    response = await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 200
@@ -57,7 +59,9 @@ async def test_recalculate_holding_pl_us_stock(
         mock_external_apis: モック化されたAPI
     """
     # 保有損益再計算APIを呼び出し
-    response = await client.post("/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 200
@@ -73,7 +77,9 @@ async def test_recalculate_holding_pl_us_stock(
 
 
 @pytest.mark.asyncio
-async def test_list_holdings(client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data):
+async def test_list_holdings(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+):
     """保有銘柄一覧取得を確認するテスト
 
     期待する動作:
@@ -98,7 +104,11 @@ async def test_list_holdings(client: AsyncClient, db_session: AsyncSession, auth
 
 @pytest.mark.asyncio
 async def test_recalculate_all_holdings_pl(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data, setup_us_stock_data
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_japanese_stock_data,
+    setup_us_stock_data,
 ):
     """全銘柄の保有損益一括再計算のテスト
 
@@ -115,7 +125,9 @@ async def test_recalculate_all_holdings_pl(
         setup_us_stock_data: 米国株のテストデータ
     """
     # 全銘柄の損益再計算APIを呼び出し
-    response = await client.post("/api/v1/holdings/recalculate-all", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/holdings/recalculate-all", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 200
@@ -128,7 +140,9 @@ async def test_recalculate_all_holdings_pl(
     # 日本株（8058）の検証
     assert "8058" in holdings
     jp_holding = holdings["8058"]
-    assert Decimal(jp_holding["current_price"]) == MOCK_JAPAN_STOCK_PRICE_UPDATED  # 更新後の価格であることを確認
+    assert (
+        Decimal(jp_holding["current_price"]) == MOCK_JAPAN_STOCK_PRICE_UPDATED
+    )  # 更新後の価格であることを確認
     assert Decimal(jp_holding["market_value"]) == MOCK_JAPAN_STOCK_PRICE_UPDATED * Decimal("100.0")
     assert jp_holding["unrealized_pl"] is not None
     assert jp_holding["unrealized_pl_percentage"] is not None
@@ -139,7 +153,9 @@ async def test_recalculate_all_holdings_pl(
     assert (
         Decimal(us_holding["current_price"]) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE
     )  # 更新後の価格であることを確認
-    assert Decimal(us_holding["market_value"]) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE * Decimal("10.0")
+    assert Decimal(
+        us_holding["market_value"]
+    ) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE * Decimal("10.0")
     assert us_holding["unrealized_pl"] is not None
     assert us_holding["unrealized_pl_percentage"] is not None
 
@@ -190,7 +206,9 @@ async def test_recalculate_holding_pl_updates_realized_pl(
     await db_session.commit()
 
     # 再計算APIを呼び出し、実現損益が更新されることを確認
-    response = await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert response.status_code == 200
     data = response.json()
     assert Decimal(data["realized_pl"]) == Decimal("2500.0")
@@ -264,7 +282,9 @@ async def test_recalculate_holding_pl_delisted_stock(
     )
 
     # 株価取得が0を返す状態で保有損益を再計算
-    response = await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 200

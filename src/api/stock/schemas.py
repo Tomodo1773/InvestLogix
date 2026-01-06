@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
 
-from .utils.datetime import JST, from_jst_input, to_jst
+from .utils.datetime import from_jst_input, to_jst
 
 
 class SecurityType(str, Enum):

@@ -1,13 +1,10 @@
 """APIレスポンスの日時がJSTで返されることを確認するテスト"""
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
-
-JST = ZoneInfo("Asia/Tokyo")
 
 
 @pytest.mark.asyncio

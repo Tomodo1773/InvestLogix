@@ -2,9 +2,9 @@ name: Ruff
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -26,7 +26,7 @@ jobs:
           pip install ruff==0.9.1
 
       - name: Run Ruff Check
-        run: ruff check --line-length=127
+        run: ruff check --line-length=110
 
       - name: Run Ruff Format Check
-        run: ruff format --check --diff --line-length=127
+        run: ruff format --check --diff --line-length=110

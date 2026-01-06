@@ -1,6 +1,37 @@
 ---
 name: test-runner
-description: Use this agent when the user requests to run tests, wants to verify code changes, needs to check test coverage, or when a logical code change has been completed and needs verification. Examples:\n\n- <example>\nContext: ユーザーが新しい機能を実装した後、テストを実行したい場合\nuser: "holding_service.pyに新しい損益計算機能を追加しました。テストを実行してください"\nassistant: "test-runnerエージェントを使ってテストを実行します"\n<commentary>\nコード変更後のテスト実行が必要なため、test-runnerエージェントを起動してuv run pytestを実行し、結果を報告する\n</commentary>\n</example>\n\n- <example>\nContext: ユーザーがテストの状態を確認したい場合\nuser: "テストを実行して"\nassistant: "test-runnerエージェントでテストを実行します"\n<commentary>\n明示的なテスト実行リクエストなので、test-runnerエージェントを起動する\n</commentary>\n</example>\n\n- <example>\nContext: エラー修正後の確認\nuser: "バグを修正しました。動作確認お願いします"\nassistant: "test-runnerエージェントを使ってテストを実行し、修正が正しく動作するか確認します"\n<commentary>\nバグ修正後の検証として、テストを実行して確認する必要がある\n</commentary>\n</example>
+description: |
+  Use this agent when the user requests to run tests, wants to verify code changes,
+  needs to check test coverage, or when a logical code change has been completed and
+  needs verification. Examples:
+
+  - <example>
+    Context: ユーザーが新しい機能を実装した後、テストを実行したい場合
+    user: "holding_service.pyに新しい損益計算機能を追加しました。テストを実行してください"
+    assistant: "test-runnerエージェントを使ってテストを実行します"
+    <commentary>
+    コード変更後のテスト実行が必要なため、test-runnerエージェントを起動して
+    uv run pytestを実行し、結果を報告する
+    </commentary>
+    </example>
+
+  - <example>
+    Context: ユーザーがテストの状態を確認したい場合
+    user: "テストを実行して"
+    assistant: "test-runnerエージェントでテストを実行します"
+    <commentary>
+    明示的なテスト実行リクエストなので、test-runnerエージェントを起動する
+    </commentary>
+    </example>
+
+  - <example>
+    Context: エラー修正後の確認
+    user: "バグを修正しました。動作確認お願いします"
+    assistant: "test-runnerエージェントを使ってテストを実行し、修正が正しく動作するか確認します"
+    <commentary>
+    バグ修正後の検証として、テストを実行して確認する必要がある
+    </commentary>
+    </example>
 model: sonnet
 ---
 

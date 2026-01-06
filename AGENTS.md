@@ -29,6 +29,8 @@ InvestLogixは、日本株と米国株のポートフォリオを管理するFas
 
 ## コマンド
 
+**注意**: 以下のコマンドは `src/api` ディレクトリで実行する必要があります。プロジェクトルートから実行する場合は、事前に `cd src/api` でディレクトリを移動してください。
+
 ```bash
 # 開発サーバ起動
 uv run uvicorn stock.app:app --reload --port 8000

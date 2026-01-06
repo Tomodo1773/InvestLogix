@@ -26,7 +26,9 @@ jobs:
           pip install ruff==0.9.1
 
       - name: Run Ruff Check
+        working-directory: src/api
         run: ruff check --line-length=110
 
       - name: Run Ruff Format Check
+        working-directory: src/api
         run: ruff format --check --diff --line-length=110

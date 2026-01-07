@@ -42,17 +42,17 @@ class TestDatetimeUtils:
         assert to_jst(None) is None
 
     def test_from_jst_input_with_naive_datetime(self):
-        """naive datetimeはJSTとして解釈されること"""
-        naive_dt = datetime(2024, 1, 1, 0, 0, 0)
-        jst_dt = from_jst_input(naive_dt)
+        """naive datetime文字列はJSTとして解釈されること"""
+        naive_dt_str = "2024-01-01T00:00:00"
+        jst_dt = from_jst_input(naive_dt_str)
 
         assert jst_dt.tzinfo == JST
         assert jst_dt.hour == 0  # そのまま JST 0:00
 
     def test_from_jst_input_with_utc_datetime(self):
-        """UTC日時はJSTに変換されること"""
-        utc_dt = datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC)
-        jst_dt = from_jst_input(utc_dt)
+        """UTC datetime文字列はJSTに変換されること"""
+        utc_dt_str = "2024-01-01T00:00:00Z"
+        jst_dt = from_jst_input(utc_dt_str)
 
         assert jst_dt.tzinfo == JST
         assert jst_dt.hour == 9  # UTC 0:00 = JST 9:00

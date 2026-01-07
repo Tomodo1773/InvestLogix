@@ -198,8 +198,8 @@ class DividendBase(BaseModel):
 
     @field_validator("payment_date", mode="before")
     @classmethod
-    def validate_payment_date(cls, v: datetime) -> datetime:
-        """リクエスト時: naive datetimeならJSTとして扱う"""
+    def validate_payment_date(cls, v: str | datetime) -> datetime:
+        """リクエスト時: naive datetime入力をJSTとして扱う"""
         return from_jst_input(v)
 
 
@@ -322,8 +322,8 @@ class TransactionCreate(BaseModel):
 
     @field_validator("transaction_date", mode="before")
     @classmethod
-    def validate_transaction_date(cls, v: datetime) -> datetime:
-        """リクエスト時: naive datetimeならJSTとして扱う"""
+    def validate_transaction_date(cls, v: str | datetime) -> datetime:
+        """リクエスト時: naive datetime入力をJSTとして扱う"""
         return from_jst_input(v)
 
 

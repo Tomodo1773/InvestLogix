@@ -214,7 +214,7 @@ async def test_transaction_monthly_summary_uses_jst(
 
     # 月次集計を取得
     monthly_response = await client.get(
-        "/api/v1/transactions/monthly", headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/monthly-summary", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert monthly_response.status_code == 200
     data = monthly_response.json()
@@ -261,7 +261,7 @@ async def test_transaction_yearly_summary_uses_jst(
 
     # 年次集計を取得
     yearly_response = await client.get(
-        "/api/v1/transactions/yearly", headers={"Authorization": f"Bearer {auth_token}"}
+        "/api/v1/transactions/yearly-summary", headers={"Authorization": f"Bearer {auth_token}"}
     )
     assert yearly_response.status_code == 200
     data = yearly_response.json()

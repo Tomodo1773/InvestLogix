@@ -28,18 +28,38 @@ def to_jst(dt: Optional[datetime]) -> Optional[datetime]:
     return dt.astimezone(JST)
 
 
-def from_jst_input(dt: Optional[datetime]) -> Optional[datetime]:
-    """リクエストのdatetime（naive想定）をJSTとして解釈する
+def from_jst_input(dt_input: Optional[str | datetime]) -> Optional[datetime]:
+    """リクエストのdatetime入力をJSTとして解釈する
+
+    Pydanticバリデータの mode="before" で使用することを想定。
+    JSON文字列から読み込んだISO形式のdatetime文字列、または
+    Pythonコードから直接渡されたdatetimeオブジェクトを、JSTタイムゾーン付きのdatetimeに変換する。
 
     Args:
-        dt: リクエストから受け取ったdatetime（None可）
+        dt_input: ISO形式のdatetime文字列またはdatetimeオブジェクト（None可）
+                  例: "2024-01-01T00:00:00" (naive文字列)
+                      "2024-01-01T00:00:00Z" (UTC文字列)
+                      datetime(2024, 1, 1, 0, 0, 0) (naive datetime)
+                      datetime(2024, 1, 1, 0, 0, 0, tzinfo=UTC) (timezone-aware datetime)
 
     Returns:
         JSTタイムゾーン付きのdatetime。入力がNoneの場合はNoneを返す。
-        naive datetime（タイムゾーン情報なし）の場合はJSTとして扱う。
+        タイムゾーン情報がない場合（naive）はJSTとして扱う。
+        タイムゾーン情報がある場合はJSTに変換する。
     """
-    if dt is None:
+    if dt_input is None:
         return None
+
+    # 既にdatetimeオブジェクトの場合はそのまま使用
+    if isinstance(dt_input, datetime):
+        dt = dt_input
+    else:
+        # ISO形式文字列をdatetimeに変換
+        dt = datetime.fromisoformat(dt_input)
+
+    # タイムゾーン情報がない場合はJSTとして扱う
     if dt.tzinfo is None:
         return dt.replace(tzinfo=JST)
+
+    # タイムゾーン情報がある場合はJSTに変換
     return dt.astimezone(JST)

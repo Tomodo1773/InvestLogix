@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
 from .utils.datetime import from_jst_input, to_jst
 
@@ -27,10 +27,10 @@ class TransactionType(str, Enum):
 class AccountType(str, Enum):
     """預かり種別"""
 
+    NISA_GROWTH = "NISA(成長投資枠)"
+    NISA_TSUMITATE = "NISA(つみたて投資枠)"
     JUNIOR_NISA = "ジュニアNISA"
     OLD_NISA = "旧NISA"
-    NISA_TSUMITATE = "NISA(つみたて投資枠)"
-    NISA_GROWTH = "NISA(成長投資枠)"
     SPECIFIC = "特定"
 
 
@@ -190,7 +190,10 @@ class PortfolioHistory(PortfolioHistoryBase):
 
 class DividendBase(BaseModel):
     symbol: str
-    payment_date: datetime
+    payment_date: datetime = Field(
+        ...,
+        json_schema_extra={"examples": ["2024-03-15T00:00:00+09:00", "2024-03-15T00:00:00", "2024-03-15"]},
+    )
     shares_owned: Decimal
     total_amount: Decimal
     tax: Optional[Decimal]
@@ -318,7 +321,10 @@ class TransactionCreate(BaseModel):
     account_type: AccountType
     fee: Decimal
     tax: Decimal
-    transaction_date: datetime
+    transaction_date: datetime = Field(
+        ...,
+        json_schema_extra={"examples": ["2024-01-15T10:30:00+09:00", "2024-01-15T10:30:00", "2024-01-15"]},
+    )
 
     @field_validator("transaction_date", mode="before")
     @classmethod

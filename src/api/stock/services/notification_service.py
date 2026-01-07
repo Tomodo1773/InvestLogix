@@ -330,3 +330,104 @@ def _generate_comment(percentage: float) -> str:
         return "順調なリターンを維持しています。長期的な視点を忘れずに"
     else:
         return "市場環境に応じて慎重に判断し、投資方針を見直してみましょう"
+
+
+async def send_weekly_performance_notification(
+    user_id: int,
+    top_performers: list,
+    bottom_performers: list,
+    db: AsyncSession = None,
+) -> bool:
+    """
+    週間騰落率ランキングをLINEにプレーンテキストで通知する
+
+    Args:
+        user_id (int): ユーザーID
+        top_performers (list): 上昇トップ5のリスト
+        bottom_performers (list): 下落ワースト5のリスト
+        db (AsyncSession, optional): データベースセッション
+
+    Returns:
+        bool: 通知が成功したかどうか
+    """
+    try:
+        # LINE APIの設定
+        line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+
+        if not line_token:
+            logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
+            return False
+
+        # ユーザーのLINE UserIDを取得
+        line_user_id = await NotificationService.get_line_user_id(user_id, db)
+
+        if not line_user_id:
+            logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
+            return False
+
+        # プレーンテキストメッセージの作成
+        message_text = _build_weekly_performance_message(top_performers, bottom_performers)
+
+        text_message = {
+            "type": "text",
+            "text": message_text,
+        }
+
+        headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
+
+        data = {"to": line_user_id, "messages": [text_message]}
+
+        # LINE Message APIにリクエストを送信
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.line.me/v2/bot/message/push", headers=headers, json=data
+            )
+
+        # レスポンス処理
+        if response.status_code == 200:
+            logger.info("週間騰落率のLINE通知が正常に送信されました")
+            return True
+        else:
+            logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
+            logger.error(f"レスポンス: {response.text}")
+            return False
+
+    except Exception as e:
+        logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
+        return False
+
+
+def _build_weekly_performance_message(top_performers: list, bottom_performers: list) -> str:
+    """
+    週間騰落率ランキングのプレーンテキストメッセージを作成する
+
+    Args:
+        top_performers (list): 上昇トップのリスト
+        bottom_performers (list): 下落ワーストのリスト
+
+    Returns:
+        str: メッセージテキスト
+    """
+    lines = ["📈 週間騰落ランキング", ""]
+
+    # 上昇トップ5
+    lines.append("【上昇トップ5】")
+    if top_performers:
+        for i, perf in enumerate(top_performers, 1):
+            sign = "+" if perf.change_rate >= 0 else ""
+            lines.append(f"{i}. {perf.name}({perf.symbol}): {sign}{perf.change_rate}%")
+    else:
+        lines.append("データなし")
+
+    lines.append("")
+
+    # 下落ワースト5
+    lines.append("【下落ワースト5】")
+    if bottom_performers:
+        for i, perf in enumerate(bottom_performers, 1):
+            sign = "+" if perf.change_rate >= 0 else ""
+            lines.append(f"{i}. {perf.name}({perf.symbol}): {sign}{perf.change_rate}%")
+    else:
+        lines.append("データなし")
+
+    return "\n".join(lines)

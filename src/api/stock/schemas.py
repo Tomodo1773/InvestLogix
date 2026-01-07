@@ -3,7 +3,9 @@ from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+
+from .utils.datetime import from_jst_input, to_jst
 
 
 class SecurityType(str, Enum):
@@ -25,10 +27,10 @@ class TransactionType(str, Enum):
 class AccountType(str, Enum):
     """預かり種別"""
 
+    NISA_GROWTH = "NISA(成長投資枠)"
+    NISA_TSUMITATE = "NISA(つみたて投資枠)"
     JUNIOR_NISA = "ジュニアNISA"
     OLD_NISA = "旧NISA"
-    NISA_TSUMITATE = "NISA(つみたて投資枠)"
-    NISA_GROWTH = "NISA(成長投資枠)"
     SPECIFIC = "特定"
 
 
@@ -51,6 +53,11 @@ class Stock(BaseModel):
     last_updated: datetime
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("last_updated")
+    def serialize_last_updated(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
 
 class StockJPXDetailBase(BaseModel):
     symbol: str
@@ -67,6 +74,11 @@ class StockJPXDetailBase(BaseModel):
 class StockJPXDetail(StockJPXDetailBase):
     last_updated: datetime
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("last_updated")
+    def serialize_last_updated(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
 
 
 class StockUSDetailBase(BaseModel):
@@ -97,6 +109,11 @@ class User(UserBase):
     is_admin: bool = False
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("created_at")
+    def serialize_created_at(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
 
 class HoldingBase(BaseModel):
     symbol: str
@@ -116,6 +133,11 @@ class Holding(HoldingBase):
     last_updated: datetime
     stock_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("last_updated")
+    def serialize_last_updated(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
 
 
 class TransactionBase(BaseModel):
@@ -139,6 +161,11 @@ class Transaction(TransactionBase):
     current_price: Optional[Decimal] = None  # 現在価格を追加
     model_config = ConfigDict(from_attributes=True)
 
+    @field_serializer("transaction_date")
+    def serialize_transaction_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
 
 class PortfolioHistoryBase(BaseModel):
     date: datetime
@@ -149,6 +176,11 @@ class PortfolioHistoryBase(BaseModel):
     total_realized_pl: Decimal
     total_dividend: Decimal
 
+    @field_serializer("date")
+    def serialize_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
 
 class PortfolioHistory(PortfolioHistoryBase):
     history_id: int
@@ -158,11 +190,20 @@ class PortfolioHistory(PortfolioHistoryBase):
 
 class DividendBase(BaseModel):
     symbol: str
-    payment_date: datetime
+    payment_date: datetime = Field(
+        ...,
+        json_schema_extra={"examples": ["2024-03-15T00:00:00+09:00", "2024-03-15T00:00:00", "2024-03-15"]},
+    )
     shares_owned: Decimal
     total_amount: Decimal
     tax: Optional[Decimal]
     fee: Optional[Decimal]
+
+    @field_validator("payment_date", mode="before")
+    @classmethod
+    def validate_payment_date(cls, v: str | datetime) -> datetime:
+        """リクエスト時: naive datetime入力をJSTとして扱う"""
+        return from_jst_input(v)
 
 
 class Dividend(DividendBase):
@@ -170,6 +211,11 @@ class Dividend(DividendBase):
     user_id: int
     stock_name: Optional[str] = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("payment_date")
+    def serialize_payment_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
 
 
 class PortfolioHistoryResponse(BaseModel):
@@ -184,6 +230,11 @@ class PortfolioHistoryResponse(BaseModel):
     total_dividend: float
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("date")
+    def serialize_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
 
 
 class MonthlySummary(BaseModel):
@@ -270,7 +321,16 @@ class TransactionCreate(BaseModel):
     account_type: AccountType
     fee: Decimal
     tax: Decimal
-    transaction_date: datetime
+    transaction_date: datetime = Field(
+        ...,
+        json_schema_extra={"examples": ["2024-01-15T10:30:00+09:00", "2024-01-15T10:30:00", "2024-01-15"]},
+    )
+
+    @field_validator("transaction_date", mode="before")
+    @classmethod
+    def validate_transaction_date(cls, v: str | datetime) -> datetime:
+        """リクエスト時: naive datetime入力をJSTとして扱う"""
+        return from_jst_input(v)
 
 
 class DividendCreate(DividendBase):

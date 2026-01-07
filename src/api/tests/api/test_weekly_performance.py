@@ -1,7 +1,7 @@
 """週間騰落率通知APIのテスト"""
 
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio

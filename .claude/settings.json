@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd src/api && uv run ruff format && uv run ruff check --fix"
+            "command": "uv run ruff format && uv run ruff check --fix"
           }
         ]
       }

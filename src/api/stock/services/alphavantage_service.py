@@ -52,9 +52,7 @@ async def fetch_usdjpy_rate() -> float | None:
         Exception: レート制限に達した場合
     """
     api_key = settings.ALPHAVANTAGE_API_KEY
-    url = (
-        f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey={api_key}"
-    )
+    url = f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey={api_key}"
     try:
         response = requests.get(url)
         data = json.loads(response.text)

@@ -22,7 +22,9 @@ class NotificationService:
     """LINE通知サービス"""
 
     @staticmethod
-    async def send_line_notification(user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None) -> bool:
+    async def send_line_notification(
+        user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None
+    ) -> bool:
         """
         ポートフォリオ情報をLINEに通知する
 
@@ -85,7 +87,13 @@ class NotificationService:
                                 }
                             ],
                         },
-                        {"type": "text", "text": "資産サマリ", "weight": "bold", "size": "xxl", "margin": "md"},
+                        {
+                            "type": "text",
+                            "text": "資産サマリ",
+                            "weight": "bold",
+                            "size": "xxl",
+                            "margin": "md",
+                        },
                         {"type": "text", "text": today, "size": "xs", "color": "#aaaaaa", "wrap": True},
                         {"type": "separator", "margin": "xxl"},
                         {
@@ -100,7 +108,12 @@ class NotificationService:
                                     "layout": "horizontal",
                                     "margin": "sm",
                                     "contents": [
-                                        {"type": "text", "text": "取得価格", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "取得価格",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "size": "sm",
@@ -114,7 +127,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "時価総額", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "時価総額",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_market_value}円",
@@ -128,7 +146,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "評価損益", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "評価損益",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_unrealized_pl}円 ({total_unrealized_pl_percentage}%)",
@@ -144,7 +167,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "実現損益", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "実現損益",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_realized_pl}円",
@@ -158,7 +186,12 @@ class NotificationService:
                                     "type": "box",
                                     "layout": "horizontal",
                                     "contents": [
-                                        {"type": "text", "text": "配当総額", "size": "sm", "color": "#555555"},
+                                        {
+                                            "type": "text",
+                                            "text": "配当総額",
+                                            "size": "sm",
+                                            "color": "#555555",
+                                        },
                                         {
                                             "type": "text",
                                             "text": f"{total_dividend}円",
@@ -200,7 +233,11 @@ class NotificationService:
                 "styles": {"footer": {"separator": True}},
             }
 
-            flex_message = {"type": "flex", "altText": "ポートフォリオの更新情報をお知らせします", "contents": flex_contents}
+            flex_message = {
+                "type": "flex",
+                "altText": "ポートフォリオの更新情報をお知らせします",
+                "contents": flex_contents,
+            }
 
             headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
 
@@ -208,7 +245,9 @@ class NotificationService:
 
             # LINE Message APIにリクエストを送信
             async with httpx.AsyncClient() as client:
-                response = await client.post("https://api.line.me/v2/bot/message/push", headers=headers, json=data)
+                response = await client.post(
+                    "https://api.line.me/v2/bot/message/push", headers=headers, json=data
+                )
 
             # レスポンス処理
             if response.status_code == 200:
@@ -291,3 +330,204 @@ def _generate_comment(percentage: float) -> str:
         return "順調なリターンを維持しています。長期的な視点を忘れずに"
     else:
         return "市場環境に応じて慎重に判断し、投資方針を見直してみましょう"
+
+
+# 週間騰落ランキング用の色定義
+WEEKLY_PERFORMANCE_COLOR_GREEN = "#00A86B"
+WEEKLY_PERFORMANCE_COLOR_RED = "#E53935"
+
+
+def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) -> dict:
+    """
+    ランキングの1行分のFlex Boxを作成する
+
+    Args:
+        rank (int): 順位
+        name (str): 銘柄名
+        symbol (str): 銘柄コード
+        change_rate (Decimal): 騰落率
+
+    Returns:
+        dict: Flex Box形式の辞書
+    """
+    is_positive = change_rate >= 0
+    sign = "+" if is_positive else ""
+    color = WEEKLY_PERFORMANCE_COLOR_GREEN if is_positive else WEEKLY_PERFORMANCE_COLOR_RED
+
+    return {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": "#666666"},
+            {
+                "type": "text",
+                "text": f"{name}({symbol})",
+                "size": "sm",
+                "flex": 3,
+                "margin": "sm",
+                "color": "#333333",
+            },
+            {
+                "type": "text",
+                "text": f"{sign}{change_rate}%",
+                "size": "sm",
+                "align": "end",
+                "color": color,
+                "weight": "bold",
+                "flex": 1,
+            },
+        ],
+        "margin": "md",
+    }
+
+
+def _build_weekly_performance_flex_message(top_performers: list, bottom_performers: list) -> dict:
+    """
+    週間騰落率ランキングのFlex Messageを作成する
+
+    Args:
+        top_performers (list): 上昇トップのリスト
+        bottom_performers (list): 下落ワーストのリスト
+
+    Returns:
+        dict: LINE Flex Message形式の辞書
+    """
+    # 日本時間の現在時刻
+    current_time = datetime.now(pytz.timezone("Asia/Tokyo"))
+    today = current_time.strftime("%Y/%m/%d")
+
+    # 上昇トップ5のコンテンツ
+    top_contents = []
+    if top_performers:
+        for i, perf in enumerate(top_performers, 1):
+            top_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
+    else:
+        top_contents.append(
+            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
+        )
+
+    # 下落ワースト5のコンテンツ
+    bottom_contents = []
+    if bottom_performers:
+        for i, perf in enumerate(bottom_performers, 1):
+            bottom_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
+    else:
+        bottom_contents.append(
+            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
+        )
+
+    return {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "InvestLogix", "weight": "bold", "size": "sm", "color": "#00A86B"},
+                {
+                    "type": "text",
+                    "text": "週間騰落ランキング",
+                    "weight": "bold",
+                    "size": "xl",
+                    "margin": "sm",
+                    "color": "#333333",
+                },
+                {"type": "text", "text": today, "size": "xs", "color": "#999999", "margin": "sm"},
+            ],
+            "paddingAll": "20px",
+            "backgroundColor": "#FFFFFF",
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "separator", "color": "#E0E0E0"},
+                {
+                    "type": "text",
+                    "text": "上昇トップ5",
+                    "weight": "bold",
+                    "size": "md",
+                    "margin": "lg",
+                    "color": "#333333",
+                },
+                {"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"},
+                {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
+                {
+                    "type": "text",
+                    "text": "下落ワースト5",
+                    "weight": "bold",
+                    "size": "md",
+                    "margin": "lg",
+                    "color": "#333333",
+                },
+                {"type": "box", "layout": "vertical", "contents": bottom_contents, "margin": "sm"},
+            ],
+            "paddingAll": "20px",
+            "backgroundColor": "#FFFFFF",
+        },
+    }
+
+
+async def send_weekly_performance_notification(
+    user_id: int,
+    top_performers: list,
+    bottom_performers: list,
+    db: AsyncSession = None,
+) -> bool:
+    """
+    週間騰落率ランキングをLINEにFlex Messageで通知する
+
+    Args:
+        user_id (int): ユーザーID
+        top_performers (list): 上昇トップ5のリスト
+        bottom_performers (list): 下落ワースト5のリスト
+        db (AsyncSession, optional): データベースセッション
+
+    Returns:
+        bool: 通知が成功したかどうか
+    """
+    try:
+        # LINE APIの設定
+        line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+
+        if not line_token:
+            logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
+            return False
+
+        # ユーザーのLINE UserIDを取得
+        line_user_id = await NotificationService.get_line_user_id(user_id, db)
+
+        if not line_user_id:
+            logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
+            return False
+
+        # Flex Messageの作成
+        flex_contents = _build_weekly_performance_flex_message(top_performers, bottom_performers)
+
+        flex_message = {
+            "type": "flex",
+            "altText": "週間騰落ランキング",
+            "contents": flex_contents,
+        }
+
+        headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
+
+        data = {"to": line_user_id, "messages": [flex_message]}
+
+        # LINE Message APIにリクエストを送信
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.line.me/v2/bot/message/push", headers=headers, json=data
+            )
+
+        # レスポンス処理
+        if response.status_code == 200:
+            logger.info("週間騰落率のLINE通知が正常に送信されました")
+            return True
+        else:
+            logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
+            logger.error(f"レスポンス: {response.text}")
+            return False
+
+    except Exception as e:
+        logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
+        return False

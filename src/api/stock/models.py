@@ -42,13 +42,19 @@ class Stock(Base):
         Enum("STOCK", "ETF", "REIT", "FUND", name="security_types"), nullable=False
     )  # [SYSTEM] 証券種別 (例: "STOCK")
     currency = Column(String(3), nullable=False)  # [SYSTEM] 通貨 (例: "USD", "JPY")
-    last_updated = Column(DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
+    last_updated = Column(
+        DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
+    )  # [SYSTEM] 最終更新日時（JST）
 
     holdings = relationship("Holding", back_populates="stock")  # Holding モデルとの関連
     transactions = relationship("Transaction", back_populates="stock")  # Transaction モデルとの関連
     dividend = relationship("Dividend", back_populates="stock")  # Dividend モデルとの関連
-    jpx_detail = relationship("StockJPXDetail", back_populates="stock", uselist=False)  # StockJPXDetail モデルとの関連
-    us_detail = relationship("StockUSDetail", back_populates="stock", uselist=False)  # StockUSDetail モデルとの関連
+    jpx_detail = relationship(
+        "StockJPXDetail", back_populates="stock", uselist=False
+    )  # StockJPXDetail モデルとの関連
+    us_detail = relationship(
+        "StockUSDetail", back_populates="stock", uselist=False
+    )  # StockUSDetail モデルとの関連
 
 
 class StockJPXDetail(Base):
@@ -65,7 +71,9 @@ class StockJPXDetail(Base):
     sector_17_name = Column(String(50))  # [API_FETCH] 17業種区分名 (例: "金融（除く銀行）")
     sector_33_code = Column(String(4))  # [API_FETCH] 33業種区分コード (例: "7200")
     sector_33_name = Column(String(50))  # [API_FETCH] 33業種区分名 (例: "その他金融業")
-    market_segment = Column(String(20), nullable=False)  # [API_FETCH] 市場区分 (プライム/スタンダード/グロース)
+    market_segment = Column(
+        String(20), nullable=False
+    )  # [API_FETCH] 市場区分 (プライム/スタンダード/グロース)
     market_code = Column(String(20))  # [API_FETCH] 規模区分 (例: "TOPIX Large70")
     market_name = Column(String(50))  # [API_FETCH] 規模区分名
     margin_trading = Column(Boolean, default=True)  # [API_FETCH] 信用取引可能か
@@ -131,17 +139,25 @@ class Holding(Base):
 
     # 保有情報
     quantity = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有数量
-    average_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 平均取得単価（取得価格合計 / 保有数量）
+    average_cost = Column(
+        Numeric(10, 2), nullable=False
+    )  # [AUTO_CALC] 平均取得単価（取得価格合計 / 保有数量）
     total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価格合計（Transactionから取得）
 
     # 現在値情報
     current_price = Column(Numeric(10, 2))  # [API_FETCH] 現在価格
     market_value = Column(Numeric(10, 2))  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
-    realized_pl = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
+    realized_pl = Column(
+        Numeric(10, 2), default=Decimal("0")
+    )  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
     total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額
-    unrealized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 評価損益（時価評価額 + 売却益 + 配当総額 - 取得価格合計）
+    unrealized_pl = Column(
+        Numeric(10, 2)
+    )  # [AUTO_CALC] 評価損益（時価評価額 + 売却益 + 配当総額 - 取得価格合計）
     unrealized_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
-    last_updated = Column(DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now)  # [SYSTEM] 最終更新日時（JST）
+    last_updated = Column(
+        DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
+    )  # [SYSTEM] 最終更新日時（JST）
 
     user = relationship("User", back_populates="holdings")
     stock = relationship("Stock", back_populates="holdings")
@@ -162,9 +178,13 @@ class Transaction(Base):
     price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
     usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
     adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
-    transaction_date = Column(DateTime(timezone=True), default=get_jst_now)  # [USER_INPUT] トランザクション日時（JST固定）
+    transaction_date = Column(
+        DateTime(timezone=True), default=get_jst_now
+    )  # [USER_INPUT] トランザクション日時（JST固定）
     account_type = Column(
-        Enum("ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", "特定", name="account_types"),
+        Enum(
+            "ジュニアNISA", "旧NISA", "NISA(つみたて投資枠)", "NISA(成長投資枠)", "特定", name="account_types"
+        ),
         nullable=False,
     )  # [USER_INPUT] 預かり種別
     fee = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 手数料
@@ -188,7 +208,9 @@ class PortfolioHistory(Base):
 
     history_id = Column(Integer, primary_key=True)  # [SYSTEM] 履歴ID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
-    date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [SYSTEM] 記録日時（JST固定）
+    date = Column(
+        DateTime(timezone=True), nullable=False, default=get_jst_now
+    )  # [SYSTEM] 記録日時（JST固定）
     total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価額合計
     total_market_value = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 時価評価額合計
     total_unrealized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 評価損益合計
@@ -207,7 +229,9 @@ class Dividend(Base):
     dividend_id = Column(Integer, primary_key=True)  # [SYSTEM] 配当ID
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
     symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [USER_INPUT] 銘柄コード
-    payment_date = Column(DateTime(timezone=True), nullable=False, default=get_jst_now)  # [USER_INPUT] 支払日（JST固定）
+    payment_date = Column(
+        DateTime(timezone=True), nullable=False, default=get_jst_now
+    )  # [USER_INPUT] 支払日（JST固定）
     shares_owned = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有株数
     total_amount = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 配当金総額
     tax = Column(Numeric(10, 2))  # [USER_INPUT] 税金

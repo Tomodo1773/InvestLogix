@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data):
+async def test_create_dividend(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+):
     """配当情報の登録テスト
 
     期待する動作:
@@ -31,19 +33,27 @@ async def test_create_dividend(client: AsyncClient, db_session: AsyncSession, au
         "fee": "0.0",
     }
 
-    response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンスの検証
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == dividend_data["symbol"]
-    assert datetime.fromisoformat(data["payment_date"]).strftime("%Y-%m-%dT%H:%M:%S") == "2024-03-15T00:00:00"
+    # レスポンスがJST形式（+09:00）であることを確認
+    assert "+09:00" in data["payment_date"]
+    parsed_dt = datetime.fromisoformat(data["payment_date"])
+    # UTC 2024-03-15T00:00:00Z → JST 2024-03-15T09:00:00+09:00
+    assert parsed_dt.strftime("%Y-%m-%dT%H:%M:%S") == "2024-03-15T09:00:00"
     assert Decimal(data["total_amount"]) == Decimal(dividend_data["total_amount"])
     assert Decimal(data["tax"]) == Decimal(dividend_data["tax"])
     assert Decimal(data["fee"]) == Decimal(dividend_data["fee"])
 
     # 保有情報の確認（配当金が反映されているか）
-    holdings_response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    holdings_response = await client.get(
+        "/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
@@ -73,7 +83,9 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
         "fee": "0.0",
     }
 
-    response = await client.post("/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.post(
+        "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンス検証
     assert response.status_code == 404
@@ -157,7 +169,9 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
         setup_dividend_data: テスト用配当データ
     """
     # 月次配当金集計の取得
-    response = await client.get("/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get(
+        "/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"}
+    )
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -184,8 +198,12 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
             us_dividend = setup_dividend_data["us_dividend"]
 
             # 実際のデータから税引後配当を計算
-            jp_amount = float(jp_dividend["total_amount"]) - float(jp_dividend["tax"]) - float(jp_dividend["fee"])
-            us_amount = float(us_dividend["total_amount"]) - float(us_dividend["tax"]) - float(us_dividend["fee"])
+            jp_amount = (
+                float(jp_dividend["total_amount"]) - float(jp_dividend["tax"]) - float(jp_dividend["fee"])
+            )
+            us_amount = (
+                float(us_dividend["total_amount"]) - float(us_dividend["tax"]) - float(us_dividend["fee"])
+            )
             expected_amount = jp_amount + us_amount
 
             # 実際の値と比較（小数点以下の誤差を許容）
@@ -193,7 +211,9 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
 
 
 @pytest.mark.asyncio
-async def test_get_monthly_dividends_respects_jst_boundary(client: AsyncClient, auth_token: str, create_dividend):
+async def test_get_monthly_dividends_respects_jst_boundary(
+    client: AsyncClient, auth_token: str, create_dividend
+):
     """JST 月初0時の配当が正しく当月に集計されることを確認する
 
     このテストは、タイムゾーン境界でのエッジケースを検証します:
@@ -211,7 +231,9 @@ async def test_get_monthly_dividends_respects_jst_boundary(client: AsyncClient, 
     }
     await create_dividend(boundary_dividend)
 
-    response = await client.get("/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get(
+        "/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"}
+    )
     assert response.status_code == 200
     data = response.json()
 

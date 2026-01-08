@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /src
 
 # pipを使ってuvをインストール
-RUN pip install uv
+RUN pip install uv==0.9.21
 
 # 必要なファイルのみをコピー
 COPY pyproject.toml uv.lock ./

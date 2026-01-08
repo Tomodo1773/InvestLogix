@@ -18,7 +18,9 @@ router = APIRouter()
 
 
 @router.post("/token", response_model=Token)
-async def login_for_access_token(response: Response, login_data: LoginRequest, db: AsyncSession = Depends(get_db)):
+async def login_for_access_token(
+    response: Response, login_data: LoginRequest, db: AsyncSession = Depends(get_db)
+):
     """
     ログイントークンを取得する
     - login_data: ユーザー名とパスワード（JSON形式）
@@ -66,7 +68,9 @@ async def login_for_access_token(response: Response, login_data: LoginRequest, d
 
 
 @router.post("/oauth/token", response_model=Token)
-async def login_for_access_token_oauth(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login_for_access_token_oauth(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
+):
     """
     OAuth2形式でログイントークンを取得する（/docsでの認証用）
     - form_data: ユーザー名とパスワード（application/x-www-form-urlencoded形式）
@@ -89,7 +93,9 @@ async def login_for_access_token_oauth(form_data: OAuth2PasswordRequestForm = De
 
 
 @router.post("/users/", response_model=User)
-async def create_user(user: UserCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+async def create_user(
+    user: UserCreate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     """
     新規ユーザーを登録する（管理者のみ実行可能）
     - user: ユーザー情報（ユーザー名、メールアドレス、パスワード）

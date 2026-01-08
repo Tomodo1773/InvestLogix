@@ -186,7 +186,11 @@ async def calculate_total_dividend_after_tax(db: AsyncSession, user_id: int, sym
     """
 
     dividend_query = select(
-        func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0) - func.coalesce(models.Dividend.fee, 0))
+        func.sum(
+            models.Dividend.total_amount
+            - func.coalesce(models.Dividend.tax, 0)
+            - func.coalesce(models.Dividend.fee, 0)
+        )
     ).where(models.Dividend.user_id == user_id, models.Dividend.symbol == symbol)
 
     result = await db.execute(dividend_query)
@@ -333,7 +337,11 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
     Returns:
         List[Holding]: 銘柄名を含む保有銘柄情報のリスト
     """
-    query = select(Holding, Stock.name).join(Stock, Holding.symbol == Stock.symbol).where(Holding.user_id == user_id)
+    query = (
+        select(Holding, Stock.name)
+        .join(Stock, Holding.symbol == Stock.symbol)
+        .where(Holding.user_id == user_id)
+    )
 
     # symbolが指定された場合は、条件を追加
     if symbol:

@@ -17,7 +17,9 @@ class TransactionService:
         self.db = db
         self.stock_service = StockService(db)
 
-    async def create_transaction(self, transaction: schemas.TransactionCreate, user_id: int) -> Optional[models.Transaction]:
+    async def create_transaction(
+        self, transaction: schemas.TransactionCreate, user_id: int
+    ) -> Optional[models.Transaction]:
         # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == transaction.symbol)
         stock_result = await self.db.execute(stock_query)
@@ -96,7 +98,9 @@ class TransactionService:
         await self.db.flush()
 
         # 実現損益の再計算
-        holding.realized_pl = await calculate_realized_pl_from_transactions(self.db, holding.user_id, holding.symbol)
+        holding.realized_pl = await calculate_realized_pl_from_transactions(
+            self.db, holding.user_id, holding.symbol
+        )
 
     async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
         # 銘柄名を取得するためにStockテーブルを結合
@@ -127,17 +131,22 @@ class TransactionService:
             List[Dict]: 年月ごとの口座種別別購入金額集計
         """
         # 購入取引（transaction_type='buy'）のみを対象に集計
+        # transaction_date を JST に変換して月ごとに集計するクエリ
+        transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")
+        year = extract("year", transaction_date_jst).label("year")
+        month = extract("month", transaction_date_jst).label("month")
+
         query = (
             select(
-                extract("year", models.Transaction.transaction_date).label("year"),
-                extract("month", models.Transaction.transaction_date).label("month"),
+                year,
+                month,
                 models.Transaction.account_type,
                 func.sum(models.Transaction.price * models.Transaction.quantity).label("total_amount"),
             )
             .where(models.Transaction.user_id == user_id, models.Transaction.transaction_type == "buy")
             .group_by(
-                extract("year", models.Transaction.transaction_date),
-                extract("month", models.Transaction.transaction_date),
+                year,
+                month,
                 models.Transaction.account_type,
             )
             .order_by("year", "month", models.Transaction.account_type)
@@ -184,15 +193,19 @@ class TransactionService:
             List[Dict]: 年ごとの口座種別別購入金額集計
         """
         # 購入取引（transaction_type='buy'）のみを対象に集計
+        # transaction_date を JST に変換して年ごとに集計するクエリ
+        transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")
+        year = extract("year", transaction_date_jst).label("year")
+
         query = (
             select(
-                extract("year", models.Transaction.transaction_date).label("year"),
+                year,
                 models.Transaction.account_type,
                 func.sum(models.Transaction.price * models.Transaction.quantity).label("total_amount"),
             )
             .where(models.Transaction.user_id == user_id, models.Transaction.transaction_type == "buy")
             .group_by(
-                extract("year", models.Transaction.transaction_date),
+                year,
                 models.Transaction.account_type,
             )
             .order_by("year", models.Transaction.account_type)

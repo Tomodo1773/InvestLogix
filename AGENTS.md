@@ -6,81 +6,54 @@
 
 InvestLogixは、日本株と米国株のポートフォリオを管理するFastAPIベースのアプリケーションです。取引記録、保有株管理、配当管理、ポートフォリオ分析、LINE通知などの機能を提供します。
 
-## 開発環境セットアップ
+## サービスレベル
 
-### 依存関係のインストール
+このアプリはユーザが2,3人のユーザで使うことを想定しています。そのため、過度な品質は不要です
 
-```bash
-cd src/api
-uv sync
-```
+## 実装手順
 
-**重要**: 新規パッケージを追加するときは `pip` や `poetry` ではなく `uv add <パッケージ名>` で追加してください。CI と一致させるため `uv.lock` も更新確認してください。
+1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
+2. コードを実装する
+3. テストコードを実装する
+4. uv run ruff format でコードを整形する
+5. uv run ruff check --fix でコードスタイルを整える
+6. test-runnerサブエージェントでテストを行う
+7. ドキュメント(AGENTS.md,README.md)を更新する
 
-### 環境変数の設定
+## 実装方針
 
-```bash
-cd src/api
-cp .env.example .env
-# .envファイルを編集して必要な環境変数を設定
-# DATABASE_URL、J-Quants API キー、LINE トークンなどの必須値を設定
-```
+- 過度に高品質な実装は不要。
+- 必要な要件をよく考え最小のコードで要件を達成することが望ましい。
+- 開発者は1人。自分が使う上で最低限のエラーハンドリングやセキュリティ対応を行う
 
-**セキュリティ**: 秘密情報は Azure Key Vault か GitHub Actions のシークレットで管理します。ローカル DB 用の Postgres パスワードは `src/docker-compose.yaml` のダミー値をそのまま使わず、環境変数で上書きします。
+## コマンド
 
-### データベースマイグレーション
-
-```bash
-cd src/api
-uv run alembic upgrade head
-```
-
-### アプリケーションの起動
+**注意**: 以下のコマンドは `src/api` ディレクトリで実行する必要があります。プロジェクトルートから実行する場合は、事前に `cd src/api` でディレクトリを移動してください。
 
 ```bash
-cd src/api
+# 開発サーバ起動
 uv run uvicorn stock.app:app --reload --port 8000
-```
 
-ホットリロードを避けたい場合は `--reload` を省略します。
-
-### コンテナ開発環境
-
-```bash
-cd src
-docker compose up --build
-```
-
-API + PostgreSQL を同時起動します。永続ボリュームは `src/postgres_data` にマウントされるため、破棄したいときだけ手動削除します。
-
-## テスト実行
-
-### 全テストの実行
-
-```bash
-cd src/api
+# テスト実行
 uv run pytest
+
+# リントチェック
+uv run ruff check --fix
+
+# フォーマットチェック
+uv run ruff format --check
+
+# マイグレーション作成
+uv run alembic revision --autogenerate -m "説明"
+
+# マイグレーション適用
+uv run alembic upgrade head
+
+# マイグレーションロールバック
+uv run alembic downgrade -1
 ```
 
-### 特定のテストファイルの実行
-
-```bash
-cd src/api
-uv run pytest tests/api/test_transactions.py
-```
-
-### 特定のテストケースの実行
-
-```bash
-cd src/api
-uv run pytest tests/api/test_transactions.py::test_function_name -v
-```
-
-**テスト指針**: 新規機能はサービス層とルート層の両方にテストを追加し、命名は `test_<対象>.py`。境界ケースは docstring で意図を説明します。CI では Ruff のみ実行されるため、ローカルでテストと `ruff format --check` の両方を通過させてから PR を開いてください。
-
-## コードベースのアーキテクチャ
-
-### ディレクトリ構造
+## ディレクトリ構造
 
 - `src/api/stock/` - メインアプリケーションコード
   - `app.py` - FastAPIアプリケーション定義、ルーター設定（エントリーポイント）
@@ -199,85 +172,9 @@ uv run pytest tests/api/test_transactions.py::test_function_name -v
 - **フォーマッタ／リンタ**: Ruff
   - `uv run ruff format` で整形
   - `uv run ruff check --fix` で軽微な違反を自動修正
-  - 行長は **127 文字以内**
+  - 行長は **110 文字以内**
   - 長い SQL は triple-quoted 文字列にまとめる
 - **命名規則**:
   - モジュール・パッケージ: snake_case
   - クラス: PascalCase
   - 環境定義は `database.py` の `Settings` クラスに集約し、`.env` から読み込む値は `pydantic-settings` で型安全に管理
-
-## よくあるタスク
-
-### マイグレーションファイルの作成
-
-```bash
-cd src/api
-uv run alembic revision --autogenerate -m "説明"
-```
-
-### マイグレーションの適用
-
-```bash
-cd src/api
-uv run alembic upgrade head
-```
-
-### マイグレーションのロールバック
-
-```bash
-cd src/api
-uv run alembic downgrade -1
-```
-
-複数段階戻すときは `-n` オプションを活用してください。
-
-### 単一ファイルのリント
-
-```bash
-cd src/api
-uv run ruff check <ファイル名>
-```
-
-### リント自動修正
-
-```bash
-cd src/api
-uv run ruff check --fix
-```
-
-### フォーマット確認（CIと同じ）
-
-```bash
-cd src/api
-uv run ruff format --check
-```
-
-## コミットとプルリクエストの運用
-
-### コミットメッセージ
-
-- Git 履歴は**日本語サマリ**で変更点を端的に記述（例: `ユーザー取得関数にキャッシュ機能を追加`）
-- 接頭辞やチケット番号は任意ですが、最初の 1 行で差分の意図が伝わるようにします
-- **1 コミット 1 トピック**を徹底し、設定・スキーマ変更はマイグレーションと同一コミットにまとめてロールバック容易性を保ちます
-
-### プルリクエスト
-
-- PR では概要、テスト結果、関連 Issue を記載し、API 変更時はエンドポイント例やレスポンス差分を添付
-- UI 変化がある場合はスクリーンショットを追加
-- 機微情報、個人情報、生成された大型データが含まれていないことを再確認
-- レビュー前に `git status` と `git diff --stat` で影響範囲を共有
-
-### コミット前チェックリスト
-
-- [ ] ローカルでテストが通過している（`uv run pytest`）
-- [ ] Ruffのフォーマットチェックが通過している（`uv run ruff format --check`）
-- [ ] 秘密情報やログに個人情報が含まれていない
-- [ ] マイグレーションファイルがある場合、スキーマ変更と同一コミットになっている
-
-## セキュリティとデータ管理
-
-- `.env.example` を複製し `DATABASE_URL`、J-Quants API キー、LINE トークンなどの必須値を設定
-- 秘密情報は Azure Key Vault か GitHub Actions のシークレットで管理
-- ローカル DB 用の Postgres パスワードは `src/docker-compose.yaml` のダミー値をそのまま使わず、環境変数で上書き
-- ログやダンプに個人情報が含まれる場合はコミット禁止
-- 不要なスナップショットは `src/postgres_data` ごと削除

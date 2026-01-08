@@ -20,7 +20,9 @@ class AuthService:
         - 戻り値: 作成されたユーザーエンティティ
         """
         # 既存ユーザーの確認
-        result = await self.db.execute(select(User).where((User.username == user.username) | (User.email == user.email)))
+        result = await self.db.execute(
+            select(User).where((User.username == user.username) | (User.email == user.email))
+        )
         if result.scalar_one_or_none():
             raise ValueError("Username or email already registered")
 

@@ -1,4 +1,5 @@
-from typing import Dict, List, Optional
+from decimal import Decimal
+from typing import Dict, List, Optional, Union
 
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from .. import models, schemas
 from .holding_service import (
     calculate_holding_from_transactions,
     calculate_realized_pl_from_transactions,
+    list_holdings,
     update_single_holding_pl,
 )
 from .stock_service import StockService
@@ -102,7 +104,9 @@ class TransactionService:
             self.db, holding.user_id, holding.symbol
         )
 
-    async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
+    async def list_transactions(
+        self, user_id: int, symbol: Optional[str] = None, include_unrealized_pl: bool = False
+    ) -> Union[List[models.Transaction], List[schemas.TransactionWithPL]]:
         # 銘柄名を取得するためにStockテーブルを結合
         query = (
             select(models.Transaction, models.Stock.name)
@@ -121,6 +125,48 @@ class TransactionService:
             transaction = row[0]
             transaction.stock_name = row[1]
             transactions.append(transaction)
+
+        # 未実現損益を含める場合
+        if include_unrealized_pl and symbol:
+            # holdingから現在価格を取得
+            holdings = await list_holdings(self.db, user_id, symbol)
+            current_price = holdings[0].current_price if holdings and holdings[0].current_price else None
+
+            # 各買付取引に対して損益を計算
+            transactions_with_pl = []
+            for transaction in transactions:
+                transaction_dict = {
+                    "transaction_id": transaction.transaction_id,
+                    "user_id": transaction.user_id,
+                    "symbol": transaction.symbol,
+                    "transaction_type": transaction.transaction_type,
+                    "quantity": transaction.quantity,
+                    "price": transaction.price,
+                    "usd_price": transaction.usd_price,
+                    "adjusted_price": transaction.adjusted_price,
+                    "account_type": transaction.account_type,
+                    "fee": transaction.fee,
+                    "tax": transaction.tax,
+                    "realized_pl": transaction.realized_pl,
+                    "transaction_date": transaction.transaction_date,
+                    "stock_name": transaction.stock_name,
+                    "unrealized_pl": None,
+                    "unrealized_pl_percentage": None,
+                }
+
+                # 買付取引の場合のみ損益を計算
+                if transaction.transaction_type == "buy" and current_price:
+                    cost = transaction.price * transaction.quantity
+                    market_value = current_price * transaction.quantity
+                    unrealized_pl = market_value - cost
+                    unrealized_pl_percentage = (unrealized_pl / cost * 100) if cost > 0 else Decimal("0")
+                    transaction_dict["unrealized_pl"] = unrealized_pl
+                    transaction_dict["unrealized_pl_percentage"] = unrealized_pl_percentage
+
+                transactions_with_pl.append(schemas.TransactionWithPL(**transaction_dict))
+
+            return transactions_with_pl
+
         return transactions
 
     async def get_monthly_summary(self, user_id: int) -> List[Dict]:

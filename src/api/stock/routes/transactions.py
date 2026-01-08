@@ -9,6 +9,7 @@ from ..schemas import (
     MonthlySummary,
     Transaction,
     TransactionCreate,
+    TransactionWithPL,
     User,
     YearlySummary,
 )
@@ -41,10 +42,11 @@ async def create_transaction(
         raise HTTPException(status_code=404, detail="Stock not found")
 
 
-@router.get("/", response_model=List[Transaction])
+@router.get("/", response_model=List[Transaction | TransactionWithPL])
 async def list_transactions(
     current_user: Annotated[User, Depends(get_current_user)],
     symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
+    include_unrealized_pl: bool = Query(False, description="買付に未実現損益を含める（symbolと併用）"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -52,9 +54,10 @@ async def list_transactions(
     - 成功時: 取引情報のリストを返却（日付降順）
     - 返却データには、銘柄名(stock_name)も含まれる
     - symbolパラメータを指定すると、該当する銘柄のみをフィルタリングして返却
+    - include_unrealized_pl=trueかつsymbol指定時、買付取引に未実現損益（unrealized_pl, unrealized_pl_percentage）を含める
     """
     transaction_service = TransactionService(db)
-    return await transaction_service.list_transactions(current_user.user_id, symbol)
+    return await transaction_service.list_transactions(current_user.user_id, symbol, include_unrealized_pl)
 
 
 @router.get("/monthly-summary", response_model=List[MonthlySummary])

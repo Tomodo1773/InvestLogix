@@ -198,9 +198,7 @@ async def test_weekly_performance_notify_endpoint(
 
 
 @pytest.mark.asyncio
-async def test_weekly_performance_excludes_zero_quantity(
-    client, auth_token, create_transaction, mocker
-):
+async def test_weekly_performance_excludes_zero_quantity(client, auth_token, create_transaction, mocker):
     """保有数量が0の銘柄が除外されることをテスト
 
     期待する動作:

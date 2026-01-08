@@ -83,9 +83,7 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Dec
         return None
 
 
-async def calculate_weekly_performance(
-    db: AsyncSession, user_id: int
-) -> List[StockWeeklyPerformance]:
+async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[StockWeeklyPerformance]:
     """
     保有銘柄の週間騰落率を計算します。
     保有数量が0の銘柄と投資信託（FUND）は除外します。

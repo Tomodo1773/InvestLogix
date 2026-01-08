@@ -257,3 +257,59 @@ class TransactionService:
             "特定": "specific",
         }
         return mapping.get(account_type, account_type)
+
+    async def get_transactions_with_pl(self, user_id: int, symbol: str) -> List[Dict]:
+        """
+        指定シンボルの取引一覧を取得し、買付取引には損益情報を付与する
+
+        Args:
+            user_id: ユーザーID
+            symbol: 銘柄シンボル
+
+        Returns:
+            List[Dict]: 取引一覧（買付には損益情報付き）
+        """
+        # 既存のlist_transactionsを利用して取引一覧を取得
+        transactions = await self.list_transactions(user_id, symbol)
+
+        result = []
+        for tx in transactions:
+            tx_dict = {
+                "transaction_id": tx.transaction_id,
+                "user_id": tx.user_id,
+                "symbol": tx.symbol,
+                "transaction_type": tx.transaction_type,
+                "quantity": tx.quantity,
+                "price": tx.price,
+                "usd_price": tx.usd_price,
+                "adjusted_price": tx.adjusted_price,
+                "account_type": tx.account_type,
+                "fee": tx.fee,
+                "tax": tx.tax,
+                "realized_pl": tx.realized_pl,
+                "transaction_date": tx.transaction_date,
+                "stock_name": tx.stock_name,
+                "current_price": tx.current_price,
+                # 損益情報（デフォルトはNone）
+                "purchase_value": None,
+                "current_value": None,
+                "unrealized_pl": None,
+                "unrealized_pl_percentage": None,
+            }
+
+            # 買付（buy）取引の場合のみ損益を計算
+            if tx.transaction_type == "buy" and tx.current_price is not None:
+                purchase_value = tx.price * tx.quantity
+                current_value = tx.current_price * tx.quantity
+                unrealized_pl = current_value - purchase_value
+
+                tx_dict["purchase_value"] = purchase_value
+                tx_dict["current_value"] = current_value
+                tx_dict["unrealized_pl"] = unrealized_pl
+
+                if purchase_value != 0:
+                    tx_dict["unrealized_pl_percentage"] = (unrealized_pl / purchase_value) * 100
+
+            result.append(tx_dict)
+
+        return result

@@ -9,6 +9,7 @@ from ..schemas import (
     MonthlySummary,
     Transaction,
     TransactionCreate,
+    TransactionWithPL,
     User,
     YearlySummary,
 )
@@ -83,3 +84,23 @@ async def get_yearly_transaction_summary(
     """
     transaction_service = TransactionService(db)
     return await transaction_service.get_yearly_summary(current_user.user_id)
+
+
+@router.get("/{symbol}/analysis", response_model=List[TransactionWithPL])
+async def get_transactions_with_pl(
+    symbol: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    指定シンボルの取引一覧を損益情報付きで取得する
+
+    - symbol: 銘柄シンボル
+    - 買付（buy）取引には損益情報（purchase_value, current_value, unrealized_pl, unrealized_pl_percentage）が含まれる
+    - 売却（sell）取引には損益情報は含まれない（realized_plは既存の値を返す）
+
+    Returns:
+        List[TransactionWithPL]: 取引一覧（買付には損益情報付き）
+    """
+    transaction_service = TransactionService(db)
+    return await transaction_service.get_transactions_with_pl(current_user.user_id, symbol)

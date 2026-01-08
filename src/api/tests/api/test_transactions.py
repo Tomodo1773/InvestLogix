@@ -411,3 +411,117 @@ async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, 
     data = response.json()
     assert len(data) > 0
     assert data[0]["stock_name"] == "三菱商事"
+
+
+@pytest.mark.asyncio
+async def test_get_transactions_with_pl(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """損益情報付き取引一覧取得を確認するテスト
+
+    期待する動作:
+    - ステータスコード200
+    - 買付（buy）取引には損益情報が含まれる
+    - 売却（sell）取引には損益情報は含まれない
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 購入取引を登録
+    buy_transaction = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post(
+        "/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # 売却取引を登録
+    sell_transaction = {
+        "symbol": "8058",
+        "transaction_type": "sell",
+        "quantity": "5.0",
+        "price": "3500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-02T00:00:00",
+    }
+    await client.post(
+        "/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # 損益情報付き取引一覧を取得
+    response = await client.get(
+        "/api/v1/transactions/8058/analysis", headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+    # 売却取引を確認（日付降順で最初に来る）
+    sell_tx = next(tx for tx in data if tx["transaction_type"] == "sell")
+    assert sell_tx["symbol"] == "8058"
+    assert sell_tx["purchase_value"] is None
+    assert sell_tx["current_value"] is None
+    assert sell_tx["unrealized_pl"] is None
+    assert sell_tx["unrealized_pl_percentage"] is None
+    assert Decimal(sell_tx["realized_pl"]) == Decimal("2500.0")  # (3500 - 3000) * 5
+
+    # 買付取引を確認（損益情報が含まれている）
+    buy_tx = next(tx for tx in data if tx["transaction_type"] == "buy")
+    assert buy_tx["symbol"] == "8058"
+    assert buy_tx["purchase_value"] is not None
+    assert buy_tx["current_value"] is not None
+    assert buy_tx["unrealized_pl"] is not None
+    assert buy_tx["unrealized_pl_percentage"] is not None
+
+    # 損益計算の検証
+    # purchase_value = price * quantity = 3000 * 10 = 30000
+    assert Decimal(buy_tx["purchase_value"]) == Decimal("30000.0")
+
+    # current_value = current_price * quantity
+    # current_priceはモックで設定されている（MOCK_JAPAN_STOCK_PRICE_UPDATED = 3100.0）
+    assert Decimal(buy_tx["current_value"]) == Decimal("31000.0")
+
+    # unrealized_pl = current_value - purchase_value = 31000 - 30000 = 1000
+    assert Decimal(buy_tx["unrealized_pl"]) == Decimal("1000.0")
+
+    # unrealized_pl_percentage = (unrealized_pl / purchase_value) * 100
+    # = (1000 / 30000) * 100 = 3.33...%
+    expected_percentage = (Decimal("1000.0") / Decimal("30000.0")) * 100
+    assert Decimal(buy_tx["unrealized_pl_percentage"]).quantize(
+        Decimal("0.0001")
+    ) == expected_percentage.quantize(Decimal("0.0001"))
+
+
+@pytest.mark.asyncio
+async def test_get_transactions_with_pl_empty(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """取引が存在しないシンボルの場合、空リストを返すテスト
+
+    期待する動作:
+    - ステータスコード200
+    - 空リストを返す
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 存在しないシンボルで取得
+    response = await client.get(
+        "/api/v1/transactions/UNKNOWN/analysis", headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 0

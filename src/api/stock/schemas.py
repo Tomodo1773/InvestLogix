@@ -384,3 +384,16 @@ class WeeklyPerformanceNotifyResponse(BaseModel):
     bottom_performers: List[StockWeeklyPerformance]
     notification_sent: bool
     timestamp: str
+
+
+class TransactionWithPL(Transaction):
+    """買付損益情報付きの取引
+
+    買付（buy）取引の場合のみ損益情報が含まれる。
+    売却（sell）取引の場合はNone。
+    """
+
+    purchase_value: Optional[Decimal] = None  # 取得金額 (price * quantity)
+    current_value: Optional[Decimal] = None  # 現在評価額 (current_price * quantity)
+    unrealized_pl: Optional[Decimal] = None  # 含み損益
+    unrealized_pl_percentage: Optional[Decimal] = None  # 含み損益率(%)

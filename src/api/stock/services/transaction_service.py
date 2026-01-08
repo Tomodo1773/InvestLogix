@@ -99,14 +99,10 @@ class TransactionService:
         holding.realized_pl = await calculate_realized_pl_from_transactions(self.db, holding.user_id, holding.symbol)
 
     async def list_transactions(self, user_id: int, symbol: Optional[str] = None) -> List[models.Transaction]:
-        # ホールディングテーブルを結合して現在価格を取得するクエリに変更
+        # 銘柄名を取得するためにStockテーブルを結合
         query = (
-            select(models.Transaction, models.Stock.name, models.Holding.current_price)
+            select(models.Transaction, models.Stock.name)
             .join(models.Stock, models.Transaction.symbol == models.Stock.symbol)
-            .outerjoin(
-                models.Holding,
-                (models.Holding.user_id == models.Transaction.user_id) & (models.Holding.symbol == models.Transaction.symbol),
-            )
             .where(models.Transaction.user_id == user_id)
         )
 
@@ -120,7 +116,6 @@ class TransactionService:
         for row in result:
             transaction = row[0]
             transaction.stock_name = row[1]
-            transaction.current_price = row[2]  # 現在価格を設定
             transactions.append(transaction)
         return transactions
 

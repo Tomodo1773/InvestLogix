@@ -136,7 +136,6 @@ class Transaction(TransactionBase):
     user_id: int
     transaction_date: datetime
     stock_name: Optional[str] = None  # 銘柄名を追加
-    current_price: Optional[Decimal] = None  # 現在価格を追加
     model_config = ConfigDict(from_attributes=True)
 
 

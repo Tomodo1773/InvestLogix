@@ -389,8 +389,8 @@ class WeeklyPerformanceNotifyResponse(BaseModel):
 class TransactionWithPL(Transaction):
     """買付損益情報付きの取引
 
-    買付（buy）取引の場合のみ損益情報が含まれる。
-    売却（sell）取引の場合はNone。
+    買付（buy）取引で current_price が取得できる場合のみ損益情報が含まれる。
+    売却（sell）取引または現在価格が取得できない場合はNone。
     """
 
     purchase_value: Optional[Decimal] = None  # 取得金額 (price * quantity)

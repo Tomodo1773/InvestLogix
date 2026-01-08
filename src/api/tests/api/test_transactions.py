@@ -525,3 +525,92 @@ async def test_get_transactions_with_pl_empty(client: AsyncClient, db_session: A
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 0
+
+
+@pytest.mark.asyncio
+async def test_get_transactions_with_pl_all_sold(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """全株売却後の損益情報付き取引一覧取得テスト
+
+    期待する動作:
+    - ステータスコード200
+    - 全株売却後でもHoldingレコードは残るため、current_priceは取得可能
+    - 買付取引の損益情報は計算される（過去の取引の参照用として）
+    - 売却取引のrealized_plは正しく返却される
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 購入取引を登録（既存のモックで対応可能な8058を使用）
+    buy_transaction = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "1000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    buy_response = await client.post(
+        "/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert buy_response.status_code == 200
+
+    # 全株売却取引を登録
+    sell_transaction = {
+        "symbol": "8058",
+        "transaction_type": "sell",
+        "quantity": "10.0",
+        "price": "1500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-02T00:00:00",
+    }
+    sell_response = await client.post(
+        "/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert sell_response.status_code == 200
+
+    # 損益情報付き取引一覧を取得
+    response = await client.get(
+        "/api/v1/transactions/8058/analysis", headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+    # 売却取引を確認（realized_plが正しく返却される）
+    sell_tx = next(tx for tx in data if tx["transaction_type"] == "sell")
+    assert sell_tx["symbol"] == "8058"
+    assert sell_tx["purchase_value"] is None
+    assert sell_tx["current_value"] is None
+    assert sell_tx["unrealized_pl"] is None
+    assert sell_tx["unrealized_pl_percentage"] is None
+    assert Decimal(sell_tx["realized_pl"]) == Decimal("5000.0")  # (1500 - 1000) * 10
+
+    # 買付取引を確認
+    # 全株売却後もHoldingレコードは残るため、current_priceは取得可能
+    # これにより過去の買付取引に対しても損益情報が参照できる
+    buy_tx = next(tx for tx in data if tx["transaction_type"] == "buy")
+    assert buy_tx["symbol"] == "8058"
+    assert buy_tx["current_price"] is not None  # Holdingレコードからcurrent_priceを取得
+    assert buy_tx["purchase_value"] is not None
+    assert buy_tx["current_value"] is not None
+    assert buy_tx["unrealized_pl"] is not None
+    assert buy_tx["unrealized_pl_percentage"] is not None
+
+    # 損益計算の検証
+    # purchase_value = price * quantity = 1000 * 10 = 10000
+    assert Decimal(buy_tx["purchase_value"]) == Decimal("10000.0")
+    # current_value = current_price * quantity = 3100 * 10 = 31000
+    # current_priceはモックで3100.0（MOCK_JAPAN_STOCK_PRICE_UPDATED）
+    assert Decimal(buy_tx["current_value"]) == Decimal("31000.0")
+    # unrealized_pl = current_value - purchase_value = 31000 - 10000 = 21000
+    assert Decimal(buy_tx["unrealized_pl"]) == Decimal("21000.0")

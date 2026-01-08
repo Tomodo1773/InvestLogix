@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock
 import pytest
 
 from stock.schemas import StockWeeklyPerformance
-from stock.services.notification_service import _build_weekly_performance_message
+from stock.services.notification_service import _build_ranking_row
+from stock.services.notification_service import WEEKLY_PERFORMANCE_COLOR_GREEN, WEEKLY_PERFORMANCE_COLOR_RED
 from stock.services.weekly_performance_service import get_top_bottom_performers
 
 
@@ -64,43 +65,36 @@ class TestGetTopBottomPerformers:
         assert bottom == []
 
 
-class TestBuildWeeklyPerformanceMessage:
-    """メッセージ作成関数のユニットテスト"""
+class TestBuildRankingRow:
+    """ランキング行ビルダー関数のユニットテスト"""
 
-    def test_message_format(self):
-        """メッセージフォーマットが正しいこと"""
-        top_performers = [
-            StockWeeklyPerformance(
-                symbol="TEST1",
-                name="テスト株1",
-                latest_price=Decimal("105"),
-                old_price=Decimal("100"),
-                change_rate=Decimal("5.00"),
-            ),
-        ]
-        bottom_performers = [
-            StockWeeklyPerformance(
-                symbol="TEST2",
-                name="テスト株2",
-                latest_price=Decimal("95"),
-                old_price=Decimal("100"),
-                change_rate=Decimal("-5.00"),
-            ),
-        ]
+    def test_positive_change_rate_uses_green_color(self):
+        """騰落率がプラスの場合、緑色が使用されること"""
+        row = _build_ranking_row(
+            rank=1,
+            name="テスト株",
+            symbol="TEST1",
+            change_rate=Decimal("10.00"),
+        )
 
-        message = _build_weekly_performance_message(top_performers, bottom_performers)
+        # 騰落率テキストが緑色であること
+        change_rate_text = row["contents"][2]
+        assert change_rate_text["color"] == WEEKLY_PERFORMANCE_COLOR_GREEN
+        assert change_rate_text["text"] == "+10.00%"
 
-        assert "📈 週間騰落ランキング" in message
-        assert "【上昇トップ5】" in message
-        assert "【下落ワースト5】" in message
-        assert "テスト株1(TEST1): +5.00%" in message
-        assert "テスト株2(TEST2): -5.00%" in message
+    def test_negative_change_rate_uses_red_color(self):
+        """騰落率がマイナスの場合、赤色が使用されること"""
+        row = _build_ranking_row(
+            rank=1,
+            name="テスト株",
+            symbol="TEST1",
+            change_rate=Decimal("-5.50"),
+        )
 
-    def test_message_with_empty_lists(self):
-        """空のリストの場合、「データなし」と表示されること"""
-        message = _build_weekly_performance_message([], [])
-
-        assert "データなし" in message
+        # 騰落率テキストが赤色であること
+        change_rate_text = row["contents"][2]
+        assert change_rate_text["color"] == WEEKLY_PERFORMANCE_COLOR_RED
+        assert change_rate_text["text"] == "-5.50%"
 
 
 @pytest.mark.asyncio

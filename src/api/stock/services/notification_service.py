@@ -332,6 +332,127 @@ def _generate_comment(percentage: float) -> str:
         return "市場環境に応じて慎重に判断し、投資方針を見直してみましょう"
 
 
+# 週間騰落ランキング用の色定義
+WEEKLY_PERFORMANCE_COLOR_GREEN = "#00A86B"
+WEEKLY_PERFORMANCE_COLOR_RED = "#E53935"
+
+
+def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) -> dict:
+    """
+    ランキングの1行分のFlex Boxを作成する
+
+    Args:
+        rank (int): 順位
+        name (str): 銘柄名
+        symbol (str): 銘柄コード
+        change_rate (Decimal): 騰落率
+
+    Returns:
+        dict: Flex Box形式の辞書
+    """
+    is_positive = change_rate >= 0
+    sign = "+" if is_positive else ""
+    color = WEEKLY_PERFORMANCE_COLOR_GREEN if is_positive else WEEKLY_PERFORMANCE_COLOR_RED
+
+    return {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": "#666666"},
+            {"type": "text", "text": f"{name}({symbol})", "size": "sm", "flex": 3, "margin": "sm", "color": "#333333"},
+            {
+                "type": "text",
+                "text": f"{sign}{change_rate}%",
+                "size": "sm",
+                "align": "end",
+                "color": color,
+                "weight": "bold",
+                "flex": 1,
+            },
+        ],
+        "margin": "md",
+    }
+
+
+def _build_weekly_performance_flex_message(top_performers: list, bottom_performers: list) -> dict:
+    """
+    週間騰落率ランキングのFlex Messageを作成する
+
+    Args:
+        top_performers (list): 上昇トップのリスト
+        bottom_performers (list): 下落ワーストのリスト
+
+    Returns:
+        dict: LINE Flex Message形式の辞書
+    """
+    # 日本時間の現在時刻
+    current_time = datetime.now(pytz.timezone("Asia/Tokyo"))
+    today = current_time.strftime("%Y/%m/%d")
+
+    # 上昇トップ5のコンテンツ
+    top_contents = []
+    if top_performers:
+        for i, perf in enumerate(top_performers, 1):
+            top_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
+    else:
+        top_contents.append(
+            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
+        )
+
+    # 下落ワースト5のコンテンツ
+    bottom_contents = []
+    if bottom_performers:
+        for i, perf in enumerate(bottom_performers, 1):
+            bottom_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
+    else:
+        bottom_contents.append(
+            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
+        )
+
+    return {
+        "type": "bubble",
+        "header": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "text", "text": "InvestLogix", "weight": "bold", "size": "sm", "color": "#00A86B"},
+                {
+                    "type": "text",
+                    "text": "週間騰落ランキング",
+                    "weight": "bold",
+                    "size": "xl",
+                    "margin": "sm",
+                    "color": "#333333",
+                },
+                {"type": "text", "text": today, "size": "xs", "color": "#999999", "margin": "sm"},
+            ],
+            "paddingAll": "20px",
+            "backgroundColor": "#FFFFFF",
+        },
+        "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+                {"type": "separator", "color": "#E0E0E0"},
+                {"type": "text", "text": "上昇トップ5", "weight": "bold", "size": "md", "margin": "lg", "color": "#333333"},
+                {"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"},
+                {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
+                {
+                    "type": "text",
+                    "text": "下落ワースト5",
+                    "weight": "bold",
+                    "size": "md",
+                    "margin": "lg",
+                    "color": "#333333",
+                },
+                {"type": "box", "layout": "vertical", "contents": bottom_contents, "margin": "sm"},
+            ],
+            "paddingAll": "20px",
+            "backgroundColor": "#FFFFFF",
+        },
+    }
+
+
 async def send_weekly_performance_notification(
     user_id: int,
     top_performers: list,
@@ -339,7 +460,7 @@ async def send_weekly_performance_notification(
     db: AsyncSession = None,
 ) -> bool:
     """
-    週間騰落率ランキングをLINEにプレーンテキストで通知する
+    週間騰落率ランキングをLINEにFlex Messageで通知する
 
     Args:
         user_id (int): ユーザーID
@@ -365,17 +486,18 @@ async def send_weekly_performance_notification(
             logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
             return False
 
-        # プレーンテキストメッセージの作成
-        message_text = _build_weekly_performance_message(top_performers, bottom_performers)
+        # Flex Messageの作成
+        flex_contents = _build_weekly_performance_flex_message(top_performers, bottom_performers)
 
-        text_message = {
-            "type": "text",
-            "text": message_text,
+        flex_message = {
+            "type": "flex",
+            "altText": "週間騰落ランキング",
+            "contents": flex_contents,
         }
 
         headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
 
-        data = {"to": line_user_id, "messages": [text_message]}
+        data = {"to": line_user_id, "messages": [flex_message]}
 
         # LINE Message APIにリクエストを送信
         async with httpx.AsyncClient() as client:
@@ -395,39 +517,3 @@ async def send_weekly_performance_notification(
     except Exception as e:
         logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
         return False
-
-
-def _build_weekly_performance_message(top_performers: list, bottom_performers: list) -> str:
-    """
-    週間騰落率ランキングのプレーンテキストメッセージを作成する
-
-    Args:
-        top_performers (list): 上昇トップのリスト
-        bottom_performers (list): 下落ワーストのリスト
-
-    Returns:
-        str: メッセージテキスト
-    """
-    lines = ["📈 週間騰落ランキング", ""]
-
-    # 上昇トップ5
-    lines.append("【上昇トップ5】")
-    if top_performers:
-        for i, perf in enumerate(top_performers, 1):
-            sign = "+" if perf.change_rate >= 0 else ""
-            lines.append(f"{i}. {perf.name}({perf.symbol}): {sign}{perf.change_rate}%")
-    else:
-        lines.append("データなし")
-
-    lines.append("")
-
-    # 下落ワースト5
-    lines.append("【下落ワースト5】")
-    if bottom_performers:
-        for i, perf in enumerate(bottom_performers, 1):
-            sign = "+" if perf.change_rate >= 0 else ""
-            lines.append(f"{i}. {perf.name}({perf.symbol}): {sign}{perf.change_rate}%")
-    else:
-        lines.append("データなし")
-
-    return "\n".join(lines)

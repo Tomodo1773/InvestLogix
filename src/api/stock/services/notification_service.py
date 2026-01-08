@@ -359,7 +359,14 @@ def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) 
         "layout": "horizontal",
         "contents": [
             {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": "#666666"},
-            {"type": "text", "text": f"{name}({symbol})", "size": "sm", "flex": 3, "margin": "sm", "color": "#333333"},
+            {
+                "type": "text",
+                "text": f"{name}({symbol})",
+                "size": "sm",
+                "flex": 3,
+                "margin": "sm",
+                "color": "#333333",
+            },
             {
                 "type": "text",
                 "text": f"{sign}{change_rate}%",
@@ -434,7 +441,14 @@ def _build_weekly_performance_flex_message(top_performers: list, bottom_performe
             "layout": "vertical",
             "contents": [
                 {"type": "separator", "color": "#E0E0E0"},
-                {"type": "text", "text": "上昇トップ5", "weight": "bold", "size": "md", "margin": "lg", "color": "#333333"},
+                {
+                    "type": "text",
+                    "text": "上昇トップ5",
+                    "weight": "bold",
+                    "size": "md",
+                    "margin": "lg",
+                    "color": "#333333",
+                },
                 {"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"},
                 {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
                 {

@@ -1,12 +1,16 @@
+from datetime import datetime
 from typing import Annotated, Dict, List
 
+import pytz
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..schemas import PortfolioHistoryResponse, PortfolioSummary, User
+from ..schemas import PortfolioHistoryResponse, PortfolioSummary, User, WeeklyPerformanceNotifyResponse
+from ..services.notification_service import send_weekly_performance_notification
 from ..services.portfolio_service import PortfolioService
+from ..services.weekly_performance_service import calculate_weekly_performance, get_top_bottom_performers
 
 router = APIRouter()
 
@@ -80,3 +84,45 @@ async def update_portfolio_and_notify(
     """
     portfolio_service = PortfolioService(db)
     return await portfolio_service.update_and_notify(current_user.user_id)
+
+
+@router.post("/weekly-performance-notify", response_model=WeeklyPerformanceNotifyResponse)
+async def notify_weekly_performance(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+):
+    """
+    週間騰落率を計算してLINE通知を送信する
+    - 保有銘柄の週間騰落率を計算（保有数量が0の銘柄は除外）
+    - 投資信託（FUND）は対象外
+    - 騰落率の上位・下位5位を抽出
+    - プレーンテキストでLINE通知
+    - 以下の情報を返却:
+        - 上位5銘柄の騰落率情報
+        - 下位5銘柄の騰落率情報
+        - 通知送信結果
+        - タイムスタンプ
+    """
+    # 週間パフォーマンスを計算
+    performances = await calculate_weekly_performance(db, current_user.user_id)
+
+    # 上位・下位5位を抽出
+    top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
+
+    # LINE通知を送信
+    notification_sent = await send_weekly_performance_notification(
+        user_id=current_user.user_id,
+        top_performers=top_performers,
+        bottom_performers=bottom_performers,
+        db=db,
+    )
+
+    # 日本時間でタイムスタンプを生成
+    jst = pytz.timezone("Asia/Tokyo")
+    timestamp = datetime.now(jst).isoformat()
+
+    return WeeklyPerformanceNotifyResponse(
+        top_performers=top_performers,
+        bottom_performers=bottom_performers,
+        notification_sent=notification_sent,
+        timestamp=timestamp,
+    )

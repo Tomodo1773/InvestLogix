@@ -17,9 +17,8 @@ InvestLogixは、日本株と米国株のポートフォリオを管理するFas
 3. テストコードを実装する
 4. uv run ruff format でコードを整形する
 5. uv run ruff check --fix でコードスタイルを整える
-6. uv sync で依存関係を更新する
-7. uv run pytest でテストを行う
-8. ドキュメント(AGENTS.md,README.md)を更新する
+6. test-runnerサブエージェントでテストを行う
+7. ドキュメント(AGENTS.md,README.md)を更新する
 
 ## 実装方針
 

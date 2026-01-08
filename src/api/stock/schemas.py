@@ -364,3 +364,23 @@ class LineUserIdUpdate(BaseModel):
     """LINE UserID更新リクエスト"""
 
     line_user_id: str
+
+
+# 週間騰落率通知用のスキーマ
+class StockWeeklyPerformance(BaseModel):
+    """週間パフォーマンス情報"""
+
+    symbol: str
+    name: str
+    latest_price: Decimal
+    old_price: Decimal
+    change_rate: Decimal  # 騰落率（%）
+
+
+class WeeklyPerformanceNotifyResponse(BaseModel):
+    """週間騰落率通知レスポンス"""
+
+    top_performers: List[StockWeeklyPerformance]
+    bottom_performers: List[StockWeeklyPerformance]
+    notification_sent: bool
+    timestamp: str

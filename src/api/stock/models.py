@@ -108,6 +108,7 @@ class StockSplit(Base):
     __tablename__ = "stock_splits"
 
     split_id = Column(Integer, primary_key=True)  # [SYSTEM] 分割ID
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)  # [SYSTEM] ユーザーID
     symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [SYSTEM] 銘柄コード
     split_date = Column(
         DateTime(timezone=True), nullable=False
@@ -117,9 +118,10 @@ class StockSplit(Base):
     )  # [USER_INPUT] 分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
 
+    user = relationship("User", backref="stock_splits")  # User モデルとの関連
     stock = relationship("Stock", backref="splits")  # Stock モデルとの関連
 
-    __table_args__ = (UniqueConstraint("symbol", "split_date", name="uq_symbol_split_date"),)
+    __table_args__ = (UniqueConstraint("user_id", "symbol", "split_date", name="uq_user_symbol_split_date"),)
 
 
 class User(Base):

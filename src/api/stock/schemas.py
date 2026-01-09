@@ -120,6 +120,7 @@ class StockSplit(StockSplitBase):
     """株式分割情報"""
 
     split_id: int
+    user_id: int
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 

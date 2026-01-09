@@ -58,7 +58,7 @@ async def list_stock_splits(
         株式分割履歴のリスト
     """
     service = StockSplitService(db)
-    return await service.list_stock_splits(symbol)
+    return await service.list_stock_splits(current_user.user_id, symbol)
 
 
 @router.delete("/{split_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -79,7 +79,7 @@ async def delete_stock_split(
         HTTPException: 分割情報が見つからない場合
     """
     service = StockSplitService(db)
-    success = await service.delete_stock_split(split_id)
+    success = await service.delete_stock_split(split_id, current_user.user_id)
 
     if not success:
         raise HTTPException(
@@ -102,4 +102,5 @@ async def recalculate_adjusted_values(
         db: データベースセッション
     """
     service = StockSplitService(db)
-    await service.recalculate_adjusted_values(symbol)
+    await service.recalculate_adjusted_values(symbol, current_user.user_id)
+    await db.commit()

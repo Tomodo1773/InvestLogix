@@ -99,9 +99,10 @@ uv run alembic downgrade -1
 - **Stock**: 銘柄の基本情報（symbol, name, market, currency, security_type）
   - **StockJPXDetail**: 日本株の詳細情報（セクター、市場区分など）
   - **StockUSDetail**: 米国株の詳細情報（GICSセクター、S&P500構成銘柄など）
-- **StockSplit**: 株式分割履歴（symbol, split_date, split_ratio）
+- **StockSplit**: 株式分割履歴（user_id, symbol, split_date, split_ratio）
+  - ユーザーごとに株式分割情報を管理
   - 分割比率: 4:1分割なら4.0、1:2併合なら0.5
-  - 分割登録時に過去取引の調整値を自動計算
+  - 分割登録時に過去取引の調整値を自動計算（ユーザーの取引のみ対象）
 - **Transaction**: 取引履歴（buy/sell, quantity, price, account_type, realized_pl, adjusted_price, adjusted_quantity）
   - adjusted_price: 株式分割による調整後の価格
   - adjusted_quantity: 株式分割による調整後の数量
@@ -128,8 +129,9 @@ uv run alembic downgrade -1
 
 #### 株式分割対応
 
-- **StockSplit**: 銘柄ごとの分割履歴を管理（symbol, split_date, split_ratio）
-- **分割登録時の自動計算**: 分割情報を登録すると、過去取引の `adjusted_price` と `adjusted_quantity` が自動再計算される
+- **StockSplit**: ユーザーごとの分割履歴を管理（user_id, symbol, split_date, split_ratio）
+- **ユーザー単位の管理**: 各ユーザーが自分の取引に対してのみ分割情報を設定・管理可能
+- **分割登録時の自動計算**: 分割情報を登録すると、該当ユーザーの過去取引の `adjusted_price` と `adjusted_quantity` が自動再計算される
 - **調整値計算ロジック**:
   - 取引日より後の分割を全て適用
   - `adjusted_quantity = quantity * (split_ratio1 * split_ratio2 * ...)`

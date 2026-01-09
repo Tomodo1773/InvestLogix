@@ -411,3 +411,119 @@ async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, 
     data = response.json()
     assert len(data) > 0
     assert data[0]["stock_name"] == "三菱商事"
+
+
+@pytest.mark.asyncio
+async def test_list_transactions_with_unrealized_pl(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """買付取引に未実現損益を含めて取得するテスト
+
+    期待する動作:
+    - include_unrealized_pl=trueかつsymbol指定時、買付取引に未実現損益が含まれる
+    - 売却取引には未実現損益が含まれない（null）
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 事前に購入取引を登録
+    buy_transaction = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post(
+        "/api/v1/transactions/", json=buy_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # 売却取引を登録
+    sell_transaction = {
+        "symbol": "8058",
+        "transaction_type": "sell",
+        "quantity": "5.0",
+        "price": "3500.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-02T00:00:00",
+    }
+    await client.post(
+        "/api/v1/transactions/", json=sell_transaction, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # 未実現損益を含めて取引履歴を取得
+    response = await client.get(
+        "/api/v1/transactions/?symbol=8058&include_unrealized_pl=true",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 2
+
+    # 日付降順で返されるので、売却が先
+    sell_data = data[0]  # 売却取引
+    buy_data = data[1]  # 買付取引
+
+    # 売却取引には未実現損益がnull
+    assert sell_data["transaction_type"] == "sell"
+    assert sell_data["unrealized_pl"] is None
+    assert sell_data["unrealized_pl_percentage"] is None
+
+    # 買付取引には未実現損益が含まれる
+    assert buy_data["transaction_type"] == "buy"
+    assert buy_data["unrealized_pl"] is not None
+    assert buy_data["unrealized_pl_percentage"] is not None
+
+
+@pytest.mark.asyncio
+async def test_list_transactions_without_unrealized_pl(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """include_unrealized_pl未指定時のテスト（デフォルトはfalse）
+
+    期待する動作:
+    - パラメータ未指定時は従来通りの動作（損益情報なし）
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 事前に購入取引を登録
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "10.0",
+        "price": "3000.0",
+        "account_type": "NISA(成長投資枠)",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post(
+        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # include_unrealized_plを指定せずに取引履歴を取得
+    response = await client.get(
+        "/api/v1/transactions/?symbol=8058",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    # レスポンスの検証
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) > 0
+
+    # 未実現損益フィールドがレスポンスに含まれていないことを確認
+    assert "unrealized_pl" not in data[0]
+    assert "unrealized_pl_percentage" not in data[0]

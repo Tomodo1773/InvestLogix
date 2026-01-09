@@ -166,6 +166,13 @@ class Transaction(TransactionBase):
         return to_jst(v).isoformat() if v else None
 
 
+class TransactionWithPL(Transaction):
+    """買付損益情報を含む取引情報"""
+
+    unrealized_pl: Optional[Decimal] = None  # 未実現損益金額（現在価格×数量 - 取得価格×数量）
+    unrealized_pl_percentage: Optional[Decimal] = None  # 未実現損益率（%）
+
+
 class PortfolioHistoryBase(BaseModel):
     date: datetime
     total_cost: Decimal

@@ -47,7 +47,7 @@ jobs:
           claude_args: |
             --model claude-opus-4-5
             --system-prompt "常に日本語で回答してください。"
-            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch"
+            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(test-creator),Skill(add-package)"
 
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"

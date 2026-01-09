@@ -111,6 +111,7 @@ async def get_current_price(stock: Stock) -> Decimal:
 async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, symbol: str):
     """
     トランザクション履歴から保有数量と取得価格を計算する
+    株式分割がある場合は調整済み値を使用する
 
     Args:
         db (AsyncSession): データベースセッション
@@ -120,10 +121,15 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     Returns:
         tuple[Decimal, Decimal, Decimal]: 保有数量、平均取得単価、取得価格合計
     """
-    # 購入トランザクションの集計
+    # 購入トランザクションの集計（調整済み値を優先使用、0はNULLとして扱う）
     buy_query = select(
-        func.sum(models.Transaction.quantity).label("total_quantity"),
-        func.sum(models.Transaction.quantity * models.Transaction.price).label("total_cost"),
+        func.sum(
+            func.coalesce(func.nullif(models.Transaction.adjusted_quantity, 0), models.Transaction.quantity)
+        ).label("total_quantity"),
+        func.sum(
+            func.coalesce(func.nullif(models.Transaction.adjusted_quantity, 0), models.Transaction.quantity)
+            * func.coalesce(func.nullif(models.Transaction.adjusted_price, 0), models.Transaction.price)
+        ).label("total_cost"),
     ).where(
         models.Transaction.user_id == user_id,
         models.Transaction.symbol == symbol,
@@ -134,8 +140,12 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     total_buy_quantity = buy_data.total_quantity or 0
     total_buy_cost = buy_data.total_cost or 0
 
-    # 売却トランザクションの集計
-    sell_query = select(func.sum(models.Transaction.quantity)).where(
+    # 売却トランザクションの集計（調整済み値を優先使用、0はNULLとして扱う）
+    sell_query = select(
+        func.sum(
+            func.coalesce(func.nullif(models.Transaction.adjusted_quantity, 0), models.Transaction.quantity)
+        )
+    ).where(
         models.Transaction.user_id == user_id,
         models.Transaction.symbol == symbol,
         models.Transaction.transaction_type == "sell",

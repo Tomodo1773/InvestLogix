@@ -30,6 +30,25 @@ class TransactionService:
         if not stock:
             stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=transaction.symbol))
 
+        # 保有情報の取得
+        holding_query = select(models.Holding).where(
+            models.Holding.user_id == user_id, models.Holding.symbol == transaction.symbol
+        )
+        holding_result = await self.db.execute(holding_query)
+        holding = holding_result.scalar_one_or_none()
+
+        # 売却の場合は、トランザクションを登録する前に売却前の平均取得単価を取得
+        average_cost_before_sell = None
+        if transaction.transaction_type == "sell":
+            if not holding:
+                return None
+            # 売却前に保有数量を再計算（調整済み値を反映）
+            current_quantity, average_cost_before_sell, _ = await calculate_holding_from_transactions(
+                self.db, user_id, transaction.symbol
+            )
+            if current_quantity < transaction.quantity:
+                return None
+
         # 取引情報の登録
         transaction_dict = transaction.model_dump()
         db_transaction = models.Transaction(**transaction_dict, user_id=user_id)
@@ -37,18 +56,12 @@ class TransactionService:
         await self.db.flush()
 
         # 保有情報の更新
-        holding_query = select(models.Holding).where(
-            models.Holding.user_id == user_id, models.Holding.symbol == transaction.symbol
-        )
-        holding_result = await self.db.execute(holding_query)
-        holding = holding_result.scalar_one_or_none()
-
         if transaction.transaction_type == "buy":
             await self._handle_buy_transaction(holding, transaction, user_id)
         elif transaction.transaction_type == "sell":
-            if not holding or holding.quantity < transaction.quantity:
-                return None
-            await self._handle_sell_transaction(holding, transaction, db_transaction)
+            await self._handle_sell_transaction(
+                holding, transaction, db_transaction, average_cost_before_sell
+            )
 
         await self.db.commit()
         await self.db.refresh(db_transaction)
@@ -80,24 +93,28 @@ class TransactionService:
             )
             self.db.add(holding)
 
-    async def _handle_sell_transaction(self, holding, transaction, db_transaction):
-        # トランザクション履歴から最新の保有情報を計算
+    async def _handle_sell_transaction(self, holding, transaction, db_transaction, average_cost_before_sell):
+        # 売却による実現損益の計算と保存（調整済み値ベースの平均取得単価を使用）
+        # db_transactionを使用（TransactionCreateには調整済み値がないため）
+        # Pythonのorで0もNone同様にフォールバック
+        sell_price = db_transaction.adjusted_price or db_transaction.price
+        sell_quantity = db_transaction.adjusted_quantity or db_transaction.quantity
+        realized_pl_for_sale = (sell_price - average_cost_before_sell) * sell_quantity
+        # TransactionCreateオブジェクトではなく、DBモデルに実現損益を設定
+        db_transaction.realized_pl = realized_pl_for_sale
+
+        # autoflush=False のため、集計前に最新の売却データをDBへ反映させる
+        await self.db.flush()
+
+        # 売却後の保有情報を計算（売却トランザクションを含む）
         new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
             self.db, holding.user_id, transaction.symbol
         )
-
-        # 売却による実現損益の計算と保存
-        realized_pl_for_sale = (transaction.price - holding.average_cost) * transaction.quantity
-        # TransactionCreateオブジェクトではなく、DBモデルに実現損益を設定
-        db_transaction.realized_pl = realized_pl_for_sale
 
         # 保有情報の更新
         holding.quantity = new_quantity
         holding.average_cost = new_average_cost
         holding.total_cost = new_total_cost
-
-        # autoflush=False のため、集計前に最新の売却データをDBへ反映させる
-        await self.db.flush()
 
         # 実現損益の再計算
         holding.realized_pl = await calculate_realized_pl_from_transactions(

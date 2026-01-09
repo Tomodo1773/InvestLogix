@@ -93,6 +93,42 @@ class StockUSDetail(StockUSDetailBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StockSplitBase(BaseModel):
+    """株式分割情報の基底スキーマ"""
+
+    symbol: str
+    split_date: datetime = Field(
+        ...,
+        json_schema_extra={"examples": ["2024-01-15T00:00:00+09:00", "2024-01-15T00:00:00", "2024-01-15"]},
+    )
+    split_ratio: Decimal = Field(..., description="分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）")
+
+    @field_validator("split_date", mode="before")
+    @classmethod
+    def validate_split_date(cls, v: str | datetime) -> datetime:
+        """リクエスト時: naive datetime入力をJSTとして扱う"""
+        return from_jst_input(v)
+
+
+class StockSplitCreate(StockSplitBase):
+    """株式分割登録リクエスト"""
+
+    pass
+
+
+class StockSplit(StockSplitBase):
+    """株式分割情報"""
+
+    split_id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("split_date", "created_at")
+    def serialize_datetime(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
+
 class UserBase(BaseModel):
     username: str
     email: str
@@ -147,6 +183,7 @@ class TransactionBase(BaseModel):
     price: Decimal
     usd_price: Optional[Decimal] = None
     adjusted_price: Optional[Decimal] = None
+    adjusted_quantity: Optional[Decimal] = None
     account_type: AccountType
     fee: Decimal
     tax: Decimal
@@ -323,7 +360,6 @@ class TransactionCreate(BaseModel):
     quantity: Decimal
     price: Decimal
     usd_price: Optional[Decimal] = None
-    adjusted_price: Optional[Decimal] = None
     account_type: AccountType
     fee: Decimal
     tax: Decimal

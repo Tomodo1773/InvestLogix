@@ -100,6 +100,28 @@ class StockUSDetail(Base):
     stock = relationship("Stock", back_populates="us_detail")
 
 
+class StockSplit(Base):
+    """
+    株式分割履歴を管理するテーブル
+    """
+
+    __tablename__ = "stock_splits"
+
+    split_id = Column(Integer, primary_key=True)  # [SYSTEM] 分割ID
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [SYSTEM] 銘柄コード
+    split_date = Column(
+        DateTime(timezone=True), nullable=False
+    )  # [USER_INPUT] 分割基準日（この日以前の取引が調整対象）
+    split_ratio = Column(
+        Numeric(10, 4), nullable=False
+    )  # [USER_INPUT] 分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）
+    created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
+
+    stock = relationship("Stock", backref="splits")  # Stock モデルとの関連
+
+    __table_args__ = (UniqueConstraint("symbol", "split_date", name="uq_symbol_split_date"),)
+
+
 class User(Base):
     """
     user_id: ユーザーID
@@ -178,6 +200,7 @@ class Transaction(Base):
     price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
     usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
     adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
+    adjusted_quantity = Column(Numeric(10, 4))  # [AUTO_CALC] 株式分割による調整後の数量
     transaction_date = Column(
         DateTime(timezone=True), default=get_jst_now
     )  # [USER_INPUT] トランザクション日時（JST固定）

@@ -45,11 +45,12 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
+            --model claude-opus-4-5
             --system-prompt "常に日本語で回答してください。"
             --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(test-creator),Skill(add-package)"
 
           # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
+          trigger_phrase: "/opus"
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

@@ -96,7 +96,6 @@ class TransactionService:
     async def _handle_sell_transaction(self, holding, transaction, db_transaction, average_cost_before_sell):
         # 売却による実現損益の計算と保存（調整済み値ベースの平均取得単価を使用）
         # db_transactionを使用（TransactionCreateには調整済み値がないため）
-        # Pythonのorで0もNone同様にフォールバック
         sell_price = db_transaction.adjusted_price or db_transaction.price
         sell_quantity = db_transaction.adjusted_quantity or db_transaction.quantity
         realized_pl_for_sale = (sell_price - average_cost_before_sell) * sell_quantity

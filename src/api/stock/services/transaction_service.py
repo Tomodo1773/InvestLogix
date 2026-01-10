@@ -160,6 +160,7 @@ class TransactionService:
                     "price": transaction.price,
                     "usd_price": transaction.usd_price,
                     "adjusted_price": transaction.adjusted_price,
+                    "adjusted_quantity": transaction.adjusted_quantity,
                     "account_type": transaction.account_type,
                     "fee": transaction.fee,
                     "tax": transaction.tax,
@@ -170,10 +171,12 @@ class TransactionService:
                     "unrealized_pl_percentage": None,
                 }
 
-                # 買付取引の場合のみ損益を計算
+                # 買付取引の場合のみ損益を計算（調整済み値を優先使用）
                 if transaction.transaction_type == "buy" and current_price:
-                    cost = transaction.price * transaction.quantity
-                    market_value = current_price * transaction.quantity
+                    price = transaction.adjusted_price or transaction.price
+                    quantity = transaction.adjusted_quantity or transaction.quantity
+                    cost = price * quantity
+                    market_value = current_price * quantity
                     unrealized_pl = market_value - cost
                     unrealized_pl_percentage = (unrealized_pl / cost * 100) if cost > 0 else Decimal("0")
                     transaction_dict["unrealized_pl"] = unrealized_pl

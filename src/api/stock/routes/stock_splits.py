@@ -8,7 +8,7 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..services.stock_split_service import StockSplitService
 
-router = APIRouter(prefix="/api/v1/stock-splits", tags=["stock-splits"])
+router = APIRouter()
 
 
 @router.post("/", response_model=schemas.StockSplit, status_code=status.HTTP_201_CREATED)

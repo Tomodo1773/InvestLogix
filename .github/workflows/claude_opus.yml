@@ -14,10 +14,10 @@ jobs:
   claude:
     if: |
       github.actor == 'Tomodo1773' && (
-        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/opus')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/opus')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '/opus')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '/opus') || contains(github.event.issue.title, '/opus')))
       )
     runs-on: ubuntu-latest
     permissions:
@@ -45,11 +45,12 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
+            --model claude-opus-4-5
             --system-prompt "常に日本語で回答してください。"
             --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(test-creator),Skill(add-package)"
 
           # Optional: Customize the trigger phrase (default: @claude)
-          # trigger_phrase: "/claude"
+          trigger_phrase: "/opus"
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

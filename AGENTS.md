@@ -62,7 +62,7 @@ uv run alembic downgrade -1
   - `database.py` - データベース接続設定、セッション管理（`pydantic-settings` で型安全に管理）
   - `auth.py` - 認証関連のユーティリティ（JWT検証など）
   - `routes/` - APIエンドポイント定義（認証・取引・配当などのドメイン別に分割）
-    - `auth.py`, `stocks.py`, `transactions.py`, `holdings.py`, `dividends.py`, `portfolio.py`, `users.py`
+    - `auth.py`, `stocks.py`, `transactions.py`, `holdings.py`, `dividends.py`, `portfolio.py`, `users.py`, `stock_splits.py`
     - 各ルーターは `APIRouter(prefix="/api/v1/...")` を定義
   - `services/` - ビジネスロジック層（データベースアクセスはここで実施）
     - `stock_service.py` - 銘柄登録・管理
@@ -71,6 +71,7 @@ uv run alembic downgrade -1
     - `dividend_service.py` - 配当管理
     - `portfolio_service.py` - ポートフォリオ分析
     - `auth_service.py` - ユーザー認証・登録
+    - `stock_split_service.py` - 株式分割管理・調整値計算
     - `jquants_service.py` - J-Quants API連携（日本株の株価・企業情報取得）
     - `alphavantage_service.py` - AlphaVantage API連携（米国株情報・為替レート取得）
     - `investment_trust_service.py` - 投資信託の基準価額取得（スクレイピング）
@@ -98,9 +99,16 @@ uv run alembic downgrade -1
 - **Stock**: 銘柄の基本情報（symbol, name, market, currency, security_type）
   - **StockJPXDetail**: 日本株の詳細情報（セクター、市場区分など）
   - **StockUSDetail**: 米国株の詳細情報（GICSセクター、S&P500構成銘柄など）
-- **Transaction**: 取引履歴（buy/sell, quantity, price, account_type, realized_pl）
+- **StockSplit**: 株式分割履歴（user_id, symbol, split_date, split_ratio）
+  - ユーザーごとに株式分割情報を管理
+  - 分割比率: 4:1分割なら4.0、1:2併合なら0.5
+  - 分割登録時に過去取引の調整値を自動計算（ユーザーの取引のみ対象）
+- **Transaction**: 取引履歴（buy/sell, quantity, price, account_type, realized_pl, adjusted_price, adjusted_quantity）
+  - adjusted_price: 株式分割による調整後の価格
+  - adjusted_quantity: 株式分割による調整後の数量
 - **Holding**: 保有銘柄の集計情報（quantity, average_cost, current_price, unrealized_pl, realized_pl, total_dividend）
   - 取引が発生するたびに自動的に再計算される
+  - 調整済み値を優先使用して保有数量・平均取得単価を計算
 - **Dividend**: 配当受取履歴
 - **PortfolioHistory**: ポートフォリオ全体の資産推移履歴
 
@@ -118,6 +126,19 @@ uv run alembic downgrade -1
 - 買付時: `_handle_buy_transaction` で保有数量と平均取得単価を再計算
 - 売却時: `_handle_sell_transaction` で保有数量を減らし、実現損益（realized_pl）を計算して Transaction に記録
 - 保有株の損益再計算は `holding_service.py` の `update_single_holding_pl` で実施
+
+#### 株式分割対応
+
+- **StockSplit**: ユーザーごとの分割履歴を管理（user_id, symbol, split_date, split_ratio）
+- **ユーザー単位の管理**: 各ユーザーが自分の取引に対してのみ分割情報を設定・管理可能
+- **分割登録時の自動計算**: 分割情報を登録すると、該当ユーザーの過去取引の `adjusted_price` と `adjusted_quantity` が自動再計算される
+- **調整値計算ロジック**:
+  - 取引日より後の分割を全て適用
+  - `adjusted_quantity = quantity * (split_ratio1 * split_ratio2 * ...)`
+  - `adjusted_price = price / (split_ratio1 * split_ratio2 * ...)`
+- **保有株計算**: `calculate_holding_from_transactions` で調整済み値を優先使用（COALESCE関数で後方互換性を維持）
+- **実現損益計算**: 売却時の実現損益も調整済み値ベースで計算
+- **冪等性**: stock_splitsテーブルから毎回再計算可能（いつ計算しても同じ結果）
 
 #### 株価取得の仕組み
 

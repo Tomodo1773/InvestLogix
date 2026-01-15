@@ -3,11 +3,17 @@ FastAPIアプリケーション定義
 ルーティングとミドルウェアの設定を行う
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from loguru import logger
 
 from .database import settings
+from .logging_config import configure_logging
 from .routes import auth, dividends, holdings, portfolio, stock_splits, stocks, transactions, users
+
+# ログ設定（FastAPIアプリ作成前に実行）
+configure_logging()
 
 # FastAPIアプリケーションの作成
 app = FastAPI(
@@ -51,3 +57,14 @@ app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["tr
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"])
 app.include_router(dividends.router, prefix="/api/v1/dividends", tags=["dividends"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+
+
+# グローバル例外ハンドラー
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """グローバル例外ハンドラー"""
+    logger.error(f"Unhandled exception: {request.method} {request.url.path}", exc_info=exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )

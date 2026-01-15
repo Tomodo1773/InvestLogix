@@ -6,6 +6,7 @@ from typing import List
 import pandas as pd
 import pandas_datareader.data as web
 import pytz
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,8 +42,8 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
             return Decimal(str(prices[-1].get("Close", "0")))
         return Decimal("0")
 
-    except Exception as e:
-        print(f"Error fetching Japan stock price for {symbol}: {str(e)}")
+    except Exception:
+        logger.error(f"日本株株価取得エラー symbol={symbol}", exc_info=True)
         return Decimal("0")
 
 
@@ -60,7 +61,7 @@ async def get_us_stock_price(symbol: str) -> Decimal:
         # まず為替レートを取得
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
         if not usdjpy_rate:
-            print(f"Failed to fetch USD/JPY rate for {symbol}")
+            logger.warning(f"為替レート取得失敗 symbol={symbol}")
             return Decimal("0")
 
         # 1週間前の日付を取得（日本時間）
@@ -80,8 +81,8 @@ async def get_us_stock_price(symbol: str) -> Decimal:
 
         return Decimal("0")
 
-    except Exception as e:
-        print(f"Error fetching US stock price for {symbol}: {str(e)}")
+    except Exception:
+        logger.error(f"米国株株価取得エラー symbol={symbol}", exc_info=True)
         return Decimal("0")
 
 
@@ -96,6 +97,9 @@ async def get_current_price(stock: Stock) -> Decimal:
     Returns:
         Decimal: 最新株価
     """
+    logger.info(
+        f"株価取得開始 symbol={stock.symbol}, security_type={stock.security_type}, currency={stock.currency}"
+    )
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
             return await get_japan_stock_price(stock.symbol)
@@ -121,7 +125,9 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     Returns:
         tuple[Decimal, Decimal, Decimal]: 保有数量、平均取得単価、取得価格合計
     """
+    logger.info(f"保有数量と取得価格の計算開始 user_id={user_id}, symbol={symbol}")
     # 購入トランザクションの集計（調整済み値を優先使用）
+    logger.info(f"購入トランザクション集計開始 user_id={user_id}, symbol={symbol}")
     buy_query = select(
         func.sum(func.coalesce(models.Transaction.adjusted_quantity, models.Transaction.quantity)).label(
             "total_quantity"
@@ -141,6 +147,7 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     total_buy_cost = buy_data.total_cost or 0
 
     # 売却トランザクションの集計（調整済み値を優先使用）
+    logger.info(f"売却トランザクション集計開始 user_id={user_id}, symbol={symbol}")
     sell_query = select(
         func.sum(func.coalesce(models.Transaction.adjusted_quantity, models.Transaction.quantity))
     ).where(
@@ -172,6 +179,7 @@ async def calculate_realized_pl_from_transactions(db: AsyncSession, user_id: int
         Decimal: 売却取引の実現損益合計（該当がなければ0）
     """
 
+    logger.info(f"売却の実現損益計算開始 user_id={user_id}, symbol={symbol}")
     realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
         models.Transaction.user_id == user_id,
         models.Transaction.symbol == symbol,
@@ -193,6 +201,7 @@ async def calculate_total_dividend_after_tax(db: AsyncSession, user_id: int, sym
         Decimal: 税・手数料控除後の配当総額（該当がなければ0）
     """
 
+    logger.info(f"配当総額計算開始 user_id={user_id}, symbol={symbol}")
     dividend_query = select(
         func.sum(
             models.Dividend.total_amount
@@ -216,6 +225,7 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     Returns:
         bool: 更新に成功した場合は True、必要情報が不足した場合は False
     """
+    logger.info(f"保有損益計算開始 user_id={holding.user_id}, symbol={holding.symbol}")
     # 銘柄情報を取得
     stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
     stock_result = await db.execute(stock_query)
@@ -284,6 +294,7 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     Returns:
         Holding: 更新された保有情報
     """
+    logger.info(f"保有損益更新開始 user_id={user_id}, symbol={symbol}")
     # 保有情報を取得
     holding_query = select(Holding).where(Holding.user_id == user_id, Holding.symbol == symbol)
     result = await db.execute(holding_query)
@@ -312,6 +323,7 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
     Returns:
         List[Holding]: 更新された保有情報のリスト
     """
+    logger.info(f"全保有損益更新開始 user_id={user_id}")
     # 保有銘柄一覧を取得
     holdings = await list_holdings(db, user_id)
     updated_holdings = []
@@ -345,6 +357,7 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
     Returns:
         List[Holding]: 銘柄名を含む保有銘柄情報のリスト
     """
+    logger.info(f"保有銘柄一覧取得 user_id={user_id}, symbol={symbol}")
     query = (
         select(Holding, Stock.name)
         .join(Stock, Holding.symbol == Stock.symbol)

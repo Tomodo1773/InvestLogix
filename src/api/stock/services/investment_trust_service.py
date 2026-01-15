@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import aiohttp
 from bs4 import BeautifulSoup
+from loguru import logger
 
 
 async def fetch_investment_trust_details(symbol: str) -> dict:
@@ -14,24 +15,34 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
     Returns:
         dict: 投資信託の詳細情報
     """
+    logger.info(f"投資信託詳細情報取得開始 symbol={symbol}")
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            html = await response.text()
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                html = await response.text()
 
-    soup = BeautifulSoup(html, "html.parser")
+        soup = BeautifulSoup(html, "html.parser")
 
-    # 銘柄名を取得
-    name_elem = soup.select_one(
-        "body > div:nth-of-type(4) > div > div > div:nth-of-type(1) > div:nth-of-type(1) > h3"
-    )
-    name = name_elem.text.strip() if name_elem else None
+        # 銘柄名を取得
+        name_elem = soup.select_one(
+            "body > div:nth-of-type(4) > div > div > div:nth-of-type(1) > div:nth-of-type(1) > h3"
+        )
+        name = name_elem.text.strip() if name_elem else None
+        logger.info(f"投資信託詳細情報取得成功 symbol={symbol}, name={name}")
 
-    return {
-        "name": name,
-        "market": None,
-        "industry": None,
-    }
+        return {
+            "name": name,
+            "market": None,
+            "industry": None,
+        }
+    except Exception:
+        logger.error(f"投資信託詳細情報取得エラー symbol={symbol}", exc_info=True)
+        return {
+            "name": None,
+            "market": None,
+            "industry": None,
+        }
 
 
 async def get_fund_price(symbol: str) -> Decimal:
@@ -44,6 +55,7 @@ async def get_fund_price(symbol: str) -> Decimal:
     Returns:
         Decimal: 基準価額。取得できない場合は0
     """
+    logger.info(f"投資信託基準価額取得開始 symbol={symbol}")
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
 
     try:
@@ -57,12 +69,15 @@ async def get_fund_price(symbol: str) -> Decimal:
         if price_div and price_div.text:
             # カンマを除去して数値に変換
             price_text = price_div.text.replace(",", "").replace("円", "").strip()
-            return Decimal(price_text)
+            price = Decimal(price_text)
+            logger.info(f"投資信託基準価額取得成功 symbol={symbol}, price={price}")
+            return price
 
+        logger.warning(f"投資信託基準価額が見つかりません symbol={symbol}")
         return Decimal("0")
 
-    except (aiohttp.ClientError, ValueError) as e:
-        print(f"Error fetching fund price for {symbol}: {str(e)}")
+    except (aiohttp.ClientError, ValueError):
+        logger.error(f"投資信託基準価額取得エラー symbol={symbol}", exc_info=True)
         return Decimal("0")
 
 

@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import Dict, List, Optional, Union
 
+from loguru import logger
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -22,12 +23,18 @@ class TransactionService:
     async def create_transaction(
         self, transaction: schemas.TransactionCreate, user_id: int
     ) -> Optional[models.Transaction]:
+        logger.info(
+            f"取引登録開始 user_id={user_id}, symbol={transaction.symbol}, "
+            f"type={transaction.transaction_type}, quantity={transaction.quantity}, price={transaction.price}"
+        )
+
         # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == transaction.symbol)
         stock_result = await self.db.execute(stock_query)
         stock = stock_result.scalar_one_or_none()
 
         if not stock:
+            logger.info(f"銘柄未登録のため新規登録 symbol={transaction.symbol}")
             stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=transaction.symbol))
 
         # 保有情報の取得
@@ -41,12 +48,17 @@ class TransactionService:
         average_cost_before_sell = None
         if transaction.transaction_type == "sell":
             if not holding:
+                logger.error(f"売却失敗: 保有情報なし user_id={user_id}, symbol={transaction.symbol}")
                 return None
             # 売却前に保有数量を再計算（調整済み値を反映）
             current_quantity, average_cost_before_sell, _ = await calculate_holding_from_transactions(
                 self.db, user_id, transaction.symbol
             )
             if current_quantity < transaction.quantity:
+                logger.error(
+                    f"売却失敗: 保有数量不足 user_id={user_id}, symbol={transaction.symbol}, "
+                    f"required={transaction.quantity}, available={current_quantity}"
+                )
                 return None
 
         # 取引情報の登録
@@ -68,6 +80,11 @@ class TransactionService:
 
         # 取引登録後に保有損益を更新
         await update_single_holding_pl(self.db, user_id, transaction.symbol)
+
+        logger.info(
+            f"取引登録完了 transaction_id={db_transaction.transaction_id}, "
+            f"user_id={user_id}, symbol={transaction.symbol}"
+        )
 
         return db_transaction
 
@@ -123,6 +140,9 @@ class TransactionService:
     async def list_transactions(
         self, user_id: int, symbol: Optional[str] = None, include_unrealized_pl: bool = False
     ) -> Union[List[models.Transaction], List[schemas.TransactionWithPL]]:
+        logger.info(
+            f"取引一覧取得 user_id={user_id}, symbol={symbol}, include_unrealized_pl={include_unrealized_pl}"
+        )
         # 銘柄名を取得するためにStockテーブルを結合
         query = (
             select(models.Transaction, models.Stock.name)
@@ -195,6 +215,7 @@ class TransactionService:
         Returns:
             List[Dict]: 年月ごとの口座種別別購入金額集計
         """
+        logger.info(f"月次トランザクション集計取得 user_id={user_id}")
         # 購入取引（transaction_type='buy'）のみを対象に集計
         # transaction_date を JST に変換して月ごとに集計するクエリ
         transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")
@@ -257,6 +278,7 @@ class TransactionService:
         Returns:
             List[Dict]: 年ごとの口座種別別購入金額集計
         """
+        logger.info(f"年次トランザクション集計取得 user_id={user_id}")
         # 購入取引（transaction_type='buy'）のみを対象に集計
         # transaction_date を JST に変換して年ごとに集計するクエリ
         transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")

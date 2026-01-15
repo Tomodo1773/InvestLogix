@@ -1,4 +1,3 @@
-import logging
 import os
 from datetime import datetime
 from decimal import Decimal
@@ -7,6 +6,7 @@ from typing import Any, Dict, Optional
 import httpx
 import pytz
 from dotenv import load_dotenv
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +14,6 @@ from .. import models
 
 # 環境変数のロード
 load_dotenv()
-
-logger = logging.getLogger(__name__)
 
 
 class NotificationService:

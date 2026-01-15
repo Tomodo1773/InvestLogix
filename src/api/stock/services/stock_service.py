@@ -1,13 +1,14 @@
 import re
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
-from .jquants_service import jquants_client
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .investment_trust_service import fetch_investment_trust_details
+from .jquants_service import jquants_client
 
 
 class StockNotFoundError(ValueError):
@@ -27,11 +28,13 @@ class StockService:
         - 新規の場合は、銘柄情報を登録して返す
         - 銘柄情報が取得できない場合はStockNotFoundErrorを発生させる
         """
+        logger.info(f"銘柄登録開始 symbol={stock.symbol}")
         query = select(models.Stock).where(models.Stock.symbol == stock.symbol)
         result = await self.db.execute(query)
         db_stock = result.scalar_one_or_none()
 
         if db_stock:
+            logger.info(f"銘柄既登録 symbol={stock.symbol}")
             return db_stock  # 既に登録されている場合はそのまま返す
 
         try:
@@ -58,6 +61,7 @@ class StockService:
         return re.match(r"^[A-Z]{1,5}$", symbol) is not None
 
     async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
+        logger.info(f"投資信託登録開始 symbol={stock.symbol}")
         # 投資信託の詳細情報を取得
         details = await fetch_investment_trust_details(stock.symbol)
         name = details["name"]
@@ -76,6 +80,7 @@ class StockService:
         return db_stock
 
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
+        logger.info(f"日本株登録開始 symbol={stock.symbol}")
         company_info = jquants_client.get_company_info(stock.symbol)
         if not company_info:
             raise StockNotFoundError(f"Company information not found for symbol: {stock.symbol}")
@@ -108,6 +113,7 @@ class StockService:
         return db_stock
 
     async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
+        logger.info(f"米国株登録開始 symbol={stock.symbol}")
         # Alpha Vantage APIを使用して米国株の詳細情報を取得
         data = await fetch_us_stock_overview(stock.symbol)
 
@@ -151,6 +157,7 @@ class StockService:
         return db_stock
 
     async def list_stocks(self, market: Optional[str] = None) -> List[models.Stock]:
+        logger.info(f"銘柄一覧取得 market={market}")
         query = select(models.Stock)
         if market:
             query = query.where(models.Stock.market == market)
@@ -163,11 +170,13 @@ class StockService:
         - symbol: 銘柄シンボル
         - 戻り値: 削除成功時はTrue、失敗時はFalse
         """
+        logger.info(f"銘柄削除開始 symbol={symbol}")
         query = select(models.Stock).where(models.Stock.symbol == symbol)
         result = await self.db.execute(query)
         db_stock = result.scalar_one_or_none()
 
         if not db_stock:
+            logger.warning(f"銘柄削除失敗: 銘柄が存在しない symbol={symbol}")
             return False
 
         # 関連する詳細情報テーブルの削除

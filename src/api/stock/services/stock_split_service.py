@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,6 +27,10 @@ class StockSplitService:
         Returns:
             登録された株式分割情報
         """
+        logger.info(
+            f"株式分割登録開始 user_id={user_id}, symbol={split_data.symbol}, "
+            f"split_date={split_data.split_date}, ratio={split_data.split_ratio}"
+        )
         # 株式分割情報を登録
         db_split = models.StockSplit(
             user_id=user_id,
@@ -54,6 +59,7 @@ class StockSplitService:
         Returns:
             株式分割履歴のリスト
         """
+        logger.info(f"株式分割履歴取得 user_id={user_id}, symbol={symbol}")
         query = (
             select(models.StockSplit)
             .where(models.StockSplit.user_id == user_id)
@@ -77,6 +83,7 @@ class StockSplitService:
         Returns:
             削除成功時True、分割情報が見つからない場合False
         """
+        logger.info(f"株式分割削除開始 split_id={split_id}, user_id={user_id}")
         # 分割情報を取得（ユーザーIDでフィルタリング）
         result = await self.db.execute(
             select(models.StockSplit).where(
@@ -117,6 +124,7 @@ class StockSplitService:
             symbol: 銘柄コード
             user_id: ユーザーID
         """
+        logger.info(f"調整値再計算開始 symbol={symbol}, user_id={user_id}")
         # 分割情報を日付順で取得（ユーザーIDでフィルタリング）
         splits_result = await self.db.execute(
             select(models.StockSplit)

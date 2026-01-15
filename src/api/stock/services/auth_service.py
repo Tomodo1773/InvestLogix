@@ -1,3 +1,4 @@
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -19,11 +20,14 @@ class AuthService:
         - is_admin: 管理者権限を付与するかどうか（デフォルトはFalse）
         - 戻り値: 作成されたユーザーエンティティ
         """
+        logger.info(f"ユーザー登録試行 username={user.username}, email={user.email}")
+
         # 既存ユーザーの確認
         result = await self.db.execute(
             select(User).where((User.username == user.username) | (User.email == user.email))
         )
         if result.scalar_one_or_none():
+            logger.warning(f"ユーザー登録失敗: 重複 username={user.username}, email={user.email}")
             raise ValueError("Username or email already registered")
 
         # パスワードのハッシュ化
@@ -39,4 +43,6 @@ class AuthService:
         )
         self.db.add(db_user)
         await self.db.commit()
+
+        logger.info(f"ユーザー登録成功 user_id={db_user.user_id}, username={user.username}")
         return db_user

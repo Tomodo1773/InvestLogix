@@ -22,6 +22,10 @@ build/
 .pytest_cache/
 .ruff_cache/
 
+# Logs
+logs/
+*.log
+
 # Docker volumes
 postgres_data/
 

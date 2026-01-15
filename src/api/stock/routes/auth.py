@@ -27,31 +27,20 @@ async def login_for_access_token(
     - 認証成功時: アクセストークンを返却（レスポンスボディとクッキーの両方）
     - 認証失敗時: 401 Unauthorized
     """
-    print("=== /token endpoint called ===")
-    print(f"Username: {login_data.username}")
-    print("Attempting to authenticate user...")
-
     user = await authenticate_user(db, login_data.username, login_data.password)
-    print(f"Authentication result: {'Success' if user else 'Failed'}")
 
     if not user:
-        print("Authentication failed - raising 401")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    print("Generating access token...")
     access_token = create_access_token(data={"sub": user.username})
-    print("Access token generated successfully")
 
     # 環境に応じてCookie設定を変更
-    print(f"Current environment: {ENVIRONMENT}")
     is_production = ENVIRONMENT.lower() == "production"
-    print(f"Is production?: {is_production}")
 
-    print("Setting cookie with token...")
     response.set_cookie(
         key="token",
         value=access_token,
@@ -61,9 +50,7 @@ async def login_for_access_token(
         max_age=3600,
         path="/",
     )
-    print("Cookie set successfully")
 
-    print("=== /token endpoint completed ===")
     return {"access_token": access_token, "token_type": "bearer"}
 
 

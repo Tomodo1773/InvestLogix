@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 
 import pandas_datareader.data as web
 import pytz
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,8 +46,8 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
             return (latest_price, old_price)
         return None
 
-    except Exception as e:
-        print(f"Error fetching Japan stock weekly prices for {symbol}: {str(e)}")
+    except Exception:
+        logger.error(f"日本株週間株価取得エラー symbol={symbol}", exc_info=True)
         return None
 
 
@@ -78,8 +79,8 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Dec
 
         return None
 
-    except Exception as e:
-        print(f"Error fetching US stock weekly prices for {symbol}: {str(e)}")
+    except Exception:
+        logger.error(f"米国株週間株価取得エラー symbol={symbol}", exc_info=True)
         return None
 
 
@@ -95,6 +96,7 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
     Returns:
         List[StockWeeklyPerformance]: 騰落率情報のリスト
     """
+    logger.info(f"週間パフォーマンス計算開始 user_id={user_id}")
     # 保有銘柄を取得（保有数量 > 0の銘柄のみ）
     query = (
         select(models.Holding, models.Stock)

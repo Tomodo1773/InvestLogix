@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +16,7 @@ class PortfolioService:
 
     async def _calculate_portfolio_summary(self, user_id: int) -> dict:
         """ポートフォリオのサマリー情報を計算する内部メソッド"""
+        logger.info(f"ポートフォリオサマリー計算開始 user_id={user_id}")
         holdings_query = select(models.Holding).where(models.Holding.user_id == user_id)
         holdings_result = await self.db.execute(holdings_query)
         holdings = holdings_result.scalars().all()
@@ -60,6 +62,7 @@ class PortfolioService:
 
     async def get_portfolio_summary(self, user_id: int) -> schemas.PortfolioSummary:
         """ポートフォリオのサマリー情報を計算して取得"""
+        logger.info(f"ポートフォリオサマリー取得 user_id={user_id}")
         summary = await self._calculate_portfolio_summary(user_id)
         return schemas.PortfolioSummary(**summary)
 
@@ -68,6 +71,7 @@ class PortfolioService:
 
         日付の昇順（古い順）でポートフォリオの履歴を返します。
         """
+        logger.info(f"ポートフォリオ履歴一覧取得 user_id={user_id}")
         query = (
             select(models.PortfolioHistory)
             .where(models.PortfolioHistory.user_id == user_id)
@@ -78,6 +82,7 @@ class PortfolioService:
 
     async def create_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
         """現在のポートフォリオ状態を計算して履歴として保存"""
+        logger.info(f"ポートフォリオ履歴作成 user_id={user_id}")
         summary = await self._calculate_portfolio_summary(user_id)
 
         portfolio_history = models.PortfolioHistory(
@@ -94,6 +99,7 @@ class PortfolioService:
 
     async def get_latest_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
         """最新のポートフォリオ履歴を取得"""
+        logger.info(f"最新ポートフォリオ履歴取得 user_id={user_id}")
         query = (
             select(models.PortfolioHistory)
             .where(models.PortfolioHistory.user_id == user_id)
@@ -113,6 +119,7 @@ class PortfolioService:
         Returns:
             Dict: 処理結果とポートフォリオサマリー
         """
+        logger.info(f"ポートフォリオ更新・通知開始 user_id={user_id}")
         # 全銘柄の最新株価を取得して更新
         await update_all_holdings_pl(self.db, user_id)
 

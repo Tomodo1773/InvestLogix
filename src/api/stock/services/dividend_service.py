@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,10 @@ class DividendService:
     async def create_dividend(
         self, dividend: schemas.DividendCreate, user_id: int
     ) -> Optional[models.Dividend]:
+        logger.info(
+            f"配当登録開始 user_id={user_id}, symbol={dividend.symbol}, "
+            f"payment_date={dividend.payment_date}, amount={dividend.total_amount}"
+        )
         # 株式の存在確認または登録
         stock_query = select(models.Stock).where(models.Stock.symbol == dividend.symbol)
         stock_result = await self.db.execute(stock_query)
@@ -31,6 +36,7 @@ class DividendService:
         await self.db.flush()
 
         # Holdingsテーブルのtotal_dividendを更新
+        logger.info(f"Holdingsテーブルのtotal_dividend更新開始 user_id={user_id}, symbol={dividend.symbol}")
         holdings_query = select(models.Holding).where(
             models.Holding.user_id == user_id, models.Holding.symbol == dividend.symbol
         )
@@ -66,6 +72,7 @@ class DividendService:
         return db_dividend
 
     async def list_dividends(self, user_id: int, symbol: Optional[str] = None) -> List[models.Dividend]:
+        logger.info(f"配当一覧取得 user_id={user_id}, symbol={symbol}")
         query = (
             select(models.Dividend, models.Stock.name)
             .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)

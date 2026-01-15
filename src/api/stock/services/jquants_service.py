@@ -11,6 +11,7 @@ from typing import Dict, List, Optional
 import aiohttp
 from dotenv import load_dotenv
 from jquantsapi.client import Client
+from loguru import logger
 
 from ..database import settings
 
@@ -38,9 +39,15 @@ class JQuantsClient:
         トークンの有効期限が切れている場合は再取得する
         """
         if not self._is_token_valid():
-            self._refresh_token = self.client.get_refresh_token()
-            self._id_token = self.client.get_id_token(self._refresh_token)
-            self._token_expires_at = datetime.now() + timedelta(hours=23)  # トークンの有効期限は24時間
+            logger.info("J-Quants APIトークンの更新開始")
+            try:
+                self._refresh_token = self.client.get_refresh_token()
+                self._id_token = self.client.get_id_token(self._refresh_token)
+                self._token_expires_at = datetime.now() + timedelta(hours=23)  # トークンの有効期限は24時間
+                logger.info("J-Quants APIトークンの更新完了")
+            except Exception:
+                logger.error("J-Quants APIトークンの取得に失敗しました", exc_info=True)
+                raise
 
     def _is_token_valid(self) -> bool:
         """トークンが有効かどうかを確認する"""
@@ -66,12 +73,17 @@ class JQuantsClient:
         if end_date:
             params["to"] = end_date
 
+        logger.info(f"J-Quants API株価取得開始 symbol={symbol}, from={start_date}, to={end_date}")
+
         async with aiohttp.ClientSession() as session:
             async with session.get(url, headers=headers, params=params) as response:
                 if response.status != 200:
+                    logger.error(f"J-Quants API株価取得失敗 symbol={symbol}, status={response.status}")
                     raise Exception(f"API request failed: {response.status}")
                 data = await response.json()
-                return data.get("daily_quotes", [])
+                prices = data.get("daily_quotes", [])
+                logger.info(f"J-Quants API株価取得成功 symbol={symbol}, count={len(prices)}")
+                return prices
 
     def get_company_info(self, symbol: str) -> Optional[Dict]:
         """
@@ -82,9 +94,12 @@ class JQuantsClient:
             企業情報の辞書
         """
         self.authenticate()
+        logger.info(f"J-Quants API企業情報取得開始 symbol={symbol}")
         response = self.client.get_listed_info(code=symbol)
         if response.empty:
+            logger.warning(f"J-Quants API企業情報が見つかりません symbol={symbol}")
             return None
+        logger.info(f"J-Quants API企業情報取得成功 symbol={symbol}")
         return response.iloc[0].to_dict()
 
     def get_market_segment(self, symbol: str = "") -> List[Dict]:

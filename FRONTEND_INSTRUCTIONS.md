@@ -230,13 +230,89 @@ InvestLogixは、日本株と米国株のポートフォリオを管理するた
 - 金額は3桁ごとにカンマ区切りで表示（例: ¥1,234,567）
 - パーセント表記は小数点第1位まで表示（例: 57.3%）
 
-## 技術スタック（推奨）
+## 技術スタック
 
-- **フレームワーク**: React + TypeScript / Vue 3 + TypeScript / Next.js
-- **スタイリング**: Tailwind CSS / Material-UI / Ant Design
-- **グラフライブラリ**: Chart.js / Recharts / ApexCharts
-- **状態管理**: React Context / Zustand / Pinia (Vue)
-- **HTTPクライアント**: Axios / Fetch API
+このプロジェクトは、モダンで最新の技術を採用します。[podcast-queue](https://github.com/Tomodo1773/podcast-queue) の技術スタックを参考にしています。
+
+### コアフレームワーク・ランタイム
+
+- **ランタイム・パッケージマネージャー**: Bun
+- **フレームワーク**: Next.js 16 (App Router)
+- **UIライブラリ**: React 19
+- **言語**: TypeScript
+
+### スタイリング・UI
+
+- **CSSフレームワーク**: Tailwind CSS 4
+- **コンポーネントライブラリ**: shadcn/ui
+- **UIプリミティブ**: Radix UI
+- **アイコン**: Lucide Icons
+
+### グラフライブラリ
+
+- **推奨**: Recharts（Reactと相性が良く、shadcn/uiでもよく使われる）
+- **代替**: Chart.js / ApexCharts
+
+### 開発ツール・品質保証
+
+- **フォーマッター・リンター**: Biome（Prettier + ESLintの代替、高速）
+- **テストフレームワーク**: Vitest（Vite/Bunと相性が良い）
+- **未使用コード検出**: Knip（オプション）
+
+### 状態管理・データフェッチング
+
+- **状態管理**: Zustand（軽量でモダン）
+- **HTTPクライアント**: Fetch API（標準、Next.jsと統合が良い）
+- **データフェッチング**: TanStack Query (React Query) を推奨（キャッシュ・再検証機能が強力）
+
+## プロジェクトセットアップ
+
+### Bunのインストール
+
+```bash
+# macOS/Linux
+curl -fsSL https://bun.sh/install | bash
+
+# Windows (PowerShell)
+powershell -c "irm bun.sh/install.ps1 | iex"
+```
+
+### プロジェクトの作成
+
+```bash
+# Next.jsプロジェクトの作成
+bunx create-next-app@latest investlogix-frontend --typescript --tailwind --app
+
+# 依存関係の追加
+cd investlogix-frontend
+bun add zustand @tanstack/react-query recharts
+bun add -d @biomejs/biome vitest @vitejs/plugin-react
+
+# shadcn/uiのセットアップ
+bunx shadcn@latest init
+```
+
+### 開発コマンド
+
+```bash
+# 開発サーバー起動
+bun dev
+
+# ビルド
+bun run build
+
+# 本番サーバー起動
+bun start
+
+# Biomeでフォーマット
+bun biome format --write .
+
+# Biomeでリント
+bun biome check --write .
+
+# テスト実行
+bun test
+```
 
 ## その他の考慮事項
 

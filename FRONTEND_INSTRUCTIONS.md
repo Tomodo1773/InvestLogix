@@ -130,69 +130,60 @@ NISA(成長投資枠)：レッド
 
 ---
 
-利用API
+## 利用するAPI
 
-バックエンドAPIは https://app-boyebeez7jzos.azurewebsites.net で稼働しています。
+バックエンドAPIは `https://app-boyebeez7jzos.azurewebsites.net` で稼働しています。
 
-認証
+### 認証API
 
-POST /api/v1/token
+#### POST /api/v1/token
 
-ログイン用エンドポイント
+ログイン用のエンドポイント。
 
-トークンはレスポンスBodyおよびCookieに返却される
+**リクエスト:**
+```json
+{
+  "username": "string",
+  "password": "string"
+}
+```
 
+**レスポンス:**
+```json
+{
+  "access_token": "string",
+  "token_type": "bearer"
+}
+```
 
-認証方式方針（セキュア優先）
+**補足:**
+- 認証成功時、アクセストークンがレスポンスボディとCookieの両方に返却されます
+- 以降のリクエストでは、Cookieの`token`または`Authorization: Bearer {token}`ヘッダーを使用してください
 
-Cookie方式を採用（フロントでトークンを保持しない）
+#### GET /api/v1/me
 
-以降のAPI呼び出しは Cookieを送信して認証する
+現在のユーザー情報を取得するエンドポイント（トークン検証用）。
 
-すべてのAPI呼び出しで fetch に credentials: "include" を付与
+**レスポンス:**
+```json
+{
+  "user_id": 0,
+  "username": "string",
+  "email": "string",
+  "created_at": "2024-01-15T10:30:00+09:00",
+  "line_user_id": "string",
+  "is_admin": false
+}
+```
 
-401（未認証/期限切れ）時は /login にリダイレクト
+### ダッシュボード用API
 
+#### GET /api/v1/portfolio/summary
 
-> 注意：Cookie認証をSPAで成立させるには、バックエンド側でCORSおよびCookie属性（SameSite / Secure など）が適切に設定されている必要があります。
+ポートフォリオのサマリー情報を取得。
 
-
-
-
----
-
-GET /api/v1/me
-
-現在ユーザー情報の取得（トークン検証用）
-
-401時は自動的にログイン画面へリダイレクト
-
-
-
----
-
-ダッシュボードAPI
-
-以降のエンドポイント呼び出しは、Cookie認証のため credentials: "include" を付与します。
-
-共通ベースURL：https://app-boyebeez7jzos.azurewebsites.net
-
-共通方針：
-
-fetch(url, { credentials: "include" })
-
-401時：ログイン画面へリダイレクト
-
-それ以外のエラー：汎用エラーメッセージ＋再試行導線
-
-
-
-GET /api/v1/portfolio/summary
-
-ポートフォリオのサマリー情報を取得（統計カード用）。
-
-レスポンス（例）
-
+**レスポンス:**
+```json
 {
   "total_cost": 0,
   "total_market_value": 0,
@@ -209,16 +200,14 @@ GET /api/v1/portfolio/summary
     "USD": 0
   }
 }
+```
 
+#### GET /api/v1/portfolio/history
 
----
+ポートフォリオの過去の履歴を取得（資産推移グラフ用）。
 
-GET /api/v1/portfolio/history
-
-ポートフォリオの履歴を取得（資産推移グラフ用）。
-
-レスポンス（例）
-
+**レスポンス:**
+```json
 [
   {
     "date": "2024-01-15T00:00:00+09:00",
@@ -230,25 +219,18 @@ GET /api/v1/portfolio/history
     "total_dividend": 0
   }
 ]
+```
 
-補足
+**補足:**
+- 日付順（昇順）でソートされています
+- フロントエンド側で日次・月次・年次のフィルタリングを実装してください
 
-日付順（昇順）でソート済み
+#### GET /api/v1/transactions/monthly-summary
 
-フロント側で 日次 / 月次 / 年次 を切り替え
+月ごとの取引集計を取得（月次取引グラフ用）。
 
-日付は +09:00 を含むため、JST前提でキー生成・表示を行う
-
-
-
----
-
-GET /api/v1/transactions/monthly-summary
-
-月次の取引集計（月次取引グラフ用）。
-
-レスポンス（例）
-
+**レスポンス:**
+```json
 [
   {
     "year": 2024,
@@ -260,25 +242,18 @@ GET /api/v1/transactions/monthly-summary
     }
   }
 ]
+```
 
-補足
+**補足:**
+- `total_purchase`は口座種別ごとの買付金額の辞書です
+- 口座種別: `NISA(成長投資枠)`, `NISA(つみたて投資枠)`, `ジュニアNISA`, `旧NISA`, `特定`
 
-total_purchase は口座種別ごとの買付金額の辞書
+#### GET /api/v1/dividends/monthly
 
-口座種別（想定）：NISA(成長投資枠), NISA(つみたて投資枠), ジュニアNISA, 旧NISA, 特定
+月次の配当金集計を取得（月次配当グラフ用）。
 
-欠けているキーは 0 として扱い、表示順・色マップは固定
-
-
-
----
-
-GET /api/v1/dividends/monthly
-
-月次の配当集計（月次配当グラフ用）。
-
-レスポンス（例）
-
+**レスポンス:**
+```json
 [
   {
     "year": 2024,
@@ -286,6 +261,7 @@ GET /api/v1/dividends/monthly
     "total_dividend": 5000
   }
 ]
+```
 
 
 ---

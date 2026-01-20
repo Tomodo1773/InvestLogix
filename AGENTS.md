@@ -35,7 +35,7 @@ InvestLogixは、日本株と米国株のポートフォリオを管理するFas
 uv run uvicorn stock.app:app --reload --port 8000
 
 # テスト実行
-uv run pytest
+# テスト実行はtest-creatorサブエージェントに任せることを推奨
 
 # リントチェック
 uv run ruff check --fix

@@ -9,12 +9,38 @@ updates:
       - "dependencies"
       - "uv"
     groups:
-      dependencies:
+      api-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      api-security:
+        applies-to: security-updates
         patterns:
           - "*"
     commit-message:
-      prefix: "deps"
-      prefix-development: "deps"
+      prefix: "deps(api)"
+      prefix-development: "deps(api)"
+      include: "scope"
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    open-pull-requests-limit: 2
+    schedule:
+      interval: weekly
+    labels:
+      - "dependencies"
+      - "npm"
+    groups:
+      web-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      web-security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "deps(web)"
+      prefix-development: "deps(web)"
       include: "scope"
   # GitHub Actionsの更新設定
   - package-ecosystem: "github-actions"
@@ -23,11 +49,19 @@ updates:
       interval: "weekly"
       day: "monday"
     groups:
-      # すべてのGitHub Actionsを1つのPRにグループ化
-      github-actions:
+      github-actions-version:
+        applies-to: version-updates
+        patterns:
+          - "*"
+      github-actions-security:
+        applies-to: security-updates
         patterns:
           - "*"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
       - "github-actions"
+    commit-message:
+      prefix: "deps(github-actions)"
+      prefix-development: "deps(github-actions)"
+      include: "scope"

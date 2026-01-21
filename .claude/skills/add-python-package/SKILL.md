@@ -1,6 +1,8 @@
 ---
 name: add-package
-description: パッケージを追加する際に使用します。開発用と、プロダクト用途問わずこれを使います。
+description: |
+  **[src/api専用]** バックエンド（Python/FastAPI）にパッケージを追加する際に使用します。
+  開発用と、プロダクト用途問わずこれを使います。
 ---
 
 # パッケージ追加スキル
@@ -9,11 +11,12 @@ description: パッケージを追加する際に使用します。開発用と�
 
 ## Instructions
 
-1. `uv add <package-name>` コマンドでパッケージを追加する
+1. まず、カレントディレクトリがsrc/apiであることを確認します。
+2. `uv add <package-name>` コマンドでパッケージを追加する
    - 通常の依存パッケージ: `uv add <package-name>`
    - 開発用依存パッケージ: `uv add -D <package-name>`
-2. パッケージ追加後、`pyproject.toml` にパッケージが追加されていることを確認する
-3. `uv.lock` が更新されていることを確認する
+3. パッケージ追加後、`pyproject.toml` にパッケージが追加されていることを確認する
+4. `uv.lock` が更新されていることを確認する
 
 ## 注意事項
 

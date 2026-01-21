@@ -18,9 +18,7 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-white">
       <div className="flex h-16 items-center gap-3 border-b px-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-          <TrendingUp className="h-5 w-5 text-primary-foreground" />
-        </div>
+        <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8" />
         <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>
       </div>
       <nav className="flex-1 space-y-1 p-4">

@@ -39,7 +39,10 @@ export function MobileNav() {
           />
           <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white md:hidden">
             <div className="flex h-16 items-center justify-between border-b px-6">
-              <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>
+              <div className="flex items-center gap-3">
+                <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8" />
+                <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>
+              </div>
               <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                 <X className="h-5 w-5" />
               </Button>

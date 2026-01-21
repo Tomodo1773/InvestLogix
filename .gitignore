@@ -21,6 +21,8 @@ build/
 # Python cache
 .pytest_cache/
 .ruff_cache/
+.uv_cache/
+.uv-cache/
 
 # Docker volumes
 postgres_data/

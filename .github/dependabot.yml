@@ -13,10 +13,14 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+        labels:
+          - "version"
       api-security:
         applies-to: security-updates
         patterns:
           - "*"
+        labels:
+          - "security"
     commit-message:
       prefix: "deps(api)"
       prefix-development: "deps(api)"
@@ -33,10 +37,14 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+        labels:
+          - "version"
       web-security:
         applies-to: security-updates
         patterns:
           - "*"
+        labels:
+          - "security"
     commit-message:
       prefix: "deps(web)"
       prefix-development: "deps(web)"
@@ -51,10 +59,14 @@ updates:
         applies-to: version-updates
         patterns:
           - "*"
+        labels:
+          - "version"
       github-actions-security:
         applies-to: security-updates
         patterns:
           - "*"
+        labels:
+          - "security"
     open-pull-requests-limit: 10
     labels:
       - "dependencies"

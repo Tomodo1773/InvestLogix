@@ -281,19 +281,29 @@ class PortfolioHistoryResponse(BaseModel):
         return to_jst(v).isoformat() if v else None
 
 
+class TotalPurchaseByAccount(BaseModel):
+    """口座種別ごとの購入金額"""
+
+    juniorNISA: float = 0.0
+    oldNISA: float = 0.0
+    NISAAccumulation: float = 0.0
+    NISAGrowth: float = 0.0
+    specific: float = 0.0
+
+
 class MonthlySummary(BaseModel):
     """月次トランザクション集計のレスポンスモデル"""
 
     year: int
     month: int
-    total_purchase: dict[str, float]
+    total_purchase: TotalPurchaseByAccount
 
 
 class YearlySummary(BaseModel):
     """年次トランザクション集計のレスポンスモデル"""
 
     year: int
-    total_purchase: dict[str, float]
+    total_purchase: TotalPurchaseByAccount
 
 
 class MonthlyDividend(BaseModel):

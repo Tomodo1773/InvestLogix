@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # uvパッケージの更新設定
   - package-ecosystem: "uv"
     directory: "/src/api"
     open-pull-requests-limit: 2
@@ -20,7 +21,7 @@ updates:
     commit-message:
       prefix: "deps(api)"
       prefix-development: "deps(api)"
-      include: "scope"
+  # npmパッケージの更新設定
   - package-ecosystem: "npm"
     directory: "/src/web"
     open-pull-requests-limit: 2
@@ -41,7 +42,6 @@ updates:
     commit-message:
       prefix: "deps(web)"
       prefix-development: "deps(web)"
-      include: "scope"
   # GitHub Actionsの更新設定
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -64,4 +64,3 @@ updates:
     commit-message:
       prefix: "deps(github-actions)"
       prefix-development: "deps(github-actions)"
-      include: "scope"

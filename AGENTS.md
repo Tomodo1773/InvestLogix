@@ -53,11 +53,15 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. test-creatorスキルを使ってテストコードを実装する
+3. api-test-creatorスキルを使ってテストコードを実装する
 4. `uv run ruff format` でコードを整形する
 5. `uv run ruff check --fix` でコードスタイルを整える
-6. test-runnerサブエージェントでテストを行う
-7. ドキュメント(AGENTS.md, README.md)を更新する
+6. api-test-runnerサブエージェントでテストを行う
+7. ドキュメント(AGENTS.md, README.md, .claude/skills/api-test-creator/SKILL.md)を更新する
+
+### 実装の指針
+
+- パッケージを追加するときはadd-python-packageスキルを利用すること
 
 ### コマンド
 
@@ -68,7 +72,7 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 uv run uvicorn stock.app:app --reload --port 8000
 
 # テスト実行
-# （test-runnerサブエージェントに任せることを推奨）
+# （api-test-runnerサブエージェントに任せることを推奨）
 
 # リントチェック
 uv run ruff check --fix
@@ -159,13 +163,13 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
 3. `pnpm install` で依存関係を更新する
-4. `pnpm run check` を実行し、lint/format/typecheck/knipが通ることを確認する
+4. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
 5. ドキュメント(AGENTS.md, README.md)を更新する
 
 ### 実装の指針
 
 - バックエンドAPIを呼び出す必要が出たときはプロジェクトルートの`openapi.json`を参照する
-- パッケージを追加するときはadd-packageスキルを利用すること
+- パッケージを追加するときはadd-npm-packageスキルを利用すること
 
 ### コマンド
 

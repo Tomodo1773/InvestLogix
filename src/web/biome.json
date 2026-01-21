@@ -6,19 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignoreUnknown": true,
-    "includes": [
-      "**",
-      "!**/node_modules",
-      "!**/.next",
-      "!**/out",
-      "!**/build",
-      "!**/dist",
-      "!**/*.config.js",
-      "!**/*.config.ts",
-      "!**/*.config.mjs",
-      "!**/components/ui"
-    ]
+    "ignoreUnknown": true
   },
   "formatter": {
     "enabled": true,

@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # API - version updates
   - package-ecosystem: "uv"
     directory: "/src/api"
     open-pull-requests-limit: 2
@@ -8,22 +9,36 @@ updates:
     labels:
       - "dependencies"
       - "uv"
+      - "version"
     groups:
       api-version:
         applies-to: version-updates
         patterns:
           - "*"
-        labels:
-          - "version"
+    commit-message:
+      prefix: "deps(api)"
+      prefix-development: "deps(api)"
+
+  # API - security updates
+  - package-ecosystem: "uv"
+    directory: "/src/api"
+    open-pull-requests-limit: 2
+    schedule:
+      interval: daily
+    labels:
+      - "dependencies"
+      - "uv"
+      - "security"
+    groups:
       api-security:
         applies-to: security-updates
         patterns:
           - "*"
-        labels:
-          - "security"
     commit-message:
       prefix: "deps(api)"
       prefix-development: "deps(api)"
+
+  # Web - version updates
   - package-ecosystem: "npm"
     directory: "/src/web"
     open-pull-requests-limit: 2
@@ -32,45 +47,70 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+      - "version"
     groups:
       web-version:
         applies-to: version-updates
         patterns:
           - "*"
-        labels:
-          - "version"
+    commit-message:
+      prefix: "deps(web)"
+      prefix-development: "deps(web)"
+
+  # Web - security updates
+  - package-ecosystem: "npm"
+    directory: "/src/web"
+    open-pull-requests-limit: 2
+    schedule:
+      interval: daily
+    labels:
+      - "dependencies"
+      - "npm"
+      - "security"
+    groups:
       web-security:
         applies-to: security-updates
         patterns:
           - "*"
-        labels:
-          - "security"
     commit-message:
       prefix: "deps(web)"
       prefix-development: "deps(web)"
-  # GitHub Actionsの更新設定
+
+  # GitHub Actions - version updates
   - package-ecosystem: "github-actions"
     directory: "/"
+    open-pull-requests-limit: 10
     schedule:
-      interval: "weekly"
-      day: "monday"
+      interval: weekly
+      day: monday
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "version"
     groups:
       github-actions-version:
         applies-to: version-updates
         patterns:
           - "*"
-        labels:
-          - "version"
+    commit-message:
+      prefix: "deps(github-actions)"
+      prefix-development: "deps(github-actions)"
+
+  # GitHub Actions - security updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    open-pull-requests-limit: 10
+    schedule:
+      interval: daily
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "security"
+    groups:
       github-actions-security:
         applies-to: security-updates
         patterns:
           - "*"
-        labels:
-          - "security"
-    open-pull-requests-limit: 10
-    labels:
-      - "dependencies"
-      - "github-actions"
     commit-message:
       prefix: "deps(github-actions)"
       prefix-development: "deps(github-actions)"

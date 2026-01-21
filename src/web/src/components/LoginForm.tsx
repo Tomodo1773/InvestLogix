@@ -1,4 +1,3 @@
-import { TrendingUp } from "lucide-react"
 import type React from "react"
 import { useState } from "react"
 import { useNavigate } from "react-router"
@@ -36,8 +35,8 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary">
-          <TrendingUp className="h-8 w-8 text-primary-foreground" />
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
+          <img src="/android-chrome-192x192.png" alt="InvestLogix" className="h-16 w-16" />
         </div>
         <CardTitle className="text-2xl font-bold text-foreground">InvestLogix</CardTitle>
         <p className="text-muted-foreground">Portfolio Manager</p>

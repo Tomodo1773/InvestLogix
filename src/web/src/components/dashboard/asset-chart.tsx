@@ -124,8 +124,8 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
-                formatter={(value: number | undefined, name: string) => {
-                  if (value === undefined) return ["-", name]
+                formatter={(value: number | undefined, name: string | undefined) => {
+                  if (value === undefined) return ["-", name ?? ""]
                   if (name === "total_unrealized_pl_percentage") {
                     return [formatPercent(value), "Unrealized P/L %"]
                   }

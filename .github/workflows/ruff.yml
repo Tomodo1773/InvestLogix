@@ -3,9 +3,13 @@ name: Ruff
 on:
   push:
     branches: ["main"]
+    paths:
+      - 'src/api/**'
   pull_request:
     types: [opened, synchronize, reopened]
     branches: ["main"]
+    paths:
+      - 'src/api/**'
 
 permissions:
   contents: read

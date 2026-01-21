@@ -4,8 +4,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "src/api/**"
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - "src/api/**"
 
 permissions:
   contents: read

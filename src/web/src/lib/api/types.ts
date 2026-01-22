@@ -59,6 +59,13 @@ export interface MonthlySummaryItem {
 }
 
 // Transactions
+export type AccountType =
+  | "NISA(成長投資枠)"
+  | "NISA(つみたて投資枠)"
+  | "ジュニアNISA"
+  | "旧NISA"
+  | "特定"
+
 export interface Transaction {
   symbol: string
   transaction_type: "buy" | "sell"
@@ -67,7 +74,7 @@ export interface Transaction {
   usd_price: string | null
   adjusted_price: string | null
   adjusted_quantity: string | null
-  account_type: "nisa" | "specific"
+  account_type: AccountType
   fee: string
   tax: string
   realized_pl: string | null

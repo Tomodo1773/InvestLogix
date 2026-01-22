@@ -83,7 +83,8 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
   }
 
   const getAccountTypeLabel = (accountType: string) => {
-    return accountType === "nisa" ? "NISA" : "特定"
+    // バックエンドから返される値をそのまま表示
+    return accountType
   }
 
   return (

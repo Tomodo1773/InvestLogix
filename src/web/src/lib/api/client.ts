@@ -94,15 +94,15 @@ export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
 
 // Symbol-specific APIs
 export async function getHoldingBySymbol(symbol: string): Promise<Holding[]> {
-  return fetchWithAuth<Holding[]>(`/api/v1/holdings/?symbol=${symbol}`)
+  return fetchWithAuth<Holding[]>(`/api/v1/holdings/?symbol=${encodeURIComponent(symbol)}`)
 }
 
 export async function getTransactionsBySymbol(symbol: string): Promise<TransactionWithPL[]> {
   return fetchWithAuth<TransactionWithPL[]>(
-    `/api/v1/transactions/?symbol=${symbol}&include_unrealized_pl=true`
+    `/api/v1/transactions/?symbol=${encodeURIComponent(symbol)}&include_unrealized_pl=true`
   )
 }
 
 export async function getDividendsBySymbol(symbol: string): Promise<Dividend[]> {
-  return fetchWithAuth<Dividend[]>(`/api/v1/dividends/?symbol=${symbol}`)
+  return fetchWithAuth<Dividend[]>(`/api/v1/dividends/?symbol=${encodeURIComponent(symbol)}`)
 }

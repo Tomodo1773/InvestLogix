@@ -84,7 +84,7 @@ async def test_list_holdings(
 
     期待する動作:
     - ステータスコード200
-    - 保有銘柄情報に銘柄名が含まれている
+    - 保有銘柄情報に銘柄名、証券種別、通貨が含まれている
 
     Args:
         client: 非同期HTTPクライアント
@@ -100,6 +100,8 @@ async def test_list_holdings(
     data = response.json()
     assert len(data) > 0
     assert data[0]["stock_name"] == "三菱商事"
+    assert data[0]["security_type"] == "STOCK"
+    assert data[0]["currency"] == "JPY"
 
 
 @pytest.mark.asyncio

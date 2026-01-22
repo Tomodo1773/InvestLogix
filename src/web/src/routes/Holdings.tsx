@@ -2,6 +2,7 @@ import { RefreshCw } from "lucide-react"
 import useSWR from "swr"
 import { AuthProvider } from "@/components/AuthProvider"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
+import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
 import { AppLayout } from "@/components/layout/app-layout"
 import { Button } from "@/components/ui/button"
 import { getHoldings } from "@/lib/api/client"
@@ -34,6 +35,7 @@ function HoldingsContent() {
             Refresh
           </Button>
         </div>
+        <SecurityTypeChart data={holdings} isLoading={isLoading} />
         <HoldingsTable holdings={holdings} isLoading={isLoading} />
       </div>
     </AppLayout>

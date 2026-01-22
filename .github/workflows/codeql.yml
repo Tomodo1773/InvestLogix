@@ -11,7 +11,8 @@ jobs:
       contents: read
     outputs:
       github: ${{ steps.changes.outputs.github }}
-      src: ${{ steps.changes.outputs.src }}
+      api: ${{ steps.changes.outputs.api }}
+      web: ${{ steps.changes.outputs.web }}
     steps:
       - uses: actions/checkout@v6
 
@@ -22,8 +23,10 @@ jobs:
           filters: |
             github:
               - '.github/**'
-            src:
-              - 'src/**'
+            api:
+              - 'src/api/**'
+            web:
+              - 'src/web/**'
 
   analyze-actions:
     name: Analyze GitHub Actions
@@ -53,7 +56,7 @@ jobs:
   analyze-python:
     name: Analyze Python
     needs: detect-changes
-    if: needs.detect-changes.outputs.src == 'true'
+    if: needs.detect-changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -74,3 +77,28 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:python"
+
+  analyze-typescript:
+    name: Analyze TypeScript
+    needs: detect-changes
+    if: needs.detect-changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: 'javascript-typescript'
+          queries: security-and-quality
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"

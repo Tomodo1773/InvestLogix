@@ -58,7 +58,38 @@ export interface MonthlySummaryItem {
   total_purchase: Record<string, number>
 }
 
+// Transactions
+export interface Transaction {
+  symbol: string
+  transaction_type: "buy" | "sell"
+  quantity: string
+  price: string
+  usd_price: string | null
+  adjusted_price: string | null
+  adjusted_quantity: string | null
+  account_type: "nisa" | "specific"
+  fee: string
+  tax: string
+  realized_pl: string | null
+  transaction_id: number
+  user_id: number
+  transaction_date: string
+  stock_name: string | null
+}
+
 // Dividends
+export interface Dividend {
+  symbol: string
+  payment_date: string
+  shares_owned: string
+  total_amount: string
+  tax: string | null
+  fee: string | null
+  dividend_id: number
+  user_id: number
+  stock_name: string | null
+}
+
 export interface MonthlyDividendItem {
   year: number
   month: number

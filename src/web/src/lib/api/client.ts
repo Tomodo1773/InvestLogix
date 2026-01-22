@@ -1,10 +1,12 @@
 import type {
+  Dividend,
   Holding,
   MonthlyDividendItem,
   MonthlySummaryItem,
   PortfolioHistoryItem,
   PortfolioSummary,
   TokenResponse,
+  Transaction,
   User,
 } from "./types"
 
@@ -72,11 +74,19 @@ export async function getHoldings(): Promise<Holding[]> {
 }
 
 // Transaction APIs
+export async function getTransactions(): Promise<Transaction[]> {
+  return fetchWithAuth<Transaction[]>("/api/v1/transactions/")
+}
+
 export async function getTransactionsMonthlySummary(): Promise<MonthlySummaryItem[]> {
   return fetchWithAuth<MonthlySummaryItem[]>("/api/v1/transactions/monthly-summary")
 }
 
 // Dividend APIs
+export async function getDividends(): Promise<Dividend[]> {
+  return fetchWithAuth<Dividend[]>("/api/v1/dividends/")
+}
+
 export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
   return fetchWithAuth<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
 }

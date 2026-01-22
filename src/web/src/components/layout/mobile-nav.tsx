@@ -1,4 +1,4 @@
-import { LayoutDashboard, Menu, TrendingUp, X } from "lucide-react"
+import { CircleDollarSign, LayoutDashboard, Menu, Receipt, TrendingUp, X } from "lucide-react"
 import { useState } from "react"
 import { NavLink } from "react-router"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,16 @@ const navItems = [
     to: "/holdings",
     label: "保有状況",
     icon: TrendingUp,
+  },
+  {
+    to: "/transactions",
+    label: "取引履歴",
+    icon: Receipt,
+  },
+  {
+    to: "/dividends",
+    label: "配当金履歴",
+    icon: CircleDollarSign,
   },
 ]
 

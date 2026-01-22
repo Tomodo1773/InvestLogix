@@ -30,3 +30,15 @@ export function formatPercent(value: number | string | null | undefined): string
 export function formatYearMonth(year: number, month: number): string {
   return `${year}/${month.toString().padStart(2, "0")}`
 }
+
+export function formatDate(dateString: string): string {
+  const date = new Date(dateString)
+  if (Number.isNaN(date.getTime())) {
+    return ""
+  }
+  return date.toLocaleDateString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+}

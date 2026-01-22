@@ -79,6 +79,11 @@ export interface Transaction {
   stock_name: string | null
 }
 
+export interface TransactionWithPL extends Transaction {
+  unrealized_pl: string | null
+  unrealized_pl_percentage: string | null
+}
+
 // Dividends
 export interface Dividend {
   symbol: string

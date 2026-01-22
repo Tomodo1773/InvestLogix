@@ -1,4 +1,4 @@
-import { LayoutDashboard, TrendingUp } from "lucide-react"
+import { CircleDollarSign, LayoutDashboard, Receipt, TrendingUp } from "lucide-react"
 import { NavLink } from "react-router"
 
 const navItems = [
@@ -12,13 +12,23 @@ const navItems = [
     label: "保有状況",
     icon: TrendingUp,
   },
+  {
+    to: "/transactions",
+    label: "取引履歴",
+    icon: Receipt,
+  },
+  {
+    to: "/dividends",
+    label: "配当金履歴",
+    icon: CircleDollarSign,
+  },
 ]
 
 export function Sidebar() {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-white">
       <div className="flex h-16 items-center gap-3 border-b px-6">
-        <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8" />
+        <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8 rounded-lg" />
         <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>
       </div>
       <nav className="flex-1 space-y-1 p-4">

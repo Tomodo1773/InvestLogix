@@ -36,7 +36,7 @@ export function LoginForm() {
     <Card className="w-full max-w-md shadow-lg">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center">
-          <img src="/android-chrome-192x192.png" alt="InvestLogix" className="h-16 w-16" />
+          <img src="/android-chrome-192x192.png" alt="InvestLogix" className="h-16 w-16 rounded-lg" />
         </div>
         <CardTitle className="text-2xl font-bold text-foreground">InvestLogix</CardTitle>
         <p className="text-muted-foreground">Portfolio Manager</p>

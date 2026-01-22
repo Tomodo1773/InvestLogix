@@ -1,9 +1,19 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Dividend } from "@/lib/api/types"
 import { formatCurrency } from "@/lib/format"
+import { usePagination } from "@/lib/hooks/use-pagination"
 
 interface DividendsTableProps {
   dividends: Dividend[] | undefined
@@ -12,6 +22,8 @@ interface DividendsTableProps {
 
 type SortKey = "symbol" | "payment_date" | "total_amount"
 type SortDirection = "asc" | "desc"
+
+const PAGE_SIZE = 20
 
 export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>("payment_date")
@@ -24,6 +36,7 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
       setSortKey(key)
       setSortDirection("desc")
     }
+    handlePageChange(1)
   }
 
   const getSortIcon = (key: SortKey) => {
@@ -65,6 +78,9 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
       : (bValue as number) - (aValue as number)
   })
 
+  const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
+    usePagination(sortedDividends, PAGE_SIZE)
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString("ja-JP", {
@@ -82,7 +98,7 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
       <CardContent>
         {isLoading ? (
           <div className="space-y-2">
-            {[...Array(5)].map((_, i) => (
+            {[...Array(20)].map((_, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loading elements
               <div key={`skeleton-${i}`} className="h-12 animate-pulse rounded bg-muted" />
             ))}
@@ -122,8 +138,8 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedDividends && sortedDividends.length > 0 ? (
-                  sortedDividends.map((dividend) => {
+                {paginatedData && paginatedData.length > 0 ? (
+                  paginatedData.map((dividend) => {
                     return (
                       <TableRow key={dividend.dividend_id}>
                         <TableCell>
@@ -157,6 +173,53 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                 )}
               </TableBody>
             </Table>
+            {totalPages > 1 && (
+              <div className="mt-4 flex justify-center">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={() => handlePageChange(currentPage - 1)}
+                        className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      // 最初、最後、現在ページの前後1ページのみ表示
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              onClick={() => handlePageChange(page)}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        )
+                      }
+                      // 省略記号
+                      if (page === currentPage - 2 || page === currentPage + 2) {
+                        return <PaginationEllipsis key={page} />
+                      }
+                      return null
+                    })}
+
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={() => handlePageChange(currentPage + 1)}
+                        className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

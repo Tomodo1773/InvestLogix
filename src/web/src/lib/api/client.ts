@@ -7,6 +7,7 @@ import type {
   PortfolioSummary,
   TokenResponse,
   Transaction,
+  TransactionWithPL,
   User,
 } from "./types"
 
@@ -89,4 +90,19 @@ export async function getDividends(): Promise<Dividend[]> {
 
 export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
   return fetchWithAuth<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
+}
+
+// Symbol-specific APIs
+export async function getHoldingBySymbol(symbol: string): Promise<Holding[]> {
+  return fetchWithAuth<Holding[]>(`/api/v1/holdings/?symbol=${symbol}`)
+}
+
+export async function getTransactionsBySymbol(symbol: string): Promise<TransactionWithPL[]> {
+  return fetchWithAuth<TransactionWithPL[]>(
+    `/api/v1/transactions/?symbol=${symbol}&include_unrealized_pl=true`
+  )
+}
+
+export async function getDividendsBySymbol(symbol: string): Promise<Dividend[]> {
+  return fetchWithAuth<Dividend[]>(`/api/v1/dividends/?symbol=${symbol}`)
 }

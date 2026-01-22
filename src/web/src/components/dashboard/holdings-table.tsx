@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { useState } from "react"
+import { Link } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { Holding } from "@/lib/api/types"
@@ -165,10 +166,14 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                     return (
                       <TableRow key={holding.symbol}>
                         <TableCell>
-                          <div>
-                            <div className="font-medium">{holding.stock_name || holding.symbol}</div>
-                            <div className="text-sm text-muted-foreground">{holding.symbol}</div>
-                          </div>
+                          <Link to={`/holdings/${holding.symbol}`}>
+                            <div className="cursor-pointer hover:opacity-80">
+                              <div className="font-medium hover:underline">
+                                {holding.stock_name || holding.symbol}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{holding.symbol}</div>
+                            </div>
+                          </Link>
                         </TableCell>
                         <TableCell className="text-right">
                           {Number(holding.quantity).toLocaleString()}

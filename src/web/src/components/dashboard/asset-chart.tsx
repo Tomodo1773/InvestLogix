@@ -124,7 +124,8 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
-                formatter={(value: number, name: string) => {
+                formatter={(value: number | undefined, name: string | undefined) => {
+                  if (value === undefined) return ["-", name ?? ""]
                   if (name === "total_unrealized_pl_percentage") {
                     return [formatPercent(value), "Unrealized P/L %"]
                   }
@@ -173,7 +174,12 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
                 tickFormatter={(v) => `${(v / 1000000).toFixed(1)}M`}
               />
               <YAxis yAxisId="right" orientation="right" width={50} tick={false} axisLine={false} />
-              <Tooltip formatter={(value: number) => [formatCurrency(value), "Unrealized P/L"]} />
+              <Tooltip
+                formatter={(value: number | undefined) => {
+                  if (value === undefined) return ["-", "Unrealized P/L"]
+                  return [formatCurrency(value), "Unrealized P/L"]
+                }}
+              />
               <ReferenceLine y={0} stroke="#666" />
               <Bar dataKey="total_unrealized_pl" name="Unrealized P/L">
                 {chartData.map((entry) => (

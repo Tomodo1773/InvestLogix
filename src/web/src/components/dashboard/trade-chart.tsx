@@ -86,7 +86,12 @@ export function TradeChart({ data, isLoading }: TradeChartProps) {
               <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <Tooltip
+                formatter={(value: number | undefined) => {
+                  if (value === undefined) return "-"
+                  return formatCurrency(value)
+                }}
+              />
               <Legend />
               {accountTypes.map((account) => (
                 <Bar

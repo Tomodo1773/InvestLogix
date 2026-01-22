@@ -57,7 +57,12 @@ export function DividendChart({ data, isLoading }: DividendChartProps) {
               <CartesianGrid strokeDasharray="3 3" stroke="#E0E0E0" />
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <Tooltip
+                formatter={(value: number | undefined) => {
+                  if (value === undefined) return "-"
+                  return formatCurrency(value)
+                }}
+              />
               <Bar dataKey="dividend" fill="#4CAF50" name="Dividend" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>

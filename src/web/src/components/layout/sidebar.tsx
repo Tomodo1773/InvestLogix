@@ -49,11 +49,17 @@ export function Sidebar() {
         isCollapsed ? "md:w-16" : "md:w-64"
       }`}
     >
-      <div className={`flex h-16 items-center justify-between border-b ${isCollapsed ? "px-2" : "px-6"}`}>
-        <div className={`flex items-center ${isCollapsed ? "" : "gap-3"}`}>
-          <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8 rounded-lg" />
-          {!isCollapsed && <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>}
-        </div>
+      <div
+        className={`flex h-16 items-center border-b ${
+          isCollapsed ? "justify-center px-2" : "justify-between px-6"
+        }`}
+      >
+        {!isCollapsed && (
+          <div className="flex items-center gap-3">
+            <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8 rounded-lg" />
+            <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>
+          </div>
+        )}
         <Button
           variant="ghost"
           size="icon"

@@ -5,6 +5,7 @@ import type {
   MonthlySummaryItem,
   PortfolioHistoryItem,
   PortfolioSummary,
+  Stock,
   TokenResponse,
   Transaction,
   TransactionWithPL,
@@ -105,4 +106,10 @@ export async function getTransactionsBySymbol(symbol: string): Promise<Transacti
 
 export async function getDividendsBySymbol(symbol: string): Promise<Dividend[]> {
   return fetchWithAuth<Dividend[]>(`/api/v1/dividends/?symbol=${encodeURIComponent(symbol)}`)
+}
+
+// Stock APIs
+export async function getStocks(market?: string): Promise<Stock[]> {
+  const params = market ? `?market=${encodeURIComponent(market)}` : ""
+  return fetchWithAuth<Stock[]>(`/api/v1/stocks/${params}`)
 }

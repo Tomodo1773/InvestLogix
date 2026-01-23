@@ -104,3 +104,16 @@ export interface MonthlyDividendItem {
   month: number
   total_dividend: number
 }
+
+// Stocks
+export type SecurityType = "STOCK" | "ETF" | "REIT" | "FUND"
+
+export interface Stock {
+  symbol: string
+  name: string
+  name_en: string | null
+  market: string
+  security_type: SecurityType
+  currency: string
+  last_updated: string
+}

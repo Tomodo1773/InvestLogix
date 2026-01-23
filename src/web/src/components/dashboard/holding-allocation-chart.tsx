@@ -124,8 +124,8 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
                 labelLine={false}
                 label={({ name, value }) => {
                   const percent = ((value / total) * 100).toFixed(1)
-                  // 小さいセクター（5%未満）はラベルを省略
-                  if (parseFloat(percent) < 5) return ""
+                  // 小さいセクター（2%未満）はラベルを省略
+                  if (parseFloat(percent) < 2) return ""
                   return `${name} ${percent}%`
                 }}
                 outerRadius={120}
@@ -142,11 +142,8 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
               <Tooltip
                 formatter={(value: number | undefined, _name: string | undefined, props: unknown) => {
                   const percent = ((value ?? 0) / total) * 100
-                  const payload = props as { payload: { symbol: string } }
-                  return [
-                    `${formatCurrency(value ?? 0)} (${percent.toFixed(2)}%)`,
-                    payload.payload.symbol === "OTHER" ? "その他" : payload.payload.symbol,
-                  ]
+                  const payload = props as { payload: { name: string } }
+                  return [`${formatCurrency(value ?? 0)} (${percent.toFixed(2)}%)`, payload.payload.name]
                 }}
                 labelFormatter={(label, payload) => {
                   if (payload && payload.length > 0) {

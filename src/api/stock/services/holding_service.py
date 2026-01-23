@@ -334,7 +334,7 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
 
 async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:
     """
-    ユーザーの保有銘柄一覧を銘柄名と共に取得します。
+    ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨と共に取得します。
     symbolが指定された場合は、その銘柄の情報のみを返します。
 
     Args:
@@ -343,10 +343,10 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
         symbol (str, optional): 銘柄コード。指定された場合はその銘柄の情報のみを返します。
 
     Returns:
-        List[Holding]: 銘柄名を含む保有銘柄情報のリスト
+        List[Holding]: 銘柄名、証券種別、通貨を含む保有銘柄情報のリスト
     """
     query = (
-        select(Holding, Stock.name)
+        select(Holding, Stock.name, Stock.security_type, Stock.currency)
         .join(Stock, Holding.symbol == Stock.symbol)
         .where(Holding.user_id == user_id)
     )
@@ -360,5 +360,7 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
     for row in result:
         holding = row[0]
         holding.stock_name = row[1]
+        holding.security_type = row[2]
+        holding.currency = row[3]
         holdings.append(holding)
     return holdings

@@ -49,6 +49,8 @@ export interface Holding {
   user_id: number
   last_updated: string
   stock_name: string | null
+  security_type: string | null
+  currency: string | null
 }
 
 // Transactions

@@ -36,44 +36,57 @@ const COLORS = [
 // 「その他」用の色
 const OTHER_COLOR = "#BDBDBD"
 
-export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationChartProps) {
-  const chartData = useMemo(() => {
-    if (!data || data.length === 0) return []
+export interface ChartDataItem {
+  name: string
+  symbol: string
+  value: number
+  [key: string]: string | number
+}
 
-    // 評価額でソート
-    const sortedHoldings = [...data]
-      .map((holding) => ({
-        symbol: holding.symbol,
-        name: holding.stock_name || holding.symbol,
-        value: parseFloat(holding.market_value || "0"),
-      }))
-      .filter((item) => item.value > 0)
-      .sort((a, b) => b.value - a.value)
+/**
+ * 保有銘柄データを円グラフ用に変換する
+ * 上位20銘柄を個別に表示し、21位以降は「その他」として集約する
+ */
+export function transformHoldingsToChartData(holdings: Holding[] | undefined): ChartDataItem[] {
+  if (!holdings || holdings.length === 0) return []
 
-    // 上位20件
-    const top20 = sortedHoldings.slice(0, 20)
-
-    // 21位以降を「その他」として集約
-    const others = sortedHoldings.slice(20)
-    const othersTotal = others.reduce((sum, item) => sum + item.value, 0)
-
-    const result = top20.map((item) => ({
-      name: item.name,
-      symbol: item.symbol,
-      value: item.value,
+  // 評価額でソート
+  const sortedHoldings = [...holdings]
+    .map((holding) => ({
+      symbol: holding.symbol,
+      name: holding.stock_name || holding.symbol,
+      value: parseFloat(holding.market_value || "0"),
     }))
+    .filter((item) => item.value > 0)
+    .sort((a, b) => b.value - a.value)
 
-    // 「その他」を追加（存在する場合のみ）
-    if (othersTotal > 0) {
-      result.push({
-        name: "その他",
-        symbol: "OTHER",
-        value: othersTotal,
-      })
-    }
+  // 上位20件
+  const top20 = sortedHoldings.slice(0, 20)
 
-    return result
-  }, [data])
+  // 21位以降を「その他」として集約
+  const others = sortedHoldings.slice(20)
+  const othersTotal = others.reduce((sum, item) => sum + item.value, 0)
+
+  const result = top20.map((item) => ({
+    name: item.name,
+    symbol: item.symbol,
+    value: item.value,
+  }))
+
+  // 「その他」を追加（存在する場合のみ）
+  if (othersTotal > 0) {
+    result.push({
+      name: "その他",
+      symbol: "OTHER",
+      value: othersTotal,
+    })
+  }
+
+  return result
+}
+
+export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationChartProps) {
+  const chartData = useMemo(() => transformHoldingsToChartData(data), [data])
 
   // 全体の合計を計算（パーセンテージ表示用）
   const total = useMemo(() => {

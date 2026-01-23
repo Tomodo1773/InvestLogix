@@ -10,10 +10,11 @@ import { useAuthStore } from "@/lib/stores/auth-store"
 function StocksContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
-  const { data: stocks, isLoading, mutate } = useSWR(
-    isAuthenticated ? "/api/v1/stocks/" : null,
-    () => getStocks()
-  )
+  const {
+    data: stocks,
+    isLoading,
+    mutate,
+  } = useSWR(isAuthenticated ? "/api/v1/stocks/" : null, () => getStocks())
 
   const handleRefresh = () => {
     mutate()

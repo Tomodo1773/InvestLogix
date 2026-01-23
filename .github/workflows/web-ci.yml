@@ -47,3 +47,7 @@ jobs:
       - name: Run knip
         working-directory: src/web
         run: pnpm run knip
+
+      - name: Run tests
+        working-directory: src/web
+        run: pnpm test:run

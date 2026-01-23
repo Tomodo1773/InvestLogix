@@ -84,6 +84,20 @@
 - [x] `yearly` で年ごとの最後のデータポイントを抽出できる
 - [x] 空配列が渡された場合に空配列を返す
 
+### グラフロジック (`components/dashboard/holding-allocation-chart.tsx`)
+
+#### `transformHoldingsToChartData`
+
+- [x] 上位20銘柄を個別に表示する
+- [x] 21位以降を「その他」として集約する
+- [x] 評価額でソートされる（降順）
+- [x] 評価額が0または負の銘柄はフィルタリングされる
+- [x] `stock_name` が null の場合は `symbol` を使用する
+- [x] 空配列が渡された場合に空配列を返す
+- [x] undefined が渡された場合に空配列を返す
+- [x] 20銘柄以下の場合は「その他」が追加されない
+- [x] `market_value` が null または空文字の場合は0として扱われフィルタリングされる
+
 ### 状態管理 (`lib/stores/auth-store.ts`)
 
 #### `useAuthStore`

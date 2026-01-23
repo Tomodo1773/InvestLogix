@@ -8,3 +8,13 @@ repos:
         args: [--fix]
       # Run the formatter.
       - id: ruff-format
+
+  # Frontend checks (src/web)
+  - repo: local
+    hooks:
+      - id: pnpm-check
+        name: pnpm check (src/web)
+        entry: bash -c 'cd src/web && pnpm check'
+        language: system
+        files: ^src/web/
+        pass_filenames: false

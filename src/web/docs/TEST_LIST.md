@@ -107,6 +107,15 @@
 - [x] `logout` で状態がリセットされること
 - [x] `setLoading` でローディング状態を切り替えられること
 
+### 状態管理 (`lib/stores/sidebar-store.ts`)
+
+#### `useSidebarStore`
+
+- [x] 初期状態で `isCollapsed` が `false` であること
+- [x] `toggle()` で状態が切り替わること
+- [x] 複数回 `toggle()` しても正しく動作すること
+- [x] 状態が `localStorage` に永続化されること
+
 ---
 
 ## 優先度：中

@@ -1,4 +1,4 @@
-name: Web CI (Biome)
+name: Web CI (Biome&Vitest)
 
 on:
   push:
@@ -47,3 +47,7 @@ jobs:
       - name: Run knip
         working-directory: src/web
         run: pnpm run knip
+
+      - name: Run tests
+        working-directory: src/web
+        run: pnpm test:run

@@ -24,7 +24,10 @@ interface AssetChartProps {
   isLoading: boolean
 }
 
-function filterDataByTimeFrame(data: PortfolioHistoryItem[], timeFrame: TimeFrame): PortfolioHistoryItem[] {
+export function filterDataByTimeFrame(
+  data: PortfolioHistoryItem[],
+  timeFrame: TimeFrame
+): PortfolioHistoryItem[] {
   if (!data || data.length === 0) return []
 
   if (timeFrame === "daily") {

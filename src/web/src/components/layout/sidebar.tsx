@@ -1,9 +1,9 @@
 import {
-  ChevronLeft,
-  ChevronRight,
   CircleDollarSign,
   Database,
   LayoutDashboard,
+  PanelLeft,
+  PanelLeftClose,
   Receipt,
   TrendingUp,
 } from "lucide-react"
@@ -49,11 +49,20 @@ export function Sidebar() {
         isCollapsed ? "md:w-16" : "md:w-64"
       }`}
     >
-      <div
-        className={`flex h-16 items-center border-b ${isCollapsed ? "justify-center px-2" : "gap-3 px-6"}`}
-      >
-        <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8 rounded-lg" />
-        {!isCollapsed && <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>}
+      <div className={`flex h-16 items-center justify-between border-b ${isCollapsed ? "px-2" : "px-6"}`}>
+        <div className={`flex items-center ${isCollapsed ? "" : "gap-3"}`}>
+          <img src="/favicon-32x32.png" alt="InvestLogix" className="h-8 w-8 rounded-lg" />
+          {!isCollapsed && <h1 className="text-xl font-bold text-[#2D9B81]">InvestLogix</h1>}
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggle}
+          className="h-8 w-8"
+          aria-label={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
+        >
+          {isCollapsed ? <PanelLeft className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </Button>
       </div>
       <nav className="flex-1 space-y-1 p-4">
         <TooltipProvider delayDuration={0}>
@@ -89,24 +98,6 @@ export function Sidebar() {
           })}
         </TooltipProvider>
       </nav>
-      <div className={`border-t p-4 ${isCollapsed ? "flex justify-center" : ""}`}>
-        <Button
-          variant="ghost"
-          size={isCollapsed ? "icon" : "sm"}
-          onClick={toggle}
-          className="w-full"
-          aria-label={isCollapsed ? "サイドバーを展開" : "サイドバーを折りたたむ"}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <>
-              <ChevronLeft className="h-4 w-4" />
-              <span>折りたたむ</span>
-            </>
-          )}
-        </Button>
-      </div>
     </aside>
   )
 }

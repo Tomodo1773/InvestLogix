@@ -165,7 +165,7 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 3. web-test-creatorスキルを使ってテストコードを実装する
 4. `pnpm install` で依存関係を更新する
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
-6. web-test-creatorスキルの指示に従ってテストを実行する
+6. `pnpm test`でテストを実行する
 7. ドキュメント(AGENTS.md, README.md)を更新する
 
 ### 実装の指針

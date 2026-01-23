@@ -19,7 +19,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = settings.JWT_SECRET_KEY
 # アルゴリズムとトークン有効期限は固定値として定義
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 1日
 
 # OAuth2スキームを更新してOAuthエンドポイントを指すように
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oauth/token")

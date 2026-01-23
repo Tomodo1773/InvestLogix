@@ -59,7 +59,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           claude_args: |
             --system-prompt "常に日本語で回答してください。"
-            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(add-npm-package),Skill(add-python-package),Skill(api-test-creator),Bash(pnpm add:*),Bash(pnpm install),Bash(pnpm check:*),Bash(pnpm build),Bash(pnpm test:*),Bash(npx shadcn@latest add:*)"
+            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(add-npm-package),Skill(add-python-package),Skill(api-test-creator),Skill(web-test-creator),Bash(pnpm add:*),Bash(pnpm install),Bash(pnpm check:*),Bash(pnpm build),Bash(pnpm test:*),Bash(npx shadcn@latest add:*)"
 
           # Optional: Customize the trigger phrase (default: @claude)
           # trigger_phrase: "/claude"

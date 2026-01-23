@@ -1,4 +1,4 @@
-name: Web CI (Biome)
+name: Web CI (Biome&Vitest)
 
 on:
   push:

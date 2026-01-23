@@ -50,4 +50,4 @@ jobs:
 
       - name: Run tests
         working-directory: src/web
-        run: pnpm test:run
+        run: pnpm test

@@ -162,10 +162,10 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. テストコードを実装する
+3. web-test-creatorスキルを使ってテストコードを実装する
 4. `pnpm install` で依存関係を更新する
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
-6. `pnpm run test`でテスト実行する
+6. web-test-creatorスキルの指示に従ってテストを実行する
 7. ドキュメント(AGENTS.md, README.md)を更新する
 
 ### 実装の指針
@@ -186,6 +186,9 @@ pnpm build
 
 # 型チェック、リンティング、フォーマット、依存関係チェック
 pnpm check
+
+# テスト実行
+# （web-test-creatorスキルを使用することを推奨）
 
 # プレビュー（ビルド後）
 pnpm preview

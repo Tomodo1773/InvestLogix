@@ -1,6 +1,7 @@
 import { RefreshCw } from "lucide-react"
 import useSWR from "swr"
 import { AuthProvider } from "@/components/AuthProvider"
+import { HoldingAllocationChart } from "@/components/dashboard/holding-allocation-chart"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
 import { AppLayout } from "@/components/layout/app-layout"
@@ -36,6 +37,7 @@ function HoldingsContent() {
           </Button>
         </div>
         <SecurityTypeChart data={holdings} isLoading={isLoading} />
+        <HoldingAllocationChart data={holdings} isLoading={isLoading} />
         <HoldingsTable holdings={holdings} isLoading={isLoading} />
       </div>
     </AppLayout>

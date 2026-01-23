@@ -49,7 +49,7 @@ describe("formatPercent", () => {
     expect(formatPercent(undefined)).toBe("0.0%")
   })
 
-  it("0の場合は符号なしで表示される", () => {
+  it("0の場合も+符号が付与される", () => {
     expect(formatPercent(0)).toBe("+0.0%")
   })
 })
@@ -59,7 +59,11 @@ describe("formatYearMonth", () => {
     expect(formatYearMonth(2024, 1)).toBe("2024/01")
   })
 
-  it("月のゼロパディングありで表示される", () => {
+  it("1桁の月はゼロパディングされる", () => {
+    expect(formatYearMonth(2024, 3)).toBe("2024/03")
+  })
+
+  it("2桁の月はそのまま表示される", () => {
     expect(formatYearMonth(2024, 12)).toBe("2024/12")
   })
 })

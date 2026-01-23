@@ -8,11 +8,10 @@
     "build": "tsc && vite build",
     "lint": "biome lint --write .",
     "format": "biome format --write .",
-    "check": "biome check --write . && tsc --noEmit && knip && vitest run",
+    "check": "biome check --write . && tsc --noEmit && knip",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "ci": "biome ci .",
     "preview": "vite preview"
   },

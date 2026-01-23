@@ -11,8 +11,7 @@
     "check": "biome check --write . && tsc --noEmit && knip",
     "typecheck": "tsc --noEmit",
     "knip": "knip",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "vitest run",
     "ci": "biome ci .",
     "preview": "vite preview"
   },

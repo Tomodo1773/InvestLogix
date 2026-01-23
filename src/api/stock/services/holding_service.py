@@ -360,7 +360,7 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
     for row in result:
         holding = row[0]
         holding.stock_name = row[1]
-        holding.security_type = row[2].value if row[2] else None
+        holding.security_type = row[2]
         holding.currency = row[3]
         holdings.append(holding)
     return holdings

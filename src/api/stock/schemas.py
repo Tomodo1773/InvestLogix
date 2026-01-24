@@ -439,3 +439,42 @@ class WeeklyPerformanceNotifyResponse(BaseModel):
     bottom_performers: List[StockWeeklyPerformance]
     notification_sent: bool
     timestamp: str
+
+
+# 株価時系列データ用のスキーマ
+class PriceDataPoint(BaseModel):
+    """株価データポイント"""
+
+    date: str = Field(..., description="日付（YYYY-MM-DD形式）")
+    open: float = Field(..., description="始値")
+    high: float = Field(..., description="高値")
+    low: float = Field(..., description="安値")
+    close: float = Field(..., description="終値")
+    volume: int = Field(..., description="出来高")
+
+
+class PriceHistoryInterval(str, Enum):
+    """株価データの時間間隔"""
+
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+
+
+class PriceHistoryPeriod(str, Enum):
+    """株価データの取得期間"""
+
+    ONE_MONTH = "1M"
+    THREE_MONTHS = "3M"
+    SIX_MONTHS = "6M"
+    ONE_YEAR = "1Y"
+    THREE_YEARS = "3Y"
+
+
+class PriceHistoryResponse(BaseModel):
+    """株価履歴レスポンス"""
+
+    symbol: str = Field(..., description="銘柄コード")
+    period: str = Field(..., description="取得期間（1M, 3M, 6M, 1Y, 3Y）")
+    interval: str = Field(..., description="データ間隔（daily, weekly, monthly）")
+    data: List[PriceDataPoint] = Field(..., description="株価データのリスト")

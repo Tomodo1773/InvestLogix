@@ -53,3 +53,12 @@ InvestLogix/
 | `api-test.yml` | バックエンドのテスト |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
 | `appservice_deploy.yml` | Azure App Serviceへのデプロイ |
+
+## 実装時の重要事項
+
+api,webについて読み取り、作成、更新を行う場合はそれぞれ以下のドキュメントを見たうえでおこなうこと。
+
+web → src/web/CLAUDE.md
+api → src/api/CLAUDE.md
+
+重要事項が記載されているため必ず見ること

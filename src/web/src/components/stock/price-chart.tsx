@@ -1,16 +1,26 @@
 import { useState } from "react"
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPriceHistory } from "@/lib/api/client"
-import type { PriceHistoryInterval, PriceHistoryPeriod } from "@/lib/api/types"
+import type { PriceHistoryInterval, PriceHistoryPeriod, TransactionWithPL } from "@/lib/api/types"
 
 interface PriceChartProps {
   symbol: string
   securityType?: string | null
+  transactions?: TransactionWithPL[]
 }
 
-export function PriceChart({ symbol, securityType }: PriceChartProps) {
+export function PriceChart({ symbol, securityType, transactions }: PriceChartProps) {
   const [period, setPeriod] = useState<PriceHistoryPeriod>("1Y")
   const [interval, setInterval] = useState<PriceHistoryInterval>("daily")
 
@@ -37,6 +47,23 @@ export function PriceChart({ symbol, securityType }: PriceChartProps) {
     { label: "週足", value: "weekly" },
     { label: "月足", value: "monthly" },
   ]
+
+  // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
+  const buyDates = (() => {
+    if (!transactions || !data?.data || data.data.length === 0) return []
+
+    // 株価データの日付はYYYY-MM-DD形式
+    const chartDates = new Set(data.data.map((d) => d.date))
+
+    // トランザクションの日付はISO形式（例: 2024-01-15T00:00:00+09:00）なので
+    // YYYY-MM-DD部分のみを抽出して比較する
+    const buyTransactionDates = transactions
+      .filter((t) => t.transaction_type === "buy")
+      .map((t) => t.transaction_date.split("T")[0])
+
+    // グラフの日付範囲内にある買付日のみを返す
+    return buyTransactionDates.filter((date) => chartDates.has(date))
+  })()
 
   return (
     <Card>
@@ -114,6 +141,9 @@ export function PriceChart({ symbol, securityType }: PriceChartProps) {
                 formatter={(value: number | undefined) => [value?.toLocaleString() ?? "0", "終値"]}
               />
               <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
+              {buyDates.map((date) => (
+                <ReferenceLine key={date} x={date} stroke="red" />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         ) : (

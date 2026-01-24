@@ -113,13 +113,7 @@ export function PriceChart({ symbol, securityType }: PriceChartProps) {
                 }}
                 formatter={(value: number | undefined) => [value?.toLocaleString() ?? "0", "終値"]}
               />
-              <Line
-                type="monotone"
-                dataKey="close"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={false}
-              />
+              <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         ) : (

@@ -7,7 +7,17 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import settings
-from .routes import auth, dividends, holdings, portfolio, stock_splits, stocks, transactions, users
+from .routes import (
+    auth,
+    dividends,
+    holdings,
+    portfolio,
+    price_history,
+    stock_splits,
+    stocks,
+    transactions,
+    users,
+)
 
 # FastAPIアプリケーションの作成
 app = FastAPI(
@@ -47,6 +57,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 # 各機能のエンドポイント
 app.include_router(holdings.router, prefix="/api/v1/holdings", tags=["holdings"])
 app.include_router(stocks.router, prefix="/api/v1/stocks", tags=["stocks"])
+app.include_router(price_history.router, prefix="/api/v1/stocks", tags=["stocks"])
 app.include_router(stock_splits.router, prefix="/api/v1/stock-splits", tags=["stock-splits"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"])

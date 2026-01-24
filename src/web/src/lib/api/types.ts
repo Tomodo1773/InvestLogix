@@ -117,3 +117,23 @@ export interface Stock {
   currency: string
   last_updated: string
 }
+
+// Price History
+export type PriceHistoryPeriod = "1M" | "3M" | "6M" | "1Y" | "3Y"
+export type PriceHistoryInterval = "daily" | "weekly" | "monthly"
+
+export interface PriceDataPoint {
+  date: string
+  open: number
+  high: number
+  low: number
+  close: number
+  volume: number
+}
+
+export interface PriceHistoryResponse {
+  symbol: string
+  period: string
+  interval: string
+  data: PriceDataPoint[]
+}

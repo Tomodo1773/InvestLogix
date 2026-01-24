@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router"
 import useSWR from "swr"
 import { AuthProvider } from "@/components/AuthProvider"
 import { AppLayout } from "@/components/layout/app-layout"
+import { PriceChart } from "@/components/stock/price-chart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -145,6 +146,9 @@ function HoldingDetailContent() {
             )}
           </CardContent>
         </Card>
+
+        {/* 株価グラフ */}
+        <PriceChart symbol={symbol} securityType={holding?.security_type} />
 
         {/* 取引履歴 */}
         <Card>

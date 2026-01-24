@@ -52,20 +52,17 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
   const buyDates = (() => {
     if (!transactions || !data?.data || data.data.length === 0) return []
 
+    // 株価データの日付はYYYY-MM-DD形式
     const chartDates = new Set(data.data.map((d) => d.date))
+
+    // トランザクションの日付はISO形式（例: 2024-01-15T00:00:00+09:00）なので
+    // YYYY-MM-DD部分のみを抽出して比較する
     const buyTransactionDates = transactions
       .filter((t) => t.transaction_type === "buy")
-      .map((t) => t.transaction_date)
-
-    // デバッグ用ログ
-    console.log("Chart dates:", Array.from(chartDates))
-    console.log("Buy dates:", buyTransactionDates)
+      .map((t) => t.transaction_date.split("T")[0])
 
     // グラフの日付範囲内にある買付日のみを返す
-    const filteredDates = buyTransactionDates.filter((date) => chartDates.has(date))
-    console.log("Filtered buy dates (within chart range):", filteredDates)
-
-    return filteredDates
+    return buyTransactionDates.filter((date) => chartDates.has(date))
   })()
 
   return (

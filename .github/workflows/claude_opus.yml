@@ -14,10 +14,10 @@ jobs:
   claude:
     if: |
       github.actor == 'Tomodo1773' && (
-        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/opus')) ||
-        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '/opus')) ||
-        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '/opus')) ||
-        (github.event_name == 'issues' && (contains(github.event.issue.body, '/opus') || contains(github.event.issue.title, '/opus')))
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@opus')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@opus')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@opus')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '@opus') || contains(github.event.issue.title, '@opus')))
       )
     runs-on: ubuntu-latest
     permissions:
@@ -51,7 +51,7 @@ jobs:
             --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(add-npm-package),Skill(add-python-package),Skill(api-test-creator),Skill(web-test-creator),Bash(pnpm add:*),Bash(pnpm install),Bash(pnpm check:*),Bash(pnpm build),Bash(pnpm test:*),Bash(npx shadcn@latest add:*)"
 
           # Optional: Customize the trigger phrase (default: @claude)
-          trigger_phrase: "/opus"
+          trigger_phrase: "@opus"
 
           # Optional: Trigger when specific user is assigned to an issue
           # assignee_trigger: "claude-bot"

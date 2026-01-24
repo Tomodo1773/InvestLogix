@@ -5,6 +5,9 @@ import type {
   MonthlySummaryItem,
   PortfolioHistoryItem,
   PortfolioSummary,
+  PriceHistoryInterval,
+  PriceHistoryPeriod,
+  PriceHistoryResponse,
   Stock,
   TokenResponse,
   Transaction,
@@ -112,4 +115,19 @@ export async function getDividendsBySymbol(symbol: string): Promise<Dividend[]> 
 export async function getStocks(market?: string): Promise<Stock[]> {
   const params = market ? `?market=${encodeURIComponent(market)}` : ""
   return fetchWithAuth<Stock[]>(`/api/v1/stocks/${params}`)
+}
+
+// Price History API
+export async function getPriceHistory(
+  symbol: string,
+  period: PriceHistoryPeriod = "1Y",
+  interval: PriceHistoryInterval = "daily"
+): Promise<PriceHistoryResponse> {
+  const params = new URLSearchParams({
+    period,
+    interval,
+  })
+  return fetchWithAuth<PriceHistoryResponse>(
+    `/api/v1/stocks/${encodeURIComponent(symbol)}/price-history?${params.toString()}`
+  )
 }

@@ -6,15 +6,16 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. web-test-creatorスキルを使ってテストコードを実装する
-4. `pnpm install` で依存関係を更新する
+3. `pnpm install` で依存関係を更新する
+4. web-test-creatorスキルを使ってテストコードを実装する
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
 6. `pnpm test`でテストを実行する
 7. ドキュメント(AGENTS.md, README.md)を更新する
+8. コミットする
 
 ## 実装の指針
 
-- バックエンドAPIを呼び出す必要が出たときはプロジェクトルートの`openapi.json`を参照する
+- バックエンドAPIを呼び出す必要が出たときはsrc/apiを参照して仕様を確認する。
 - パッケージを追加するときはadd-npm-packageスキルを利用すること
 
 ## コマンド

@@ -1,8 +1,11 @@
+name: investlogix
+
 services:
   db:
     build:
       context: .
       dockerfile: Dockerfile
+    image: investlogix-db
     container_name: investlogix-db
     environment:
       POSTGRES_USER: postgres
@@ -23,6 +26,7 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
+    image: investlogix-api
     container_name: investlogix-api
     env_file:
       - ./api/.env
@@ -37,3 +41,20 @@ services:
       db:
         condition: service_healthy
     working_dir: /src
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: investlogix-web
+    container_name: investlogix-web
+    environment:
+      VITE_API_URL: http://localhost:8000
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    working_dir: /app

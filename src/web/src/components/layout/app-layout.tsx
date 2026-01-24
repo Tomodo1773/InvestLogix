@@ -18,7 +18,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh">
       <Sidebar />
       <div className="flex flex-1 flex-col">
         <header className="border-b bg-card">

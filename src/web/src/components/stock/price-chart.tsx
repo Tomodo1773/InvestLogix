@@ -142,7 +142,7 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
               />
               <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
               {buyDates.map((date) => (
-                <ReferenceLine key={date} x={date} stroke="red" label="買付" />
+                <ReferenceLine key={date} x={date} stroke="red" />
               ))}
             </LineChart>
           </ResponsiveContainer>

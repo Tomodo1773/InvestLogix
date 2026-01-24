@@ -148,7 +148,7 @@ function HoldingDetailContent() {
         </Card>
 
         {/* 株価グラフ */}
-        <PriceChart symbol={symbol} securityType={holding?.security_type} />
+        <PriceChart symbol={symbol} securityType={holding?.security_type} transactions={transactions} />
 
         {/* 取引履歴 */}
         <Card>

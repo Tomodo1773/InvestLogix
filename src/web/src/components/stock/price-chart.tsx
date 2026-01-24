@@ -1,16 +1,17 @@
 import { useState } from "react"
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPriceHistory } from "@/lib/api/client"
-import type { PriceHistoryInterval, PriceHistoryPeriod } from "@/lib/api/types"
+import type { PriceHistoryInterval, PriceHistoryPeriod, TransactionWithPL } from "@/lib/api/types"
 
 interface PriceChartProps {
   symbol: string
   securityType?: string | null
+  transactions?: TransactionWithPL[]
 }
 
-export function PriceChart({ symbol, securityType }: PriceChartProps) {
+export function PriceChart({ symbol, securityType, transactions }: PriceChartProps) {
   const [period, setPeriod] = useState<PriceHistoryPeriod>("1Y")
   const [interval, setInterval] = useState<PriceHistoryInterval>("daily")
 
@@ -37,6 +38,10 @@ export function PriceChart({ symbol, securityType }: PriceChartProps) {
     { label: "週足", value: "weekly" },
     { label: "月足", value: "monthly" },
   ]
+
+  // 買付日を抽出
+  const buyDates =
+    transactions?.filter((t) => t.transaction_type === "buy").map((t) => t.transaction_date) || []
 
   return (
     <Card>
@@ -114,6 +119,9 @@ export function PriceChart({ symbol, securityType }: PriceChartProps) {
                 formatter={(value: number | undefined) => [value?.toLocaleString() ?? "0", "終値"]}
               />
               <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
+              {buyDates.map((date) => (
+                <ReferenceLine key={date} x={date} stroke="#4CAF50" strokeDasharray="3 3" label="買付" />
+              ))}
             </LineChart>
           </ResponsiveContainer>
         ) : (

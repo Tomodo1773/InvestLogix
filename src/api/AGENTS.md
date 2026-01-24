@@ -6,11 +6,13 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. api-test-creatorスキルを使ってテストコードを実装する
-4. `uv run ruff format` でコードを整形する
-5. `uv run ruff check --fix` でコードスタイルを整える
-6. api-test-runnerサブエージェントでテストを行う
-7. ドキュメント(AGENTS.md, README.md, .claude/skills/api-test-creator/SKILL.md)を更新する
+3. `uv sync'`で依存関係をインストールし、仮想環境を有効化する
+4. api-test-creatorスキルを使ってテストコードを実装する
+5. `uv run ruff format` でコードを整形する
+6. `uv run ruff check --fix` でコードスタイルを整える
+7. api-test-runnerサブエージェントでテストを行う
+8. ドキュメント(AGENTS.md, README.md, .claude/skills/api-test-creator/SKILL.md)を更新する
+9. コミットする
 
 ## 実装の指針
 

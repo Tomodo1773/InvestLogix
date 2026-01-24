@@ -45,7 +45,7 @@ const FILTER_OPTIONS: { value: SecurityTypeFilter; label: string }[] = [
   { value: "ALL", label: "すべて" },
   { value: "STOCK", label: "株式" },
   { value: "ETF", label: "ETF" },
-  { value: "FUND", label: "投信" },
+  { value: "FUND", label: "投資信託" },
   { value: "REIT", label: "REIT" },
 ]
 

@@ -54,11 +54,121 @@ InvestLogix/
 | `web-ci.yml` | フロントエンドのビルド・チェック |
 | `appservice_deploy.yml` | Azure App Serviceへのデプロイ |
 
-## 実装時の重要事項
+## フロントエンド (src/web)
 
-api,webについて読み取り、作成、更新を行う場合はそれぞれ以下のドキュメントを見たうえでおこなうこと。
+React + Vite ベースのSPAです。Vercelでデプロイされています。
 
-web → src/web/CLAUDE.md
-api → src/api/CLAUDE.md
+### 実装手順
 
-重要事項が記載されているため必ず見ること
+1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
+2. コードを実装する
+3. `pnpm install` で依存関係を更新する
+4. web-test-creatorスキルを使ってテストコードを実装する
+5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
+6. `pnpm test`でテストを実行する
+7. ドキュメント(CLAUDE.md, README.md)を更新する
+8. コミットする
+
+### 実装の指針
+
+- バックエンドAPIを呼び出す必要が出たときはsrc/apiを参照して仕様を確認する。
+- パッケージを追加するときはadd-npm-packageスキルを利用すること
+
+### コーディングスタイル
+
+- **TypeScript**: 型定義を義務付け(strict mode有効)
+- **フォーマッタ/リンタ**: Biome(行長110文字以内)
+- **コードスタイル**:
+  - インデント: スペース2文字
+  - クォート: ダブルクォート
+  - セミコロン: 必要な箇所のみ
+  - 末尾カンマ: ES5形式
+- **命名規則**:
+  - コンポーネント: PascalCase
+  - 関数/変数: camelCase
+  - 定数: UPPER_SNAKE_CASE
+  - ファイル名: kebab-case (コンポーネントはPascalCaseも可)
+
+### コマンド
+
+**注意**: 以下のコマンドは `src/web` ディレクトリで実行する必要があります。
+
+```bash
+# 開発サーバーの起動
+pnpm dev
+
+# ビルド
+pnpm build
+
+# 型チェック、リンティング、フォーマット、依存関係チェック
+pnpm check
+
+# テスト実行
+# (web-test-creatorスキルを使用することを推奨)
+
+# プレビュー(ビルド後)
+pnpm preview
+```
+
+## バックエンドAPI (src/api)
+
+FastAPIベースのREST APIです。PostgreSQLをデータベースとして使用し、非同期処理に対応しています。
+
+### 実装手順
+
+1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
+2. コードを実装する
+3. `uv sync'`で依存関係をインストールし、仮想環境を有効化する
+4. api-test-creatorスキルを使ってテストコードを実装する
+5. `uv run ruff format` でコードを整形する
+6. `uv run ruff check --fix` でコードスタイルを整える
+7. api-test-runnerサブエージェントでテストを行う
+8. ドキュメント(CLAUDE.md, README.md, .claude/skills/api-test-creator/SKILL.md)を更新する
+9. コミットする
+
+### 実装の指針
+
+- パッケージを追加するときはadd-python-packageスキルを利用すること
+
+### コマンド
+
+**注意**: 以下のコマンドは `src/api` ディレクトリで実行する必要があります。
+
+```bash
+# 開発サーバ起動
+uv run uvicorn stock.app:app --reload --port 8000
+
+# テスト実行
+# (api-test-runnerサブエージェントに任せることを推奨)
+
+# リントチェック
+uv run ruff check --fix
+
+# フォーマット
+uv run ruff format
+
+# マイグレーション作成
+uv run alembic revision --autogenerate -m "説明"
+
+# マイグレーション適用
+uv run alembic upgrade head
+
+# マイグレーションロールバック
+uv run alembic downgrade -1
+```
+
+### 認証認可
+
+想定クライアントは以下
+
+| クライアント | 認証方法 | 用途 |
+|-------------|---------|------|
+| Webフロントエンド | Cookie(httponly) | ブラウザからのアクセス |
+| ユーザー端末からの直接API呼び出し | Authorization ヘッダー | スクリプトや CLI からのアクセス |
+| Swagger UI (/docs) | OAuth2形式 | API テスト・開発 |
+
+### コーディングスタイル
+
+- **Python 3.11 以上**: 型ヒントを義務付け
+- **フォーマッタ/リンタ**: Ruff(行長110文字以内)
+- **命名規則**: モジュール/パッケージはsnake_case、クラスはPascalCase

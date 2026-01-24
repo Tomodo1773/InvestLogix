@@ -98,6 +98,17 @@
 - [x] 20銘柄以下の場合は「その他」が追加されない
 - [x] `market_value` が null または空文字の場合は0として扱われフィルタリングされる
 
+#### `transformHoldingsToChartData` - フィルタ機能
+
+- [x] フィルタなし（ALL）の場合、すべてのsecurity_typeが表示される
+- [x] STOCKフィルタで株式のみが表示される
+- [x] ETFフィルタでETFのみが表示される
+- [x] FUNDフィルタで投資信託のみが表示される
+- [x] REITフィルタでREITのみが表示される
+- [x] フィルタ適用後も上位20銘柄制限が機能する
+- [x] フィルタ条件に一致する銘柄がない場合は空配列を返す
+- [x] `security_type` が null の銘柄はフィルタで除外される
+
 ### 状態管理 (`lib/stores/auth-store.ts`)
 
 #### `useAuthStore`

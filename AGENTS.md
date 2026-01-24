@@ -95,48 +95,6 @@ pnpm check
 pnpm preview
 ```
 
-**環境変数:**
-
-- `VITE_API_URL`: バックエンドAPIのベースURL
-  - ローカル: `http://localhost:8000`
-  - `.env.local`で設定
-
-### 技術スタック
-
-- **Vite 6 + React 19 + TypeScript**: コア技術
-- **React Router 7**: ルーティング
-- **Tailwind CSS 4 + shadcn/ui**: スタイリング
-- **SWR**: データフェッチング
-- **Zustand**: グローバル状態管理(認証のみ)
-- **Recharts**: グラフ描画
-- **React Hook Form + Zod**: フォーム管理
-
-### ディレクトリ構造
-
-```
-src/web/src/
-├── main.tsx                    # エントリーポイント
-├── App.tsx                     # ルーター設定
-├── routes/                     # ページコンポーネント
-├── components/                 # UIコンポーネント
-│   ├── layout/                 # レイアウト(サイドバー、ナビなど)
-│   ├── dashboard/              # ダッシュボード関連
-│   └── ui/                     # shadcn/uiコンポーネント
-└── lib/
-    ├── api/                    # APIクライアント
-    ├── stores/                 # Zustandストア
-    └── format.ts               # フォーマット関数
-```
-
-### ルーティング
-
-| パス | ページ | 説明 |
-|------|--------|------|
-| `/` | ダッシュボード | サマリーカード、資産推移、月次取引、月次配当 |
-| `/holdings` | 保有状況 | 銘柄別保有状況テーブル |
-| `/holdings/:symbol` | 銘柄詳細 | 保有サマリ、株価グラフ(投資信託除く)、取引履歴、配当履歴 |
-| `/login` | ログイン | ログインページ |
-
 ## バックエンドAPI (src/api)
 
 FastAPIベースのREST APIです。PostgreSQLをデータベースとして使用し、非同期処理に対応しています。
@@ -183,53 +141,6 @@ uv run alembic upgrade head
 # マイグレーションロールバック
 uv run alembic downgrade -1
 ```
-
-### ディレクトリ構造
-
-```
-src/api/
-├── stock/                      # メインアプリケーションコード
-│   ├── app.py                  # FastAPIアプリ定義(エントリーポイント)
-│   ├── models.py               # SQLAlchemyモデル定義
-│   ├── schemas.py              # Pydanticスキーマ定義
-│   ├── database.py             # DB接続設定
-│   ├── auth.py                 # 認証ユーティリティ
-│   ├── routes/                 # APIエンドポイント(ドメイン別)
-│   ├── services/               # ビジネスロジック層
-│   └── utils/                  # ユーティリティ関数
-├── tests/                      # テストコード
-│   ├── conftest.py             # 共通フィクスチャ
-│   ├── api/                    # APIエンドポイントテスト
-│   └── ...
-└── alembic/                    # DBマイグレーション
-```
-
-### 主要な設計パターン
-
-- **サービス層とルート層の分離**: routes/はエンドポイント定義のみ、services/にビジネスロジックを集約
-- **取引と保有株の連動**: Transaction登録時にHoldingを自動更新
-- **株式分割対応**: ユーザーごとに分割履歴を管理し、調整値を自動計算
-- **株価時系列データ取得**: 日本株はJ-Quants API、米国株はpandas_datareaderのStooqを使用。期間(1M/3M/6M/1Y/3Y)と間隔(日足/週足/月足)を指定可能。投資信託は非対応
-- **認証**: JWTトークンベース(Cookie または Authorization ヘッダー)
-
-### データモデルの関係
-
-- **User**: ユーザー情報(認証、LINE UserID)
-- **Stock**: 銘柄の基本情報(symbol, name, market, currency, security_type)
-  - **StockJPXDetail**: 日本株の詳細情報(セクター、市場区分など)
-  - **StockUSDetail**: 米国株の詳細情報(GICSセクター、S&P500構成銘柄など)
-- **StockSplit**: 株式分割履歴(user_id, symbol, split_date, split_ratio)
-  - ユーザーごとに株式分割情報を管理
-  - 分割比率: 4:1分割なら4.0、1:2併合なら0.5
-  - 分割登録時に過去取引の調整値を自動計算(ユーザーの取引のみ対象)
-- **Transaction**: 取引履歴(buy/sell, quantity, price, account_type, realized_pl, adjusted_price, adjusted_quantity)
-  - adjusted_price: 株式分割による調整後の価格
-  - adjusted_quantity: 株式分割による調整後の数量
-- **Holding**: 保有銘柄の集計情報(quantity, average_cost, current_price, unrealized_pl, realized_pl, total_dividend)
-  - 取引が発生するたびに自動的に再計算される
-  - 調整済み値を優先使用して保有数量・平均取得単価を計算
-- **Dividend**: 配当受取履歴
-- **PortfolioHistory**: ポートフォリオ全体の資産推移履歴
 
 ### 認証認可
 

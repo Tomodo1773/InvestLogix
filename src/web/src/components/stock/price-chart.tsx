@@ -48,9 +48,25 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     { label: "月足", value: "monthly" },
   ]
 
-  // 買付日を抽出
-  const buyDates =
-    transactions?.filter((t) => t.transaction_type === "buy").map((t) => t.transaction_date) || []
+  // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
+  const buyDates = (() => {
+    if (!transactions || !data?.data || data.data.length === 0) return []
+
+    const chartDates = new Set(data.data.map((d) => d.date))
+    const buyTransactionDates = transactions
+      .filter((t) => t.transaction_type === "buy")
+      .map((t) => t.transaction_date)
+
+    // デバッグ用ログ
+    console.log("Chart dates:", Array.from(chartDates))
+    console.log("Buy dates:", buyTransactionDates)
+
+    // グラフの日付範囲内にある買付日のみを返す
+    const filteredDates = buyTransactionDates.filter((date) => chartDates.has(date))
+    console.log("Filtered buy dates (within chart range):", filteredDates)
+
+    return filteredDates
+  })()
 
   return (
     <Card>

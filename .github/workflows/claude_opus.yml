@@ -48,7 +48,7 @@ jobs:
           claude_args: |
             --model claude-opus-4-5
             --system-prompt "常に日本語で回答してください。"
-            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(test-creator),Skill(add-package)"
+            --allowedTools "Bash(uv add:*),Bash(uv sync:*),Bash(uv run ruff:*),Bash(uv run pytest:*),WebSearch,WebFetch,Skill(add-npm-package),Skill(add-python-package),Skill(api-test-creator),Skill(web-test-creator),Bash(pnpm add:*),Bash(pnpm install),Bash(pnpm check:*),Bash(pnpm build),Bash(pnpm test:*),Bash(npx shadcn@latest add:*)"
 
           # Optional: Customize the trigger phrase (default: @claude)
           trigger_phrase: "/opus"

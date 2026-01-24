@@ -24,6 +24,10 @@ services:
       context: ./api
       dockerfile: Dockerfile
     container_name: investlogix-api
+    env_file:
+      - ./api/.env
+    environment:
+      DB_HOST: db
     volumes:
       - ./api:/src
       - ./api/.dockervenv:/src/.venv

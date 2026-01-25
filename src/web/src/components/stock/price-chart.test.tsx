@@ -27,6 +27,9 @@ vi.mock("recharts", () => ({
   YAxis: () => <div data-testid="y-axis" />,
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
+  ReferenceLine: ({ label, x }: { label?: { value: string }; x?: string }) => (
+    <div data-testid={`reference-line-${x}`} data-label={label?.value} />
+  ),
 }))
 
 const mockPriceData: PriceHistoryResponse = {
@@ -211,5 +214,62 @@ describe("PriceChart", () => {
     // Rechartsコンポーネントが表示されていることを確認
     expect(screen.getByTestId("recharts-container")).toBeInTheDocument()
     expect(screen.getByTestId("line-chart")).toBeInTheDocument()
+  })
+
+  it("年の変わり目に参照線が表示されること", async () => {
+    const useSWR = await import("swr")
+    const multiYearData: PriceHistoryResponse = {
+      symbol: "7203",
+      period: "3Y",
+      interval: "daily",
+      data: [
+        { date: "2023-12-28", open: 2800, high: 2850, low: 2780, close: 2820, volume: 900000 },
+        { date: "2023-12-29", open: 2820, high: 2880, low: 2810, close: 2850, volume: 950000 },
+        { date: "2024-01-04", open: 2850, high: 2900, low: 2840, close: 2880, volume: 1000000 },
+        { date: "2024-01-05", open: 2880, high: 2920, low: 2870, close: 2900, volume: 1050000 },
+        { date: "2024-12-27", open: 2950, high: 3000, low: 2940, close: 2980, volume: 1100000 },
+        { date: "2024-12-30", open: 2980, high: 3020, low: 2970, close: 3000, volume: 1150000 },
+        { date: "2025-01-06", open: 3000, high: 3050, low: 2990, close: 3020, volume: 1200000 },
+        { date: "2025-01-07", open: 3020, high: 3080, low: 3010, close: 3060, volume: 1250000 },
+      ],
+    }
+
+    vi.mocked(useSWR.default).mockReturnValue({
+      data: multiYearData,
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    })
+
+    render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+    // 2024年の変わり目の参照線が存在すること
+    const referenceLine2024 = screen.getByTestId("reference-line-2024-01-04")
+    expect(referenceLine2024).toBeInTheDocument()
+    expect(referenceLine2024).toHaveAttribute("data-label", "2024")
+
+    // 2025年の変わり目の参照線が存在すること
+    const referenceLine2025 = screen.getByTestId("reference-line-2025-01-06")
+    expect(referenceLine2025).toBeInTheDocument()
+    expect(referenceLine2025).toHaveAttribute("data-label", "2025")
+  })
+
+  it("年をまたがないデータでは年の参照線が表示されないこと", async () => {
+    const useSWR = await import("swr")
+    vi.mocked(useSWR.default).mockReturnValue({
+      data: mockPriceData, // 2025年のデータのみ
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    })
+
+    const { container } = render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+    // 年の参照線が存在しないこと（買付日の参照線のみ）
+    const referenceLines = container.querySelectorAll('[data-testid^="reference-line-"]')
+    const yearReferenceLines = Array.from(referenceLines).filter((el) => el.getAttribute("data-label"))
+    expect(yearReferenceLines).toHaveLength(0)
   })
 })

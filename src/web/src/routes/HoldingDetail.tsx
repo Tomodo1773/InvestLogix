@@ -20,6 +20,12 @@ function HoldingDetailContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { symbol } = useParams<{ symbol: string }>()
 
+  const formatSplitRatio = (ratio: string) => {
+    const numRatio = Number(ratio)
+    if (Number.isNaN(numRatio)) return ratio
+    return `${numRatio}:1 分割`
+  }
+
   const { data: holdings, isLoading: isLoadingHolding } = useSWR(
     isAuthenticated && symbol ? `/holdings/${symbol}` : null,
     () => (symbol ? getHoldingBySymbol(symbol) : null)
@@ -331,25 +337,17 @@ function HoldingDetailContent() {
                   </TableHeader>
                   <TableBody>
                     {stockSplits && stockSplits.length > 0 ? (
-                      stockSplits.map((stockSplit) => {
-                        const formatSplitRatio = (ratio: string) => {
-                          const numRatio = Number(ratio)
-                          if (Number.isNaN(numRatio)) return ratio
-                          return `${numRatio}:1 分割`
-                        }
-
-                        return (
-                          <TableRow key={stockSplit.split_id}>
-                            <TableCell>{formatDate(stockSplit.split_date)}</TableCell>
-                            <TableCell className="text-right font-medium">
-                              {formatSplitRatio(stockSplit.split_ratio)}
-                            </TableCell>
-                            <TableCell className="text-right text-sm text-muted-foreground">
-                              {formatDate(stockSplit.created_at)}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })
+                      stockSplits.map((stockSplit) => (
+                        <TableRow key={stockSplit.split_id}>
+                          <TableCell>{formatDate(stockSplit.split_date)}</TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatSplitRatio(stockSplit.split_ratio)}
+                          </TableCell>
+                          <TableCell className="text-right text-sm text-muted-foreground">
+                            {formatDate(stockSplit.created_at)}
+                          </TableCell>
+                        </TableRow>
+                      ))
                     ) : (
                       <TableRow>
                         <TableCell colSpan={3} className="text-center text-muted-foreground">

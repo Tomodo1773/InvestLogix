@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { StockSplit } from "@/lib/api/types"
+import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
 
 interface StockSplitsTableProps {
@@ -79,15 +80,6 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
 
   const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
     usePagination(sortedStockSplits, PAGE_SIZE)
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  }
 
   const formatSplitRatio = (ratio: string) => {
     const numRatio = Number(ratio)

@@ -14,7 +14,7 @@ function StockSplitsContent() {
     data: stockSplits,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/stock-splits/" : null, getStockSplits)
+  } = useSWR(isAuthenticated ? "/api/v1/stock-splits/" : null, () => getStockSplits())
 
   const handleRefresh = () => {
     mutate()

@@ -1,4 +1,13 @@
-import { CircleDollarSign, Database, LayoutDashboard, Menu, Receipt, TrendingUp, X } from "lucide-react"
+import {
+  CircleDollarSign,
+  Database,
+  LayoutDashboard,
+  Menu,
+  Receipt,
+  Scissors,
+  TrendingUp,
+  X,
+} from "lucide-react"
 import { useState } from "react"
 import { NavLink } from "react-router"
 import { Button } from "@/components/ui/button"
@@ -23,6 +32,11 @@ const navItems = [
     to: "/dividends",
     label: "配当金履歴",
     icon: CircleDollarSign,
+  },
+  {
+    to: "/stock-splits",
+    label: "株式分割履歴",
+    icon: Scissors,
   },
   {
     to: "/stocks",

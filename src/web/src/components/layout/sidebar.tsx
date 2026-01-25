@@ -5,6 +5,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   Receipt,
+  Scissors,
   TrendingUp,
 } from "lucide-react"
 import { NavLink } from "react-router"
@@ -32,6 +33,11 @@ const navItems = [
     to: "/dividends",
     label: "配当金履歴",
     icon: CircleDollarSign,
+  },
+  {
+    to: "/stock-splits",
+    label: "株式分割履歴",
+    icon: Scissors,
   },
   {
     to: "/stocks",

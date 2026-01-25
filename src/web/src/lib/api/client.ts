@@ -9,6 +9,7 @@ import type {
   PriceHistoryPeriod,
   PriceHistoryResponse,
   Stock,
+  StockSplit,
   TokenResponse,
   Transaction,
   TransactionWithPL,
@@ -130,4 +131,10 @@ export async function getPriceHistory(
   return fetchWithAuth<PriceHistoryResponse>(
     `/api/v1/stocks/${encodeURIComponent(symbol)}/price-history?${params.toString()}`
   )
+}
+
+// Stock Split APIs
+export async function getStockSplits(symbol?: string): Promise<StockSplit[]> {
+  const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""
+  return fetchWithAuth<StockSplit[]>(`/api/v1/stock-splits/${params}`)
 }

@@ -137,3 +137,13 @@ export interface PriceHistoryResponse {
   interval: string
   data: PriceDataPoint[]
 }
+
+// Stock Splits
+export interface StockSplit {
+  split_id: number
+  user_id: number
+  symbol: string
+  split_date: string
+  split_ratio: string
+  created_at: string
+}

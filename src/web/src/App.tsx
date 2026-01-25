@@ -4,6 +4,7 @@ import HoldingDetail from "./routes/HoldingDetail"
 import Holdings from "./routes/Holdings"
 import Home from "./routes/Home"
 import Login from "./routes/Login"
+import StockSplits from "./routes/StockSplits"
 import Stocks from "./routes/Stocks"
 import Transactions from "./routes/Transactions"
 
@@ -15,6 +16,7 @@ function App() {
       <Route path="/holdings/:symbol" element={<HoldingDetail />} />
       <Route path="/transactions" element={<Transactions />} />
       <Route path="/dividends" element={<Dividends />} />
+      <Route path="/stock-splits" element={<StockSplits />} />
       <Route path="/stocks" element={<Stocks />} />
       <Route path="/login" element={<Login />} />
     </Routes>

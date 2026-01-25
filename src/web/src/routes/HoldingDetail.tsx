@@ -7,7 +7,12 @@ import { PriceChart } from "@/components/stock/price-chart"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getDividendsBySymbol, getHoldingBySymbol, getTransactionsBySymbol } from "@/lib/api/client"
+import {
+  getDividendsBySymbol,
+  getHoldingBySymbol,
+  getStockSplits,
+  getTransactionsBySymbol,
+} from "@/lib/api/client"
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
@@ -28,6 +33,11 @@ function HoldingDetailContent() {
   const { data: dividends, isLoading: isLoadingDividends } = useSWR(
     isAuthenticated && symbol ? `/dividends/${symbol}` : null,
     () => (symbol ? getDividendsBySymbol(symbol) : null)
+  )
+
+  const { data: stockSplits, isLoading: isLoadingStockSplits } = useSWR(
+    isAuthenticated && symbol ? `/stock-splits/${symbol}` : null,
+    () => (symbol ? getStockSplits(symbol) : null)
   )
 
   const holding = holdings?.[0]
@@ -286,6 +296,64 @@ function HoldingDetailContent() {
                       <TableRow>
                         <TableCell colSpan={5} className="text-center text-muted-foreground">
                           配当金履歴がありません
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* 株式分割履歴 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>株式分割履歴</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStockSplits ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loading elements
+                  <div key={`skeleton-${i}`} className="h-12 animate-pulse rounded bg-muted" />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>分割日</TableHead>
+                      <TableHead className="text-right">分割比率</TableHead>
+                      <TableHead className="text-right">登録日</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {stockSplits && stockSplits.length > 0 ? (
+                      stockSplits.map((stockSplit) => {
+                        const formatSplitRatio = (ratio: string) => {
+                          const numRatio = Number(ratio)
+                          if (Number.isNaN(numRatio)) return ratio
+                          return `${numRatio}:1 分割`
+                        }
+
+                        return (
+                          <TableRow key={stockSplit.split_id}>
+                            <TableCell>{formatDate(stockSplit.split_date)}</TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatSplitRatio(stockSplit.split_ratio)}
+                            </TableCell>
+                            <TableCell className="text-right text-sm text-muted-foreground">
+                              {formatDate(stockSplit.created_at)}
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                          株式分割履歴がありません
                         </TableCell>
                       </TableRow>
                     )}

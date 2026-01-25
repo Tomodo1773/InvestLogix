@@ -124,11 +124,11 @@ class PriceHistoryService:
                 result.append(
                     {
                         "date": price["Date"],
-                        "open": float(price["Open"]),
-                        "high": float(price["High"]),
-                        "low": float(price["Low"]),
-                        "close": float(price["Close"]),
-                        "volume": int(price["Volume"]),
+                        "open": float(price["AdjustmentOpen"]),
+                        "high": float(price["AdjustmentHigh"]),
+                        "low": float(price["AdjustmentLow"]),
+                        "close": float(price["AdjustmentClose"]),
+                        "volume": int(price["AdjustmentVolume"]),
                     }
                 )
             return result

@@ -27,23 +27,23 @@ async def test_get_japanese_stock_price_history(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # J-Quants APIのモックを設定
+    # J-Quants APIのモックを設定（調整済み株価フィールドを使用）
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "Open": 3000.0,
-            "High": 3050.0,
-            "Low": 2980.0,
-            "Close": 3020.0,
-            "Volume": 1000000,
+            "AdjustmentOpen": 3000.0,
+            "AdjustmentHigh": 3050.0,
+            "AdjustmentLow": 2980.0,
+            "AdjustmentClose": 3020.0,
+            "AdjustmentVolume": 1000000,
         },
         {
             "Date": "2025-01-21",
-            "Open": 3020.0,
-            "High": 3080.0,
-            "Low": 3010.0,
-            "Close": 3060.0,
-            "Volume": 1200000,
+            "AdjustmentOpen": 3020.0,
+            "AdjustmentHigh": 3080.0,
+            "AdjustmentLow": 3010.0,
+            "AdjustmentClose": 3060.0,
+            "AdjustmentVolume": 1200000,
         },
     ]
 
@@ -174,31 +174,31 @@ async def test_get_price_history_with_weekly_interval(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # 複数日分のモックデータ（同じ週の月曜〜金曜）
+    # 複数日分のモックデータ（同じ週の月曜〜金曜、調整済み株価フィールドを使用）
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "Open": 3000.0,
-            "High": 3050.0,
-            "Low": 2980.0,
-            "Close": 3020.0,
-            "Volume": 1000000,
+            "AdjustmentOpen": 3000.0,
+            "AdjustmentHigh": 3050.0,
+            "AdjustmentLow": 2980.0,
+            "AdjustmentClose": 3020.0,
+            "AdjustmentVolume": 1000000,
         },
         {
             "Date": "2025-01-21",
-            "Open": 3020.0,
-            "High": 3080.0,
-            "Low": 3010.0,
-            "Close": 3060.0,
-            "Volume": 1200000,
+            "AdjustmentOpen": 3020.0,
+            "AdjustmentHigh": 3080.0,
+            "AdjustmentLow": 3010.0,
+            "AdjustmentClose": 3060.0,
+            "AdjustmentVolume": 1200000,
         },
         {
             "Date": "2025-01-22",
-            "Open": 3060.0,
-            "High": 3100.0,
-            "Low": 3040.0,
-            "Close": 3080.0,
-            "Volume": 1100000,
+            "AdjustmentOpen": 3060.0,
+            "AdjustmentHigh": 3100.0,
+            "AdjustmentLow": 3040.0,
+            "AdjustmentClose": 3080.0,
+            "AdjustmentVolume": 1100000,
         },
     ]
 
@@ -246,39 +246,39 @@ async def test_get_price_history_with_monthly_interval(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # 複数日分のモックデータ（異なる月）
+    # 複数日分のモックデータ（異なる月、調整済み株価フィールドを使用）
     mock_jquants_prices = [
         {
             "Date": "2024-12-20",
-            "Open": 2900.0,
-            "High": 2950.0,
-            "Low": 2880.0,
-            "Close": 2920.0,
-            "Volume": 1000000,
+            "AdjustmentOpen": 2900.0,
+            "AdjustmentHigh": 2950.0,
+            "AdjustmentLow": 2880.0,
+            "AdjustmentClose": 2920.0,
+            "AdjustmentVolume": 1000000,
         },
         {
             "Date": "2024-12-25",
-            "Open": 2920.0,
-            "High": 2980.0,
-            "Low": 2910.0,
-            "Close": 2960.0,
-            "Volume": 1200000,
+            "AdjustmentOpen": 2920.0,
+            "AdjustmentHigh": 2980.0,
+            "AdjustmentLow": 2910.0,
+            "AdjustmentClose": 2960.0,
+            "AdjustmentVolume": 1200000,
         },
         {
             "Date": "2025-01-10",
-            "Open": 2960.0,
-            "High": 3000.0,
-            "Low": 2940.0,
-            "Close": 2980.0,
-            "Volume": 1100000,
+            "AdjustmentOpen": 2960.0,
+            "AdjustmentHigh": 3000.0,
+            "AdjustmentLow": 2940.0,
+            "AdjustmentClose": 2980.0,
+            "AdjustmentVolume": 1100000,
         },
         {
             "Date": "2025-01-20",
-            "Open": 2980.0,
-            "High": 3050.0,
-            "Low": 2970.0,
-            "Close": 3020.0,
-            "Volume": 1300000,
+            "AdjustmentOpen": 2980.0,
+            "AdjustmentHigh": 3050.0,
+            "AdjustmentLow": 2970.0,
+            "AdjustmentClose": 3020.0,
+            "AdjustmentVolume": 1300000,
         },
     ]
 
@@ -403,11 +403,11 @@ async def test_get_price_history_different_periods(
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "Open": 3000.0,
-            "High": 3050.0,
-            "Low": 2980.0,
-            "Close": 3020.0,
-            "Volume": 1000000,
+            "AdjustmentOpen": 3000.0,
+            "AdjustmentHigh": 3050.0,
+            "AdjustmentLow": 2980.0,
+            "AdjustmentClose": 3020.0,
+            "AdjustmentVolume": 1000000,
         },
     ]
 

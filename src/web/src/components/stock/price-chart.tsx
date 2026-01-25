@@ -48,6 +48,37 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     { label: "月足", value: "monthly" },
   ]
 
+  // 期間に応じた目盛り間隔を設定
+  const getTickInterval = (selectedPeriod: PriceHistoryPeriod, dataLength: number) => {
+    switch (selectedPeriod) {
+      case "1M":
+        return Math.ceil(dataLength / 6) // 約6個の目盛り
+      case "3M":
+        return Math.ceil(dataLength / 8)
+      case "6M":
+        return Math.ceil(dataLength / 10)
+      case "1Y":
+        return Math.ceil(dataLength / 12)
+      case "3Y":
+        return Math.ceil(dataLength / 12)
+      default:
+        return 0
+    }
+  }
+
+  // 期間に応じたフォーマットを設定
+  const getTickFormatter = (selectedPeriod: PriceHistoryPeriod) => {
+    return (value: string) => {
+      const date = new Date(value)
+      if (selectedPeriod === "3Y" || selectedPeriod === "1Y") {
+        // 長期間は年/月表示（YY/M形式）
+        return `${date.getFullYear() % 100}/${date.getMonth() + 1}`
+      }
+      // 短期間は月/日表示
+      return `${date.getMonth() + 1}/${date.getDate()}`
+    }
+  }
+
   // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
   const buyDates = (() => {
     if (!transactions || !data?.data || data.data.length === 0) return []
@@ -122,10 +153,8 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="date"
-                tickFormatter={(value) => {
-                  const date = new Date(value)
-                  return `${date.getMonth() + 1}/${date.getDate()}`
-                }}
+                interval={getTickInterval(period, data.data.length)}
+                tickFormatter={getTickFormatter(period)}
               />
               <YAxis domain={["auto", "auto"]} tickFormatter={(value) => value.toLocaleString()} />
               <Tooltip

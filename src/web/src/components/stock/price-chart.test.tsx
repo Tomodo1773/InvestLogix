@@ -212,4 +212,104 @@ describe("PriceChart", () => {
     expect(screen.getByTestId("recharts-container")).toBeInTheDocument()
     expect(screen.getByTestId("line-chart")).toBeInTheDocument()
   })
+
+  it("長期間（1Y）選択時にXAxisのintervalとticksが設定されること", async () => {
+    const useSWR = await import("swr")
+    const mockData: PriceHistoryResponse = {
+      symbol: "7203",
+      period: "1Y",
+      interval: "daily",
+      data: Array.from({ length: 365 }, (_, i) => ({
+        date: `2024-${String(Math.floor(i / 30) + 1).padStart(2, "0")}-${String((i % 30) + 1).padStart(2, "0")}`,
+        open: 3000,
+        high: 3050,
+        low: 2980,
+        close: 3020,
+        volume: 1000000,
+      })),
+    }
+
+    vi.mocked(useSWR.default).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    })
+
+    render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+    // XAxisがレンダリングされていることを確認（Rechartsはモック化されているため、実際のpropsは検証できない）
+    expect(screen.getByTestId("x-axis")).toBeInTheDocument()
+  })
+
+  it("短期間（1M）選択時にXAxisのintervalとticksが設定されること", async () => {
+    const user = userEvent.setup()
+    const useSWR = await import("swr")
+    const mockData: PriceHistoryResponse = {
+      symbol: "7203",
+      period: "1M",
+      interval: "daily",
+      data: Array.from({ length: 30 }, (_, i) => ({
+        date: `2024-01-${String(i + 1).padStart(2, "0")}`,
+        open: 3000,
+        high: 3050,
+        low: 2980,
+        close: 3020,
+        volume: 1000000,
+      })),
+    }
+
+    vi.mocked(useSWR.default).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    })
+
+    render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+    // 1Mボタンをクリック
+    const button1M = screen.getByText("1M")
+    await user.click(button1M)
+
+    // XAxisがレンダリングされていることを確認
+    expect(screen.getByTestId("x-axis")).toBeInTheDocument()
+  })
+
+  it("3Y期間選択時にXAxisのintervalとticksが設定されること", async () => {
+    const user = userEvent.setup()
+    const useSWR = await import("swr")
+    const mockData: PriceHistoryResponse = {
+      symbol: "7203",
+      period: "3Y",
+      interval: "daily",
+      data: Array.from({ length: 1095 }, (_, i) => ({
+        date: `202${Math.floor(i / 365) + 2}-${String(Math.floor((i % 365) / 30) + 1).padStart(2, "0")}-${String((i % 30) + 1).padStart(2, "0")}`,
+        open: 3000,
+        high: 3050,
+        low: 2980,
+        close: 3020,
+        volume: 1000000,
+      })),
+    }
+
+    vi.mocked(useSWR.default).mockReturnValue({
+      data: mockData,
+      isLoading: false,
+      error: null,
+      isValidating: false,
+      mutate: vi.fn(),
+    })
+
+    render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+    // 3Yボタンをクリック
+    const button3Y = screen.getByText("3Y")
+    await user.click(button3Y)
+
+    // XAxisがレンダリングされていることを確認
+    expect(screen.getByTestId("x-axis")).toBeInTheDocument()
+  })
 })

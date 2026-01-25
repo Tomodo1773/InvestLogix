@@ -47,6 +47,8 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
   }, [transactions, data])
 
   // 年の変わり目を検出
+  // 注意: 日付文字列はYYYY-MM-DD形式なので、直接文字列から年を抽出する
+  // new Date()を使うとタイムゾーンの影響で年がずれる可能性があるため
   const yearBoundaries = useMemo(() => {
     if (!data?.data || data.data.length === 0) return []
 
@@ -54,8 +56,8 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     let currentYear: number | null = null
 
     for (const item of data.data) {
-      const date = new Date(item.date)
-      const year = date.getFullYear()
+      // YYYY-MM-DD形式の日付文字列から年を直接抽出
+      const year = Number.parseInt(item.date.substring(0, 4), 10)
 
       if (currentYear !== null && year !== currentYear) {
         // 年が変わった最初のデータポイントを記録

@@ -5,49 +5,27 @@ J-Quants APIクライアントモジュール
 
 import asyncio
 import os
-from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 import aiohttp
 from dotenv import load_dotenv
-from jquantsapi.client import Client
+from jquantsapi import ClientV2
 
 from ..database import settings
 
 
 class JQuantsClient:
-    """J-Quants APIクライアント"""
+    """J-Quants APIクライアント（v2対応）"""
 
-    BASE_URL = "https://api.jquants.com/v1"
+    BASE_URL = "https://api.jquants.com/v2"
 
-    def __init__(self, mail_address: str, password: str):
+    def __init__(self, api_key: str = ""):
         """
         クライアントの初期化
         Args:
-            mail_address: J-Quants APIログイン用メールアドレス
-            password: J-Quants APIログイン用パスワード
+            api_key: J-Quants APIキー。指定しない場合は環境変数JQUANTS_API_KEYから取得
         """
-        self.client = Client(mail_address=mail_address, password=password)
-        self._refresh_token = None
-        self._id_token = None
-        self._token_expires_at = None
-
-    def authenticate(self) -> None:
-        """
-        認証を行い、トークンを取得する
-        トークンの有効期限が切れている場合は再取得する
-        """
-        if not self._is_token_valid():
-            self._refresh_token = self.client.get_refresh_token()
-            self._id_token = self.client.get_id_token(self._refresh_token)
-            self._token_expires_at = datetime.now() + timedelta(hours=23)  # トークンの有効期限は24時間
-
-    def _is_token_valid(self) -> bool:
-        """トークンが有効かどうかを確認する"""
-        if not self._token_expires_at:
-            return False
-        # 有効期限の1時間前に更新する
-        return datetime.now() < (self._token_expires_at - timedelta(hours=1))
+        self.client = ClientV2(api_key=api_key) if api_key else ClientV2()
 
     async def get_prices(self, symbol: str, start_date: str, end_date: str = None) -> List[Dict]:
         """
@@ -59,9 +37,8 @@ class JQuantsClient:
         Returns:
             株価情報のリスト
         """
-        self.authenticate()
         url = f"{self.BASE_URL}/prices/daily_quotes"
-        headers = {"Authorization": f"Bearer {self._id_token}"}
+        headers = {"x-api-key": self.client.api_key}
         params = {"code": symbol, "from": start_date}
         if end_date:
             params["to"] = end_date
@@ -81,7 +58,6 @@ class JQuantsClient:
         Returns:
             企業情報の辞書
         """
-        self.authenticate()
         response = self.client.get_listed_info(code=symbol)
         if response.empty:
             return None
@@ -95,13 +71,12 @@ class JQuantsClient:
         Returns:
             市場区分情報のリスト
         """
-        self.authenticate()
         response = self.client.get_market_segments()
         return response.to_dict("records") if not response.empty else []
 
 
 # シングルトンインスタンスの作成（環境変数から認証情報を取得）
-jquants_client = JQuantsClient(mail_address=settings.JQUANTS_MAIL_ADDRESS, password=settings.JQUANTS_PASSWORD)
+jquants_client = JQuantsClient(api_key=settings.JQUANTS_API_KEY)
 
 
 def test_api():
@@ -141,15 +116,14 @@ if __name__ == "__main__":
     load_dotenv()
 
     # 認証情報の取得
-    mail_address = os.getenv("JQUANTS_MAIL_ADDRESS")
-    password = os.getenv("JQUANTS_PASSWORD")
+    api_key = os.getenv("JQUANTS_API_KEY")
 
-    if not mail_address or not password:
-        print("環境変数 JQUANTS_MAIL_ADDRESS と JQUANTS_PASSWORD を設定してください。")
+    if not api_key:
+        print("環境変数 JQUANTS_API_KEY を設定してください。")
         exit(1)
 
     # クライアントの初期化（シングルトンインスタンスを上書き）
-    jquants_client = JQuantsClient(mail_address=mail_address, password=password)
+    jquants_client = JQuantsClient(api_key=api_key)
 
     # テストの実行
     test_api()

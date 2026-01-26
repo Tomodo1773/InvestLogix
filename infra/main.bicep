@@ -75,8 +75,7 @@ module AppService './app/api.bicep' = {
       DB_PORT: appSettings.DB_PORT
       DB_NAME: appSettings.DB_NAME
       JWT_SECRET_KEY: appSettings.JWT_SECRET_KEY
-      JQUANTS_MAIL_ADDRESS: appSettings.JQUANTS_MAIL_ADDRESS
-      JQUANTS_PASSWORD: appSettings.JQUANTS_PASSWORD
+      JQUANTS_API_KEY: appSettings.JQUANTS_API_KEY
       ALPHAVANTAGE_API_KEY: appSettings.ALPHAVANTAGE_API_KEY
       LINE_CHANNEL_ACCESS_TOKEN: appSettings.LINE_CHANNEL_ACCESS_TOKEN
       CORS_ORIGINS: appSettings.CORS_ORIGINS

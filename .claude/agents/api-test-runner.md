@@ -1,5 +1,5 @@
 ---
-name: test-runner
+name: api-test-runner
 description: |
   **[src/api専用]** バックエンド（Python/FastAPI）のテストを実行するエージェントです。
   Use this agent when the user requests to run tests, wants to verify code changes,
@@ -9,9 +9,9 @@ description: |
   - <example>
     Context: ユーザーが新しい機能を実装した後、テストを実行したい場合
     user: "holding_service.pyに新しい損益計算機能を追加しました。テストを実行してください"
-    assistant: "test-runnerエージェントを使ってテストを実行します"
+    assistant: "api-test-runnerエージェントを使ってテストを実行します"
     <commentary>
-    コード変更後のテスト実行が必要なため、test-runnerエージェントを起動して
+    コード変更後のテスト実行が必要なため、api-test-runnerエージェントを起動して
     uv run pytestを実行し、結果を報告する
     </commentary>
     </example>

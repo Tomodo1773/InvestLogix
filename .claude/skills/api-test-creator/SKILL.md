@@ -1,5 +1,5 @@
 ---
-name: test-creator
+name: api-test-creator
 description: |
   **[src/api専用]** バックエンド（Python/FastAPI）のテストコードを作成する際に使用します。
   ユニットテスト、統合テスト、エンドツーエンドテストなど、あらゆる種類のテストコードを生成するためにこのスキルを利用してください。

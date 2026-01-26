@@ -63,13 +63,6 @@ class JQuantsClient:
         self.api_key = api_key
         self.client = ClientV2(api_key=api_key)
 
-    def authenticate(self) -> None:
-        """
-        認証を行う（V2では不要だが互換性のため残す）
-        V2ではAPIキーによる認証のため、トークン管理は不要
-        """
-        pass
-
     def _convert_v2_to_v1_quote(self, quote: Dict) -> Dict:
         """
         V2形式の株価データをV1形式に変換する

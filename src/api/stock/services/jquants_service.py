@@ -38,7 +38,7 @@ class JQuantsClient:
             株価情報のリスト
         """
         url = f"{self.BASE_URL}/prices/daily_quotes"
-        headers = {"x-api-key": self.client.api_key}
+        headers = {"x-api-key": self.client._api_key}
         params = {"code": symbol, "from": start_date}
         if end_date:
             params["to"] = end_date
@@ -58,7 +58,7 @@ class JQuantsClient:
         Returns:
             企業情報の辞書
         """
-        response = self.client.get_listed_info(code=symbol)
+        response = self.client.get_eq_master(code=symbol)
         if response.empty:
             return None
         return response.iloc[0].to_dict()

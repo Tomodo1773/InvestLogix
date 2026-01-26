@@ -93,7 +93,7 @@ class JQuantsClient:
             result[new_key] = value
         return result
 
-    async def get_prices(self, symbol: str, start_date: str, end_date: str = None) -> List[Dict]:
+    async def get_prices(self, symbol: str, start_date: str, end_date: Optional[str] = None) -> List[Dict]:
         """
         指定した銘柄の株価情報を取得する
         Args:

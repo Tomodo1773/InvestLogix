@@ -1659,7 +1659,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.3" },
     { name = "fastapi", specifier = ">=0.100.0" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "jquants-api-client", specifier = ">=1.7.3" },
+    { name = "jquants-api-client", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "pandas-datareader", specifier = ">=0.10.0" },
     { name = "passlib", extras = ["bcrypt"], specifier = ">=1.7.4" },

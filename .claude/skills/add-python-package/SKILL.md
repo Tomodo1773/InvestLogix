@@ -1,5 +1,5 @@
 ---
-name: add-package
+name: add-python-package
 description: |
   **[src/api専用]** バックエンド（Python/FastAPI）にパッケージを追加する際に使用します。
   開発用と、プロダクト用途問わずこれを使います。

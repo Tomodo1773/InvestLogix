@@ -1,5 +1,5 @@
 ---
-name: add-package
+name: add-npm-package
 description: |
   **[src/web専用]** フロントエンド（React/TypeScript）にnpmパッケージを追加する際に使用します。
   開発用と、プロダクト用途問わずこれを使います。shadcnはnpxのため本スキルでは扱いません。

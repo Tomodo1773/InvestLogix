@@ -104,7 +104,7 @@ pnpm build
 pnpm check
 
 # テスト実行
-# (web-test-creatorスキルを使用することを推奨)
+pnpm test
 
 # プレビュー(ビルド後)
 pnpm preview

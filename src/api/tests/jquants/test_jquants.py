@@ -12,11 +12,10 @@ from stock.services.jquants_service import JQuantsClient
 def jquants_client():
     """実際のAPIクライアントを使用するfixture"""
     load_dotenv()
-    mail_address = os.getenv("JQUANTS_MAIL_ADDRESS")
-    password = os.getenv("JQUANTS_PASSWORD")
-    if not mail_address or not password:
-        pytest.skip("環境変数 JQUANTS_MAIL_ADDRESS と JQUANTS_PASSWORD が設定されていません")
-    return JQuantsClient(mail_address=mail_address, password=password)
+    api_key = os.getenv("JQUANTS_API_KEY")
+    if not api_key:
+        pytest.skip("環境変数 JQUANTS_API_KEY が設定されていません")
+    return JQuantsClient(api_key=api_key)
 
 
 @pytest.mark.asyncio

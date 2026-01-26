@@ -41,8 +41,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # J-Quants API設定
-    JQUANTS_MAIL_ADDRESS: str = ""
-    JQUANTS_PASSWORD: str = ""
+    JQUANTS_API_KEY: str = ""
 
     # Alpha Vantage API設定
     ALPHAVANTAGE_API_KEY: str = ""

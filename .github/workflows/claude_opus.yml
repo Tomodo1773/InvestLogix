@@ -49,7 +49,7 @@ jobs:
           settings: |
             {
               "model": "claude-opus-4-5",
-              "systemPrompt": "常に日本語で回答してください。",
+              "language": "Japanese",
               "permissions": {
                 "allow": [
                   "Bash(uv add:*)",

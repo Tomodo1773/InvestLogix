@@ -81,7 +81,6 @@ jobs:
                 ]
               },
               "env": {
-                "JQUANTS_MAIL_ADDRESS": "${{ secrets.JQUANTS_MAIL_ADDRESS }}",
-                "JQUANTS_PASSWORD": "${{ secrets.JQUANTS_PASSWORD }}"
+                "JQUANTS_API_KEY": "${{ secrets.JQUANTS_API_KEY }}"
               }
             }

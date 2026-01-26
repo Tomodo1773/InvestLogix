@@ -21,8 +21,7 @@ jobs:
       image: node:20-bookworm
     timeout-minutes: 30
     env:
-      JQUANTS_MAIL_ADDRESS: ${{ secrets.JQUANTS_MAIL_ADDRESS }}
-      JQUANTS_PASSWORD: ${{ secrets.JQUANTS_PASSWORD }}
+      JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
     steps:
       - uses: actions/checkout@v6
 

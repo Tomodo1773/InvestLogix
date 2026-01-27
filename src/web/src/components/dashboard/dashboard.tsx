@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/client"
 import { AssetChart } from "./asset-chart"
 import { DividendChart } from "./dividend-chart"
+import { NisaLimitGauge } from "./nisa-limit-gauge"
 import { StatCards } from "./stat-cards"
 import { TradeChart } from "./trade-chart"
 
@@ -56,6 +57,7 @@ export function Dashboard() {
         </Button>
       </div>
       <StatCards summary={summary} isLoading={summaryLoading} />
+      <NisaLimitGauge data={trades} isLoading={tradesLoading} />
       <AssetChart history={history} isLoading={historyLoading} />
       <div className="grid gap-6 lg:grid-cols-2">
         <TradeChart data={trades} isLoading={tradesLoading} />

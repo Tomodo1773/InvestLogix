@@ -27,33 +27,37 @@ async def test_get_japanese_stock_price_history(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # J-Quants APIのモックを設定（調整済み株価フィールドを使用）
+    # J-Quants APIのモックを設定（V2形式、調整済み株価フィールドを使用）
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "AdjustmentOpen": 3000.0,
-            "AdjustmentHigh": 3050.0,
-            "AdjustmentLow": 2980.0,
-            "AdjustmentClose": 3020.0,
-            "AdjustmentVolume": 1000000,
+            "AdjO": 3000.0,
+            "AdjH": 3050.0,
+            "AdjL": 2980.0,
+            "AdjC": 3020.0,
+            "AdjVo": 1000000,
         },
         {
             "Date": "2025-01-21",
-            "AdjustmentOpen": 3020.0,
-            "AdjustmentHigh": 3080.0,
-            "AdjustmentLow": 3010.0,
-            "AdjustmentClose": 3060.0,
-            "AdjustmentVolume": 1200000,
+            "AdjO": 3020.0,
+            "AdjH": 3080.0,
+            "AdjL": 3010.0,
+            "AdjC": 3060.0,
+            "AdjVo": 1200000,
         },
     ]
 
     # 非同期関数なので、AsyncMockを使用
     from unittest.mock import AsyncMock
 
+    # get_jquants_client()が返すモックオブジェクトを作成
+    mock_client = mocker.MagicMock()
+    mock_client.get_prices = AsyncMock(return_value=mock_jquants_prices)
+
+    # price_history_serviceでインポートされたget_jquants_clientをモック化
     mock_get_prices = mocker.patch(
-        "stock.services.jquants_service.jquants_client.get_prices",
-        new_callable=AsyncMock,
-        return_value=mock_jquants_prices,
+        "stock.services.price_history_service.get_jquants_client",
+        return_value=mock_client,
     )
 
     # APIリクエスト実行
@@ -174,40 +178,42 @@ async def test_get_price_history_with_weekly_interval(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # 複数日分のモックデータ（同じ週の月曜〜金曜、調整済み株価フィールドを使用）
+    # 複数日分のモックデータ（同じ週の月曜〜金曜、V2形式）
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "AdjustmentOpen": 3000.0,
-            "AdjustmentHigh": 3050.0,
-            "AdjustmentLow": 2980.0,
-            "AdjustmentClose": 3020.0,
-            "AdjustmentVolume": 1000000,
+            "AdjO": 3000.0,
+            "AdjH": 3050.0,
+            "AdjL": 2980.0,
+            "AdjC": 3020.0,
+            "AdjVo": 1000000,
         },
         {
             "Date": "2025-01-21",
-            "AdjustmentOpen": 3020.0,
-            "AdjustmentHigh": 3080.0,
-            "AdjustmentLow": 3010.0,
-            "AdjustmentClose": 3060.0,
-            "AdjustmentVolume": 1200000,
+            "AdjO": 3020.0,
+            "AdjH": 3080.0,
+            "AdjL": 3010.0,
+            "AdjC": 3060.0,
+            "AdjVo": 1200000,
         },
         {
             "Date": "2025-01-22",
-            "AdjustmentOpen": 3060.0,
-            "AdjustmentHigh": 3100.0,
-            "AdjustmentLow": 3040.0,
-            "AdjustmentClose": 3080.0,
-            "AdjustmentVolume": 1100000,
+            "AdjO": 3060.0,
+            "AdjH": 3100.0,
+            "AdjL": 3040.0,
+            "AdjC": 3080.0,
+            "AdjVo": 1100000,
         },
     ]
 
     from unittest.mock import AsyncMock
 
+    mock_client = mocker.MagicMock()
+    mock_client.get_prices = AsyncMock(return_value=mock_jquants_prices)
+
     mocker.patch(
-        "stock.services.jquants_service.jquants_client.get_prices",
-        new_callable=AsyncMock,
-        return_value=mock_jquants_prices,
+        "stock.services.price_history_service.get_jquants_client",
+        return_value=mock_client,
     )
 
     # APIリクエスト実行（週次指定）
@@ -246,48 +252,50 @@ async def test_get_price_history_with_monthly_interval(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
-    # 複数日分のモックデータ（異なる月、調整済み株価フィールドを使用）
+    # 複数日分のモックデータ（異なる月、V2形式）
     mock_jquants_prices = [
         {
             "Date": "2024-12-20",
-            "AdjustmentOpen": 2900.0,
-            "AdjustmentHigh": 2950.0,
-            "AdjustmentLow": 2880.0,
-            "AdjustmentClose": 2920.0,
-            "AdjustmentVolume": 1000000,
+            "AdjO": 2900.0,
+            "AdjH": 2950.0,
+            "AdjL": 2880.0,
+            "AdjC": 2920.0,
+            "AdjVo": 1000000,
         },
         {
             "Date": "2024-12-25",
-            "AdjustmentOpen": 2920.0,
-            "AdjustmentHigh": 2980.0,
-            "AdjustmentLow": 2910.0,
-            "AdjustmentClose": 2960.0,
-            "AdjustmentVolume": 1200000,
+            "AdjO": 2920.0,
+            "AdjH": 2980.0,
+            "AdjL": 2910.0,
+            "AdjC": 2960.0,
+            "AdjVo": 1200000,
         },
         {
             "Date": "2025-01-10",
-            "AdjustmentOpen": 2960.0,
-            "AdjustmentHigh": 3000.0,
-            "AdjustmentLow": 2940.0,
-            "AdjustmentClose": 2980.0,
-            "AdjustmentVolume": 1100000,
+            "AdjO": 2960.0,
+            "AdjH": 3000.0,
+            "AdjL": 2940.0,
+            "AdjC": 2980.0,
+            "AdjVo": 1100000,
         },
         {
             "Date": "2025-01-20",
-            "AdjustmentOpen": 2980.0,
-            "AdjustmentHigh": 3050.0,
-            "AdjustmentLow": 2970.0,
-            "AdjustmentClose": 3020.0,
-            "AdjustmentVolume": 1300000,
+            "AdjO": 2980.0,
+            "AdjH": 3050.0,
+            "AdjL": 2970.0,
+            "AdjC": 3020.0,
+            "AdjVo": 1300000,
         },
     ]
 
     from unittest.mock import AsyncMock
 
+    mock_client = mocker.MagicMock()
+    mock_client.get_prices = AsyncMock(return_value=mock_jquants_prices)
+
     mocker.patch(
-        "stock.services.jquants_service.jquants_client.get_prices",
-        new_callable=AsyncMock,
-        return_value=mock_jquants_prices,
+        "stock.services.price_history_service.get_jquants_client",
+        return_value=mock_client,
     )
 
     # APIリクエスト実行（月次指定）
@@ -403,20 +411,22 @@ async def test_get_price_history_different_periods(
     mock_jquants_prices = [
         {
             "Date": "2025-01-20",
-            "AdjustmentOpen": 3000.0,
-            "AdjustmentHigh": 3050.0,
-            "AdjustmentLow": 2980.0,
-            "AdjustmentClose": 3020.0,
-            "AdjustmentVolume": 1000000,
+            "AdjO": 3000.0,
+            "AdjH": 3050.0,
+            "AdjL": 2980.0,
+            "AdjC": 3020.0,
+            "AdjVo": 1000000,
         },
     ]
 
     from unittest.mock import AsyncMock
 
+    mock_client = mocker.MagicMock()
+    mock_client.get_prices = AsyncMock(return_value=mock_jquants_prices)
+
     mocker.patch(
-        "stock.services.jquants_service.jquants_client.get_prices",
-        new_callable=AsyncMock,
-        return_value=mock_jquants_prices,
+        "stock.services.price_history_service.get_jquants_client",
+        return_value=mock_client,
     )
 
     # 各期間パラメータをテスト

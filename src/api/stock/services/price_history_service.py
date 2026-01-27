@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval, PriceHistoryPeriod
 from ..utils.cache import timed_cache
-from .jquants_service import jquants_client
+from .jquants_service import get_jquants_client
 
 
 class PriceHistoryService:
@@ -117,18 +117,20 @@ class PriceHistoryService:
             株価データのリスト
         """
         try:
-            prices = await jquants_client.get_prices(symbol=symbol, start_date=start_date, end_date=end_date)
+            prices = await get_jquants_client().get_prices(
+                symbol=symbol, start_date=start_date, end_date=end_date
+            )
 
             result = []
             for price in prices:
                 result.append(
                     {
                         "date": price["Date"],
-                        "open": float(price["AdjustmentOpen"]),
-                        "high": float(price["AdjustmentHigh"]),
-                        "low": float(price["AdjustmentLow"]),
-                        "close": float(price["AdjustmentClose"]),
-                        "volume": int(price["AdjustmentVolume"]),
+                        "open": float(price["AdjO"]),
+                        "high": float(price["AdjH"]),
+                        "low": float(price["AdjL"]),
+                        "close": float(price["AdjC"]),
+                        "volume": int(price["AdjVo"]),
                     }
                 )
             return result

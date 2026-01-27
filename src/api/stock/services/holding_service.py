@@ -13,7 +13,7 @@ from .. import models
 from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
-from .jquants_service import jquants_client
+from .jquants_service import get_jquants_client
 
 
 async def get_japan_stock_price(symbol: str) -> Decimal:
@@ -34,11 +34,13 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
         start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
 
         # 非同期でJ-Quants APIを呼び出し
-        prices = await jquants_client.get_prices(symbol=symbol, start_date=start_date, end_date=end_date)
+        prices = await get_jquants_client().get_prices(
+            symbol=symbol, start_date=start_date, end_date=end_date
+        )
 
         # 最新の株価を返す
         if prices and len(prices) > 0:
-            return Decimal(str(prices[-1].get("Close", "0")))
+            return Decimal(str(prices[-1].get("C", "0")))
         return Decimal("0")
 
     except Exception as e:

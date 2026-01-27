@@ -6,7 +6,7 @@ interface ProgressProps {
 }
 
 export function Progress({ value, max, label, colorClass = "bg-green-500" }: ProgressProps) {
-  const percentage = Math.min((value / max) * 100, 100)
+  const percentage = max > 0 ? Math.min((value / max) * 100, 100) : 0
   const isOverLimit = value > max
 
   return (

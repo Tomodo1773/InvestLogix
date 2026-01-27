@@ -1,0 +1,47 @@
+name: Ruff Auto Fix and Commit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint-and-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Python version
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.5.13"
+
+      - name: Install dependencies for api
+        run: |
+          cd src/api
+          uv sync
+
+      - name: Run Ruff check with fix
+        run: |
+          cd src/api && uv run ruff check --fix --line-length=110 .
+
+      - name: Run Ruff format
+        run: |
+          cd src/api && uv run ruff format --line-length=110 .
+
+      - name: Commit fixed files
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "style: apply ruff auto-fix"
+          skip_ci: true

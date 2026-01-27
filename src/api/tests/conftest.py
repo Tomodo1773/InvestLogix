@@ -397,7 +397,9 @@ async def mock_external_apis(mocker):
     mocker.patch("stock.services.stock_service.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.holding_service.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
-    mocker.patch("stock.services.weekly_performance_service.get_jquants_client", return_value=mock_jquants_client)
+    mocker.patch(
+        "stock.services.weekly_performance_service.get_jquants_client", return_value=mock_jquants_client
+    )
 
     return {
         "overview": mock_overview,

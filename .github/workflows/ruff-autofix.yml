@@ -34,11 +34,11 @@ jobs:
 
       - name: Run Ruff check with fix
         run: |
-          cd src/api && uv run ruff check --fix .
+          cd src/api && uv run ruff check --fix --line-length=110 .
 
       - name: Run Ruff format
         run: |
-          cd src/api && uv run ruff format .
+          cd src/api && uv run ruff format --line-length=110 .
 
       - name: Commit fixed files
         uses: stefanzweifel/git-auto-commit-action@v7

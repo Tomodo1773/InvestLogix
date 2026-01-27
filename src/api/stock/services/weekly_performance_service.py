@@ -10,6 +10,7 @@ from typing import List, Optional, Tuple
 
 import pandas_datareader.data as web
 import pytz
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -48,7 +49,11 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
         return None
 
     except Exception as e:
-        print(f"Error fetching Japan stock weekly prices for {symbol}: {str(e)}")
+        logger.error(
+            "日本株の週間株価取得に失敗しました action=external_io symbol={} error={}",
+            symbol,
+            str(e),
+        )
         return None
 
 
@@ -81,7 +86,11 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Dec
         return None
 
     except Exception as e:
-        print(f"Error fetching US stock weekly prices for {symbol}: {str(e)}")
+        logger.error(
+            "米国株の週間株価取得に失敗しました action=external_io symbol={} error={}",
+            symbol,
+            str(e),
+        )
         return None
 
 
@@ -148,6 +157,11 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
                 )
             )
 
+    logger.info(
+        "週間騰落率を取得しました action=aggregate user_id={} count={}",
+        user_id,
+        len(performances),
+    )
     return performances
 
 

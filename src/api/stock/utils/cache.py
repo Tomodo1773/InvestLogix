@@ -51,10 +51,8 @@ def timed_cache(seconds: int = 3600):
             if key in cache:
                 result, timestamp = cache[key]
                 if current_time - timestamp < seconds:
-                    print(f"[Cache Hit] {func.__name__}: キャッシュから結果を返します")
                     return result
 
-            print(f"[Cache Miss] {func.__name__}: 関数を実行し、結果をキャッシュします")
             # 関数を実行して結果をキャッシュ
             result = await func(*args, **kwargs)
             cache[key] = (result, current_time)
@@ -70,10 +68,8 @@ def timed_cache(seconds: int = 3600):
             if key in cache:
                 result, timestamp = cache[key]
                 if current_time - timestamp < seconds:
-                    print(f"[Cache Hit] {func.__name__}: キャッシュから結果を返します")
                     return result
 
-            print(f"[Cache Miss] {func.__name__}: 関数を実行し、結果をキャッシュします")
             # 関数を実行して結果をキャッシュ
             result = func(*args, **kwargs)
             cache[key] = (result, current_time)
@@ -101,7 +97,6 @@ def invalidate_cache(func: Callable) -> None:
         # デコレータが適用された関数の場合
         wrapper = func
         if hasattr(wrapper, "cache"):
-            print(f"[Cache Invalidate] {func.__name__}のキャッシュを無効化します")
             wrapper.cache.clear()  # type: ignore
 
 
@@ -135,12 +130,9 @@ class CacheManager:
         """
         if name is not None:
             if name in self.caches:
-                print(f"[Cache Invalidate] {name}のキャッシュを無効化します")
                 self.caches[name].clear()
         else:
-            print("[Cache Invalidate] 全てのキャッシュを無効化します")
             for cache_name, cache in self.caches.items():
-                print(f"  - {cache_name}のキャッシュを無効化")
                 cache.clear()
 
 

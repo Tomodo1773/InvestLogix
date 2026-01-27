@@ -1,6 +1,7 @@
 import json
 
 import requests
+from loguru import logger
 
 from ..database import settings
 from ..utils.cache import timed_cache
@@ -74,6 +75,6 @@ if __name__ == "__main__":
         # ドル円レートのテスト
         rate = await fetch_usdjpy_rate()
         if rate:
-            print(f"Current USD/JPY rate: {rate}")
+            logger.info("USD/JPYのレートを取得しました action=external_io rate={}", rate)
 
     asyncio.run(main())

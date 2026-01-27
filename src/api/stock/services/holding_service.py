@@ -6,6 +6,7 @@ from typing import List
 import pandas as pd
 import pandas_datareader.data as web
 import pytz
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,11 +41,14 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
 
         # 最新の株価を返す
         if prices and len(prices) > 0:
-            return Decimal(str(prices[-1].get("C", "0")))
+            price = Decimal(str(prices[-1].get("C", "0")))
+            logger.info("日本株株価を取得しました symbol={} price={}", symbol, price)
+            return price
+        logger.info("日本株株価を取得できませんでした symbol={}", symbol)
         return Decimal("0")
 
     except Exception as e:
-        print(f"Error fetching Japan stock price for {symbol}: {str(e)}")
+        logger.error("日本株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
         return Decimal("0")
 
 
@@ -62,7 +66,7 @@ async def get_us_stock_price(symbol: str) -> Decimal:
         # まず為替レートを取得
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
         if not usdjpy_rate:
-            print(f"Failed to fetch USD/JPY rate for {symbol}")
+            logger.info("為替レートが取得できませんでした symbol={}", symbol)
             return Decimal("0")
 
         # 1週間前の日付を取得（日本時間）
@@ -78,12 +82,15 @@ async def get_us_stock_price(symbol: str) -> Decimal:
             latest_close = df["Close"].iloc[0]
             if not pd.isna(latest_close):  # NaN値のチェック
                 # 円換算して返す
-                return Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
+                price = Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
+                logger.info("米国株株価を取得しました symbol={} price={}", symbol, price)
+                return price
 
+        logger.info("米国株株価を取得できませんでした symbol={}", symbol)
         return Decimal("0")
 
     except Exception as e:
-        print(f"Error fetching US stock price for {symbol}: {str(e)}")
+        logger.error("米国株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
         return Decimal("0")
 
 
@@ -110,7 +117,11 @@ async def get_current_price(stock: Stock) -> Decimal:
     return Decimal("0")
 
 
-async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, symbol: str):
+async def calculate_holding_from_transactions(
+    db: AsyncSession,
+    user_id: int,
+    symbol: str,
+):
     """
     トランザクション履歴から保有数量と取得価格を計算する
     株式分割がある場合は調整済み値を使用する
@@ -158,10 +169,22 @@ async def calculate_holding_from_transactions(db: AsyncSession, user_id: int, sy
     average_cost = total_buy_cost / total_buy_quantity if total_buy_quantity > 0 else 0
     current_total_cost = current_quantity * average_cost
 
+    logger.info(
+        "Transactionを取得しました action=aggregate user_id={} symbol={} total_buy_quantity={} total_sell_quantity={}",
+        user_id,
+        symbol,
+        total_buy_quantity,
+        total_sell_quantity,
+    )
+
     return current_quantity, average_cost, current_total_cost
 
 
-async def calculate_realized_pl_from_transactions(db: AsyncSession, user_id: int, symbol: str) -> Decimal:
+async def calculate_realized_pl_from_transactions(
+    db: AsyncSession,
+    user_id: int,
+    symbol: str,
+) -> Decimal:
     """
     売却取引の実現損益合計を取得する
 
@@ -180,10 +203,21 @@ async def calculate_realized_pl_from_transactions(db: AsyncSession, user_id: int
         models.Transaction.transaction_type == "sell",
     )
     result = await db.execute(realized_pl_query)
-    return result.scalar() or Decimal("0")
+    realized_pl = result.scalar() or Decimal("0")
+    logger.info(
+        "Transactionを取得しました action=aggregate user_id={} symbol={} realized_pl={}",
+        user_id,
+        symbol,
+        realized_pl,
+    )
+    return realized_pl
 
 
-async def calculate_total_dividend_after_tax(db: AsyncSession, user_id: int, symbol: str) -> Decimal:
+async def calculate_total_dividend_after_tax(
+    db: AsyncSession,
+    user_id: int,
+    symbol: str,
+) -> Decimal:
     """指定銘柄の配当総額（税・手数料控除後）を取得する
 
     Args:
@@ -204,10 +238,20 @@ async def calculate_total_dividend_after_tax(db: AsyncSession, user_id: int, sym
     ).where(models.Dividend.user_id == user_id, models.Dividend.symbol == symbol)
 
     result = await db.execute(dividend_query)
-    return result.scalar() or Decimal("0")
+    total_dividend = result.scalar() or Decimal("0")
+    logger.info(
+        "Dividendを取得しました action=aggregate user_id={} symbol={} total_dividend={}",
+        user_id,
+        symbol,
+        total_dividend,
+    )
+    return total_dividend
 
 
-async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> bool:
+async def calculate_holding_pl(
+    db: AsyncSession,
+    holding: models.Holding,
+) -> bool:
     """
     保有銘柄の損益情報を計算して更新する
 
@@ -223,7 +267,13 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     stock_result = await db.execute(stock_query)
     stock = stock_result.scalar_one_or_none()
     if not stock:
+        logger.info("Stockが見つかりませんでした action=select symbol={}", holding.symbol)
         return False
+    logger.info(
+        "Stockを取得しました action=select user_id={} symbol={} found=true",
+        holding.user_id,
+        holding.symbol,
+    )
 
     # トランザクション履歴から最新の保有情報を取得
     new_quantity, new_average_cost, new_total_cost = await calculate_holding_from_transactions(
@@ -253,6 +303,10 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     # 上場廃止銘柄でも実現損益と配当を反映するため、損益計算は必ず実行
     if holding.current_price is None:
         # 完全に価格情報がない初回のみスキップ
+        logger.info(
+            "Holdingsの更新をスキップしました action=update symbol={} reason=no_current_price",
+            holding.symbol,
+        )
         return False
 
     # 時価評価額の計算
@@ -292,13 +346,18 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     holding = result.scalar_one_or_none()
 
     if not holding:
+        logger.info("Holdingsが見つかりませんでした action=select user_id={} symbol={}", user_id, symbol)
         return None
+    logger.info("Holdingsを取得しました action=select user_id={} symbol={} found=true", user_id, symbol)
 
     # 損益情報を更新
     updated = await calculate_holding_pl(db, holding)
     if updated:
         await db.commit()
         await db.refresh(holding)
+        logger.info("Holdingsを更新しました action=update user_id={} symbol={}", user_id, symbol)
+    else:
+        logger.info("Holdingsを更新できませんでした action=update user_id={} symbol={}", user_id, symbol)
 
     return holding
 
@@ -330,6 +389,13 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
     # 更新後のデータをリフレッシュ
     for holding in updated_holdings:
         await db.refresh(holding)
+
+    logger.info(
+        "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={}",
+        user_id,
+        len(holdings),
+        len(updated_holdings),
+    )
 
     return updated_holdings
 
@@ -365,4 +431,10 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
         holding.security_type = row[2]
         holding.currency = row[3]
         holdings.append(holding)
+    logger.info(
+        "Holdingsを取得しました action=select user_id={} symbol={} count={}",
+        user_id,
+        symbol,
+        len(holdings),
+    )
     return holdings

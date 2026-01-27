@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Union
 
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
 
 from .. import models, schemas
 from .holding_service import (
@@ -26,9 +27,16 @@ class TransactionService:
         stock_query = select(models.Stock).where(models.Stock.symbol == transaction.symbol)
         stock_result = await self.db.execute(stock_query)
         stock = stock_result.scalar_one_or_none()
+        logger.info(
+            "Stockを取得しました action=select user_id={} symbol={} found={}",
+            user_id,
+            transaction.symbol,
+            bool(stock),
+        )
 
         if not stock:
             stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=transaction.symbol))
+            logger.info("Stockに登録しました action=create user_id={} symbol={}", user_id, transaction.symbol)
 
         # 保有情報の取得
         holding_query = select(models.Holding).where(
@@ -36,17 +44,33 @@ class TransactionService:
         )
         holding_result = await self.db.execute(holding_query)
         holding = holding_result.scalar_one_or_none()
+        logger.info(
+            "Holdingsを取得しました action=select user_id={} symbol={} found={}",
+            user_id,
+            transaction.symbol,
+            bool(holding),
+        )
 
         # 売却の場合は、トランザクションを登録する前に売却前の平均取得単価を取得
         average_cost_before_sell = None
         if transaction.transaction_type == "sell":
             if not holding:
+                logger.info(
+                    "Transactionを登録できませんでした action=create user_id={} symbol={} reason=no_holding",
+                    user_id,
+                    transaction.symbol,
+                )
                 return None
             # 売却前に保有数量を再計算（調整済み値を反映）
             current_quantity, average_cost_before_sell, _ = await calculate_holding_from_transactions(
                 self.db, user_id, transaction.symbol
             )
             if current_quantity < transaction.quantity:
+                logger.info(
+                    "Transactionを登録できませんでした action=create user_id={} symbol={} reason=insufficient_quantity",
+                    user_id,
+                    transaction.symbol,
+                )
                 return None
 
         # 取引情報の登録
@@ -68,6 +92,14 @@ class TransactionService:
 
         # 取引登録後に保有損益を更新
         await update_single_holding_pl(self.db, user_id, transaction.symbol)
+
+        logger.info(
+            "Transactionに登録しました action=create user_id={} symbol={} type={} transaction_id={}",
+            user_id,
+            transaction.symbol,
+            transaction.transaction_type,
+            db_transaction.transaction_id,
+        )
 
         return db_transaction
 
@@ -141,6 +173,12 @@ class TransactionService:
             transaction = row[0]
             transaction.stock_name = row[1]
             transactions.append(transaction)
+        logger.info(
+            "Transactionを取得しました action=select user_id={} symbol={} count={}",
+            user_id,
+            symbol,
+            len(transactions),
+        )
 
         # 未実現損益を含める場合
         if include_unrealized_pl and symbol:
@@ -248,7 +286,9 @@ class TransactionService:
             summary[key]["total_purchase"][account_name] = amount
 
         # 日付順にソートして返す
-        return [summary[key] for key in sorted(summary.keys())]
+        summaries = [summary[key] for key in sorted(summary.keys())]
+        logger.info("Transactionの月次集計を取得しました user_id={} months={}", user_id, len(summaries))
+        return summaries
 
     async def get_yearly_summary(self, user_id: int) -> List[Dict]:
         """
@@ -304,7 +344,9 @@ class TransactionService:
             summary[year]["total_purchase"][account_name] = amount
 
         # 年順にソートして返す
-        return [summary[year] for year in sorted(summary.keys())]
+        summaries = [summary[year] for year in sorted(summary.keys())]
+        logger.info("Transactionの年次集計を取得しました user_id={} years={}", user_id, len(summaries))
+        return summaries
 
     def _convert_account_type_name(self, account_type: str) -> str:
         """アカウント種別名をAPIレスポンス用に変換する"""

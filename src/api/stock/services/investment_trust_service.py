@@ -2,6 +2,7 @@ from decimal import Decimal
 
 import aiohttp
 from bs4 import BeautifulSoup
+from loguru import logger
 
 
 async def fetch_investment_trust_details(symbol: str) -> dict:
@@ -62,7 +63,11 @@ async def get_fund_price(symbol: str) -> Decimal:
         return Decimal("0")
 
     except (aiohttp.ClientError, ValueError) as e:
-        print(f"Error fetching fund price for {symbol}: {str(e)}")
+        logger.error(
+            "投資信託の基準価額取得に失敗しました action=external_io symbol={} error={}",
+            symbol,
+            str(e),
+        )
         return Decimal("0")
 
 
@@ -75,10 +80,10 @@ if __name__ == "__main__":
 
         # 基準価額の取得テスト
         price = await get_fund_price(symbol)
-        print(f"基準価額: {price}円")
+        logger.info("基準価額を取得しました action=external_io symbol={} price={}", symbol, price)
 
         # 詳細情報の取得テスト
-        details = await fetch_investment_trust_details(symbol)
-        print("詳細情報:", details)
+        await fetch_investment_trust_details(symbol)
+        logger.info("投資信託の詳細情報を取得しました action=external_io symbol={}", symbol)
 
     asyncio.run(main())

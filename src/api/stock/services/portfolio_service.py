@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Dict, List
 
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,6 +46,11 @@ class PortfolioService:
         dividend_result = await self.db.execute(dividend_query)
         total_dividend = dividend_result.scalar() or 0
 
+        logger.info(
+            "PortfolioSummaryを集計しました action=aggregate user_id={} holdings_count={}",
+            user_id,
+            len(holdings),
+        )
         return {
             "total_cost": total_cost,
             "total_market_value": total_market_value,
@@ -74,7 +80,13 @@ class PortfolioService:
             .order_by(models.PortfolioHistory.date.asc())  # 降順(desc)から昇順(asc)に変更
         )
         result = await self.db.execute(query)
-        return result.scalars().all()
+        histories = result.scalars().all()
+        logger.info(
+            "PortfolioHistoryを取得しました action=select user_id={} count={}",
+            user_id,
+            len(histories),
+        )
+        return histories
 
     async def create_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
         """現在のポートフォリオ状態を計算して履歴として保存"""
@@ -90,6 +102,11 @@ class PortfolioService:
         await self.db.commit()
         await self.db.refresh(portfolio_history)
 
+        logger.info(
+            "PortfolioHistoryを登録しました action=create user_id={} history_id={}",
+            user_id,
+            portfolio_history.history_id,
+        )
         return portfolio_history
 
     async def get_latest_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
@@ -101,7 +118,19 @@ class PortfolioService:
             .limit(1)
         )
         result = await self.db.execute(query)
-        return result.scalar_one_or_none()
+        history = result.scalar_one_or_none()
+        if not history:
+            logger.info(
+                "PortfolioHistoryが見つかりませんでした action=select user_id={} found=false",
+                user_id,
+            )
+            return None
+        logger.info(
+            "PortfolioHistoryを取得しました action=select user_id={} history_id={} found=true",
+            user_id,
+            history.history_id,
+        )
+        return history
 
     async def update_and_notify(self, user_id: int) -> Dict:
         """
@@ -135,6 +164,11 @@ class PortfolioService:
         # ポートフォリオサマリーを取得
         summary = await self.get_portfolio_summary(user_id)
 
+        logger.info(
+            "Portfolioを更新しました action=bulk_update user_id={} notification_sent={}",
+            user_id,
+            notification_sent,
+        )
         return {
             "summary": summary,
             "notification_sent": notification_sent,

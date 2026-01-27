@@ -8,6 +8,7 @@ from typing import List
 
 import pandas as pd
 from pandas_datareader import data as pdr
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
@@ -133,8 +134,22 @@ class PriceHistoryService:
                         "volume": int(price["AdjVo"]),
                     }
                 )
+            logger.info(
+                "日本株株価を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
+                symbol,
+                start_date,
+                end_date,
+                len(result),
+            )
             return result
         except Exception as e:
+            logger.error(
+                "日本株株価の取得に失敗しました action=external_io symbol={} start_date={} end_date={} error={}",
+                symbol,
+                start_date,
+                end_date,
+                str(e),
+            )
             raise Exception(f"Failed to fetch Japanese stock prices: {str(e)}")
 
     @staticmethod
@@ -171,8 +186,22 @@ class PriceHistoryService:
                         "volume": int(row["Volume"]),
                     }
                 )
+            logger.info(
+                "米国株株価を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
+                symbol,
+                start_date,
+                end_date,
+                len(result),
+            )
             return result
         except Exception as e:
+            logger.error(
+                "米国株株価の取得に失敗しました action=external_io symbol={} start_date={} end_date={} error={}",
+                symbol,
+                start_date,
+                end_date,
+                str(e),
+            )
             raise Exception(f"Failed to fetch US stock prices: {str(e)}")
 
     async def _fetch_us_stock_prices(
@@ -219,10 +248,12 @@ class PriceHistoryService:
         stock = result.scalar_one_or_none()
 
         if not stock:
+            logger.error("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
             raise ValueError(f"Stock {symbol} not found")
 
         # 投資信託は非対応
         if stock.security_type == "FUND":
+            logger.error("投資信託は価格履歴未対応です action=select symbol={} security_type=FUND", symbol)
             raise ValueError("Price history is not available for investment funds")
 
         # 開始日・終了日を計算
@@ -241,4 +272,11 @@ class PriceHistoryService:
         elif interval == PriceHistoryInterval.MONTHLY:
             data = self._aggregate_to_monthly(data)
 
+        logger.info(
+            "PriceHistoryを取得しました action=aggregate symbol={} period={} interval={} count={}",
+            symbol,
+            period.value,
+            interval.value,
+            len(data),
+        )
         return {"symbol": symbol, "period": period.value, "interval": interval.value, "data": data}

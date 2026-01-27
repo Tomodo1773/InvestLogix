@@ -1,6 +1,7 @@
 import re
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,9 +33,11 @@ class StockService:
         db_stock = result.scalar_one_or_none()
 
         if db_stock:
+            logger.info("Stockを取得しました action=select symbol={} found=true", stock.symbol)
             return db_stock  # 既に登録されている場合はそのまま返す
 
         try:
+            logger.info("Stockが見つかりませんでした action=select symbol={} found=false", stock.symbol)
             if self.is_investment_trust(stock.symbol):
                 return await self.create_investment_trust(stock)
             elif self.is_japanese_stock(stock.symbol):
@@ -43,9 +46,11 @@ class StockService:
                 return await self.create_us_stock(stock)
             else:
                 raise StockNotFoundError(f"Invalid stock symbol format: {stock.symbol}")
-        except StockNotFoundError:
+        except StockNotFoundError as e:
+            logger.error("Stockの作成に失敗しました action=create symbol={} error={}", stock.symbol, str(e))
             raise
         except Exception as e:
+            logger.error("Stockの作成に失敗しました action=create symbol={} error={}", stock.symbol, str(e))
             raise StockNotFoundError(f"Failed to get stock information: {stock.symbol}") from e
 
     def is_investment_trust(self, symbol: str) -> bool:
@@ -73,11 +78,13 @@ class StockService:
         self.db.add(db_stock)
         await self.db.flush()
         await self.db.refresh(db_stock)
+        logger.info("Stockを登録しました action=create symbol={} security_type=FUND", db_stock.symbol)
         return db_stock
 
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
         company_info = get_jquants_client().get_company_info(stock.symbol)
         if not company_info:
+            logger.error("企業情報が取得できませんでした action=external_io symbol={}", stock.symbol)
             raise StockNotFoundError(f"Company information not found for symbol: {stock.symbol}")
 
         db_stock = models.Stock(
@@ -105,6 +112,9 @@ class StockService:
 
         await self.db.flush()
         await self.db.refresh(db_stock)
+        logger.info(
+            "Stockを登録しました action=create symbol={} security_type=STOCK market=JPX", stock.symbol
+        )
         return db_stock
 
     async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
@@ -115,6 +125,7 @@ class StockService:
             # ETFの可能性があるため、SYMBOL_SEARCHを使用
             search_data = await fetch_us_stock_search(stock.symbol)
             if not search_data.get("bestMatches"):
+                logger.error("Stock情報が見つかりませんでした action=external_io symbol={}", stock.symbol)
                 raise StockNotFoundError(f"Stock information not found for symbol: {stock.symbol}")
             best_match = search_data.get("bestMatches", [])[0]
             name = best_match["2. name"].rstrip()  # 末尾のスペースを削除
@@ -148,6 +159,12 @@ class StockService:
 
         await self.db.flush()
         await self.db.refresh(db_stock)
+        logger.info(
+            "Stockを登録しました action=create symbol={} security_type={} market={}",
+            stock.symbol,
+            security_type,
+            market,
+        )
         return db_stock
 
     async def list_stocks(self, market: Optional[str] = None) -> List[models.Stock]:
@@ -155,7 +172,9 @@ class StockService:
         if market:
             query = query.where(models.Stock.market == market)
         result = await self.db.execute(query)
-        return result.scalars().all()
+        stocks = result.scalars().all()
+        logger.info("Stockを取得しました action=select market={} count={}", market or "all", len(stocks))
+        return stocks
 
     async def delete_stock(self, symbol: str) -> bool:
         """
@@ -168,6 +187,7 @@ class StockService:
         db_stock = result.scalar_one_or_none()
 
         if not db_stock:
+            logger.info("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
             return False
 
         # 関連する詳細情報テーブルの削除
@@ -186,4 +206,5 @@ class StockService:
         # 株式情報を削除
         await self.db.delete(db_stock)
         await self.db.flush()
+        logger.info("Stockを削除しました action=delete symbol={}", symbol)
         return True

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from loguru import logger
 
 from ..auth import get_password_hash
 from ..models import User, get_jst_now
@@ -24,6 +25,7 @@ class AuthService:
             select(User).where((User.username == user.username) | (User.email == user.email))
         )
         if result.scalar_one_or_none():
+            logger.error("Userが既に存在します action=select reason=already_exists")
             raise ValueError("Username or email already registered")
 
         # パスワードのハッシュ化
@@ -39,4 +41,5 @@ class AuthService:
         )
         self.db.add(db_user)
         await self.db.commit()
+        logger.info("Userを登録しました action=create user_id={}", db_user.user_id)
         return db_user

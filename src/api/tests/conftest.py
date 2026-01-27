@@ -235,7 +235,14 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
             setup_database, class_=AsyncSession, expire_on_commit=False
         )
         async with TestingSessionLocalFunction() as session:
-            yield session
+            try:
+                yield session
+                await session.commit()
+            except Exception:
+                await session.rollback()
+                raise
+            finally:
+                await session.close()
 
     # get_db依存性をオーバーライド
     app.dependency_overrides[get_db] = override_get_db
@@ -310,30 +317,44 @@ MOCK_ETF_SEARCH_RESPONSE = {
     ]
 }
 
-# JQuantsのレスポンスをモック化
+# JQuantsのレスポンスをモック化（V2形式）
 MOCK_JQUANTS_COMPANY_INFO = {
-    "CompanyName": "三菱商事",
-    "CompanyNameEnglish": "Mitsubishi Corporation",
-    "Sector17Code": "6050",
-    "Sector17CodeName": "商社・卸売",
-    "Sector33Code": "6050",
-    "Sector33CodeName": "商社・卸売業",
-    "MarketCodeName": "プライム",
-    "ScaleCategory": "PRIME",
+    "CoName": "三菱商事",
+    "CoNameEn": "Mitsubishi Corporation",
+    "S17": "60",  # 17業種コード（2桁）
+    "S17Nm": "商社・卸売",
+    "S33": "6050",  # 33業種コード（4桁）
+    "S33Nm": "商社・卸売業",
+    "MktNm": "プライム",
+    "ScaleCat": "PRIME",
     "MarginCode": "1",
 }
+
+# JQuantsの株価データモック（V2形式）
+MOCK_JQUANTS_PRICE_DATA = [
+    {
+        "Date": "2024-01-01",
+        "Code": "8058",
+        "Open": 3000.0,
+        "High": 3100.0,
+        "Low": 2900.0,
+        "Close": 3000.0,
+        "Volume": 1000000,
+    }
+]
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def mock_external_apis(mocker):
     """外部APIの応答をモック化するフィクスチャー
 
-    以下の外部APIをモック化します：
+    以下の外部APIをモック化します:
     - AlphaVantage API（為替レート取得）
     - holdings_service（日本株・米国株の株価取得関数）
+    - JQuants API（銘柄情報、株価取得）
 
     Note:
-        株価取得関数は呼び出し順序によって異なる値を返します：
+        株価取得関数は呼び出し順序によって異なる値を返します:
         - get_japan_stock_price:
             1回目: MOCK_JAPAN_STOCK_PRICE_INITIAL (3000.0)
             2回目以降: MOCK_JAPAN_STOCK_PRICE_UPDATED (3100.0)
@@ -366,12 +387,25 @@ async def mock_external_apis(mocker):
     mock_usdjpy = mocker.patch("stock.services.alphavantage_service.fetch_usdjpy_rate", autospec=True)
     mock_usdjpy.return_value = MOCK_USD_JPY_RATE_RESPONSE
 
+    # JQuantsクライアントのモック化
+    mock_jquants_client = mocker.Mock()
+    mock_jquants_client.get_company_info.return_value = MOCK_JQUANTS_COMPANY_INFO
+    # get_pricesは非同期メソッドなので、AsyncMockを使用
+    mock_jquants_client.get_prices = mocker.AsyncMock(return_value=MOCK_JQUANTS_PRICE_DATA)
+
+    # 各サービスファイルでインポートされたget_jquants_clientをモック化
+    mocker.patch("stock.services.stock_service.get_jquants_client", return_value=mock_jquants_client)
+    mocker.patch("stock.services.holding_service.get_jquants_client", return_value=mock_jquants_client)
+    mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
+    mocker.patch("stock.services.weekly_performance_service.get_jquants_client", return_value=mock_jquants_client)
+
     return {
         "overview": mock_overview,
         "search": mock_search,
         "japan_price": mock_japan_price,
         "us_price": mock_us_price,
         "usdjpy": mock_usdjpy,
+        "jquants_client": mock_jquants_client,
     }
 
 

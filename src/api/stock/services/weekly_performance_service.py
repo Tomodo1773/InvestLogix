@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..schemas import SecurityType, StockWeeklyPerformance
-from .jquants_service import jquants_client
+from .jquants_service import get_jquants_client
 
 
 async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Decimal]]:
@@ -36,12 +36,14 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
         start_date = (now - timedelta(days=14)).strftime("%Y-%m-%d")
 
         # J-Quants APIを呼び出し
-        prices = await jquants_client.get_prices(symbol=symbol, start_date=start_date, end_date=end_date)
+        prices = await get_jquants_client().get_prices(
+            symbol=symbol, start_date=start_date, end_date=end_date
+        )
 
         # 6件以上のデータが必要（最新と5営業日前）
         if prices and len(prices) >= 6:
-            latest_price = Decimal(str(prices[-1].get("Close", "0")))
-            old_price = Decimal(str(prices[-6].get("Close", "0")))
+            latest_price = Decimal(str(prices[-1].get("C", "0")))
+            old_price = Decimal(str(prices[-6].get("C", "0")))
             return (latest_price, old_price)
         return None
 

@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
-from .jquants_service import jquants_client
+from .jquants_service import get_jquants_client
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .investment_trust_service import fetch_investment_trust_details
 
@@ -71,19 +71,19 @@ class StockService:
             currency="JPY",
         )
         self.db.add(db_stock)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_stock)
         return db_stock
 
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
-        company_info = jquants_client.get_company_info(stock.symbol)
+        company_info = get_jquants_client().get_company_info(stock.symbol)
         if not company_info:
             raise StockNotFoundError(f"Company information not found for symbol: {stock.symbol}")
 
         db_stock = models.Stock(
             symbol=stock.symbol,
-            name=company_info.get("CompanyName"),
-            name_en=company_info.get("CompanyNameEnglish"),
+            name=company_info.get("CoName"),
+            name_en=company_info.get("CoNameEn"),
             market="JPX",
             security_type="STOCK",
             currency="JPY",
@@ -92,18 +92,18 @@ class StockService:
 
         db_stock_jpx_detail = models.StockJPXDetail(
             symbol=stock.symbol,
-            sector_17_code=company_info.get("Sector17Code"),
-            sector_17_name=company_info.get("Sector17CodeName"),
-            sector_33_code=company_info.get("Sector33Code"),
-            sector_33_name=company_info.get("Sector33CodeName"),
-            market_segment=company_info.get("MarketCodeName"),
-            market_code=company_info.get("ScaleCategory"),
-            market_name=company_info.get("MarketCodeName"),
+            sector_17_code=company_info.get("S17"),
+            sector_17_name=company_info.get("S17Nm"),
+            sector_33_code=company_info.get("S33"),
+            sector_33_name=company_info.get("S33Nm"),
+            market_segment=company_info.get("MktNm"),
+            market_code=company_info.get("ScaleCat"),
+            market_name=company_info.get("MktNm"),
             margin_trading=company_info.get("MarginCode") == "1",
         )
         self.db.add(db_stock_jpx_detail)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_stock)
         return db_stock
 
@@ -146,7 +146,7 @@ class StockService:
             )
             self.db.add(db_stock_us_detail)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_stock)
         return db_stock
 
@@ -185,5 +185,5 @@ class StockService:
 
         # 株式情報を削除
         await self.db.delete(db_stock)
-        await self.db.commit()
+        await self.db.flush()
         return True

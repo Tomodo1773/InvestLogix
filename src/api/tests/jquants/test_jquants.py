@@ -26,10 +26,10 @@ async def test_get_prices(jquants_client):
 
     assert len(prices) > 0
     price = prices[0]
-    assert "Open" in price
-    assert "High" in price
-    assert "Low" in price
-    assert "Close" in price
+    assert "O" in price
+    assert "H" in price
+    assert "L" in price
+    assert "C" in price
 
 
 def test_get_company_info(jquants_client):
@@ -38,5 +38,5 @@ def test_get_company_info(jquants_client):
     company = jquants_client.get_company_info("7203")
 
     assert company is not None
-    assert company["CompanyName"] == "トヨタ自動車"
+    assert company["CoName"] == "トヨタ自動車"
     assert company["Code"] == "72030"  # APIは5桁形式で返却

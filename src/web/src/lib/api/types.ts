@@ -28,13 +28,13 @@ export interface PortfolioSummary {
 
 export interface PortfolioHistoryItem {
   date: string
-  total_cost: number
-  total_market_value: number
-  total_unrealized_pl: number
-  total_pl: number
-  total_unrealized_pl_percentage: number
-  total_realized_pl: number
-  total_dividend: number
+  total_cost: string
+  total_market_value: string
+  total_unrealized_pl: string
+  total_pl: string
+  total_unrealized_pl_percentage: string
+  total_realized_pl: string
+  total_dividend: string
 }
 
 export interface Holding {

@@ -270,13 +270,13 @@ class PortfolioHistoryResponse(BaseModel):
     """ポートフォリオ履歴のレスポンスモデル"""
 
     date: datetime
-    total_cost: float
-    total_market_value: float
-    total_unrealized_pl: float
-    total_pl: float
-    total_unrealized_pl_percentage: float
-    total_realized_pl: float
-    total_dividend: float
+    total_cost: Decimal
+    total_market_value: Decimal
+    total_unrealized_pl: Decimal
+    total_pl: Decimal
+    total_unrealized_pl_percentage: Decimal
+    total_realized_pl: Decimal
+    total_dividend: Decimal
 
     model_config = ConfigDict(from_attributes=True)
 

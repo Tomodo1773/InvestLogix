@@ -53,7 +53,7 @@ class PortfolioService:
             "total_market_value": total_market_value,
             "total_unrealized_pl": total_unrealized_pl,
             "total_pl": total_pl,
-            "total_unrealized_pl_percentage": total_pl / total_cost * 100 if total_cost > 0 else 0,
+            "total_unrealized_pl_percentage": total_unrealized_pl / total_cost * 100 if total_cost > 0 else 0,
             "total_realized_pl": total_realized_pl,
             "total_dividend": total_dividend,
             "holdings_by_market": holdings_by_market,

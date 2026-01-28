@@ -268,9 +268,9 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
         + (holding.total_dividend or Decimal("0"))
     )
 
-    # トータル損益率の計算（取得価格が0の場合は0%とする）
+    # 含み損益率の計算（取得価格が0の場合は0%とする）
     holding.unrealized_pl_percentage = (
-        (holding.total_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
+        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
     )
 
     return True

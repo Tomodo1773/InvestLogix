@@ -54,13 +54,19 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
 
   const chartData = useMemo(() => {
     return filteredData.map((item) => ({
-      ...item,
       rawDate: item.date,
       date: new Date(item.date).toLocaleDateString("ja-JP", {
         year: "2-digit",
         month: "short",
         day: timeFrame === "daily" ? "numeric" : undefined,
       }),
+      total_cost: Number(item.total_cost),
+      total_market_value: Number(item.total_market_value),
+      total_unrealized_pl: Number(item.total_unrealized_pl),
+      total_pl: Number(item.total_pl),
+      total_unrealized_pl_percentage: Number(item.total_unrealized_pl_percentage),
+      total_realized_pl: Number(item.total_realized_pl),
+      total_dividend: Number(item.total_dividend),
     }))
   }, [filteredData, timeFrame])
 

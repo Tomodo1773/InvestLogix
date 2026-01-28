@@ -310,11 +310,12 @@ async def test_recalculate_holding_pl_delisted_stock(
     # 取得価格合計: 5株 × 3000円 = 15000円
     assert Decimal(data["total_cost"]) == Decimal("15000.0")
 
-    # unrealized_pl が null ではなく計算されていることを確認
+    # unrealized_pl（含み損益）= market_value(0) - total_cost(15000) = -15000
     assert data["unrealized_pl"] is not None
-
-    # unrealized_pl = market_value(0) + realized_pl(2500) + total_dividend(800) - total_cost(15000)
-    #                = 0 + 2500 + 800 - 15000
-    #                = -11700
-    expected_unrealized_pl = Decimal("0") + Decimal("2500") + Decimal("800") - Decimal("15000")
+    expected_unrealized_pl = Decimal("0") - Decimal("15000")
     assert Decimal(data["unrealized_pl"]) == expected_unrealized_pl
+
+    # total_pl = unrealized_pl(-15000) + realized_pl(2500) + total_dividend(800) = -11700
+    assert data["total_pl"] is not None
+    expected_total_pl = Decimal("-15000") + Decimal("2500") + Decimal("800")
+    assert Decimal(data["total_pl"]) == expected_total_pl

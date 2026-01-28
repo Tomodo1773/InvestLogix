@@ -258,17 +258,19 @@ async def calculate_holding_pl(db: AsyncSession, holding: models.Holding) -> boo
     # 時価評価額の計算
     holding.market_value = holding.current_price * holding.quantity
 
-    # 評価損益の計算（実現損益と配当は既存の値を使用）
-    holding.unrealized_pl = (
-        holding.market_value
+    # 含み損益の計算（時価評価額 - 取得価格合計のみ）
+    holding.unrealized_pl = holding.market_value - holding.total_cost
+
+    # トータル損益の計算（含み損益 + 売却益 + 配当総額）
+    holding.total_pl = (
+        holding.unrealized_pl
         + (holding.realized_pl or Decimal("0"))
         + (holding.total_dividend or Decimal("0"))
-        - holding.total_cost
     )
 
-    # 評価損益率の計算（取得価格が0の場合は0%とする）
+    # トータル損益率の計算（取得価格が0の場合は0%とする）
     holding.unrealized_pl_percentage = (
-        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
+        (holding.total_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
     )
 
     return True

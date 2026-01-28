@@ -11,11 +11,11 @@ interface StatCardsProps {
 export function StatCards({ summary, isLoading }: StatCardsProps) {
   const stats = [
     {
-      label: "Unrealized P/L",
-      value: summary ? formatCurrency(summary.total_unrealized_pl) : "-",
+      label: "Total P/L",
+      value: summary ? formatCurrency(summary.total_pl) : "-",
       icon: Wallet,
-      color: summary && Number(summary.total_unrealized_pl) >= 0 ? "text-[#4CAF50]" : "text-destructive",
-      bgColor: summary && Number(summary.total_unrealized_pl) >= 0 ? "bg-[#4CAF50]/10" : "bg-destructive/10",
+      color: summary && Number(summary.total_pl) >= 0 ? "text-[#4CAF50]" : "text-destructive",
+      bgColor: summary && Number(summary.total_pl) >= 0 ? "bg-[#4CAF50]/10" : "bg-destructive/10",
     },
     {
       label: "P/L Rate",

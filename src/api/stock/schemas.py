@@ -162,6 +162,7 @@ class HoldingBase(BaseModel):
     realized_pl: Optional[Decimal]
     total_dividend: Optional[Decimal]
     unrealized_pl: Optional[Decimal]
+    total_pl: Optional[Decimal]
     unrealized_pl_percentage: Optional[Decimal]
 
 
@@ -218,6 +219,7 @@ class PortfolioHistoryBase(BaseModel):
     total_cost: Decimal
     total_market_value: Decimal
     total_unrealized_pl: Decimal
+    total_pl: Decimal
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal
@@ -271,6 +273,7 @@ class PortfolioHistoryResponse(BaseModel):
     total_cost: float
     total_market_value: float
     total_unrealized_pl: float
+    total_pl: float
     total_unrealized_pl_percentage: float
     total_realized_pl: float
     total_dividend: float
@@ -400,6 +403,7 @@ class PortfolioSummary(BaseModel):
     total_cost: Decimal
     total_market_value: Decimal
     total_unrealized_pl: Decimal
+    total_pl: Decimal
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal

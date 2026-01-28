@@ -18,6 +18,7 @@ export interface PortfolioSummary {
   total_cost: string
   total_market_value: string
   total_unrealized_pl: string
+  total_pl: string
   total_unrealized_pl_percentage: string
   total_realized_pl: string
   total_dividend: string
@@ -30,6 +31,7 @@ export interface PortfolioHistoryItem {
   total_cost: number
   total_market_value: number
   total_unrealized_pl: number
+  total_pl: number
   total_unrealized_pl_percentage: number
   total_realized_pl: number
   total_dividend: number
@@ -45,6 +47,7 @@ export interface Holding {
   realized_pl: string | null
   total_dividend: string | null
   unrealized_pl: string | null
+  total_pl: string | null
   unrealized_pl_percentage: string | null
   user_id: number
   last_updated: string

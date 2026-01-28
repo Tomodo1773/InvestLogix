@@ -141,10 +141,14 @@ async def test_portfolio_update_with_price_changes(
     # 期待値の確認
     assert Decimal(str(created_summary["total_market_value"])) == Decimal("685000.00")  # 310,000 + 375,000
     assert Decimal(str(created_summary["total_cost"])) == Decimal("660540.00")  # 取得価額の合計
-    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal("24460.00")  # 685,000 - 660,540
+    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal(
+        "24460.00"
+    )  # 含み損益: 685,000 - 660,540
     assert Decimal(str(created_summary["total_dividend"])) == Decimal(
         "2000.00"
     )  # (1000 - 200) + (1500 - 300)
+    # total_pl = 含み損益(24460) + 実現損益(0) + 配当(2000) = 26460
+    assert Decimal(str(created_summary["total_pl"])) == Decimal("26460.00")
 
     # 市場別保有額の確認
     assert "JPX" in created_summary["holdings_by_market"]
@@ -222,6 +226,7 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
         assert "total_cost" in record
         assert "total_market_value" in record
         assert "total_unrealized_pl" in record
+        assert "total_pl" in record
         assert "total_unrealized_pl_percentage" in record
         assert "total_realized_pl" in record
         assert "total_dividend" in record
@@ -230,5 +235,6 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
     latest_record = data[0]
     assert Decimal(str(latest_record["total_cost"])) == Decimal("660540.00")
     assert Decimal(str(latest_record["total_market_value"])) == Decimal("685000.00")
-    assert Decimal(str(latest_record["total_unrealized_pl"])) == Decimal("24460.00")
+    assert Decimal(str(latest_record["total_unrealized_pl"])) == Decimal("24460.00")  # 含み損益のみ
+    assert Decimal(str(latest_record["total_pl"])) == Decimal("26460.00")  # 含み損益 + 配当
     assert Decimal(str(latest_record["total_dividend"])) == Decimal("2000.00")

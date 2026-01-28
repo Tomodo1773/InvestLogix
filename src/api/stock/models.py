@@ -173,12 +173,13 @@ class Holding(Base):
     market_value = Column(Numeric(10, 2))  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
     realized_pl = Column(
         Numeric(10, 2), default=Decimal("0")
-    )  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
-    total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額
-    unrealized_pl = Column(
-        Numeric(10, 2)
-    )  # [AUTO_CALC] 評価損益（時価評価額 + 売却益 + 配当総額 - 取得価格合計）
-    unrealized_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
+    )  # [AUTO_CALC] 売却益（売却取引の実現損益の合計）
+    total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額（税・手数料控除後）
+    unrealized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 含み損益（時価評価額 - 取得価格合計）
+    total_pl = Column(Numeric(10, 2))  # [AUTO_CALC] トータル損益（含み損益 + 売却益 + 配当総額）
+    unrealized_pl_percentage = Column(
+        Numeric(5, 2)
+    )  # [AUTO_CALC] トータル損益率（トータル損益 / 取得価格合計）
     last_updated = Column(
         DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
     )  # [SYSTEM] 最終更新日時（JST）
@@ -238,8 +239,13 @@ class PortfolioHistory(Base):
     )  # [SYSTEM] 記録日時（JST固定）
     total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価額合計
     total_market_value = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 時価評価額合計
-    total_unrealized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 評価損益合計
-    total_unrealized_pl_percentage = Column(Numeric(5, 2), nullable=False)  # [AUTO_CALC] 評価損益率
+    total_unrealized_pl = Column(
+        Numeric(10, 2), nullable=False
+    )  # [AUTO_CALC] 含み損益合計（時価合計 - 取得価額合計）
+    total_pl = Column(
+        Numeric(10, 2), nullable=False
+    )  # [AUTO_CALC] トータル損益合計（含み損益 + 実現損益 + 配当）
+    total_unrealized_pl_percentage = Column(Numeric(5, 2), nullable=False)  # [AUTO_CALC] トータル損益率
     total_realized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 実現損益合計
     total_dividend = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 配当金合計
 

@@ -179,14 +179,14 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
               <YAxis yAxisId="right" orientation="right" width={50} tick={false} axisLine={false} />
               <Tooltip
                 formatter={(value: number | undefined) => {
-                  if (value === undefined) return ["-", "Unrealized P/L"]
-                  return [formatCurrency(value), "Unrealized P/L"]
+                  if (value === undefined) return ["-", "Total P/L"]
+                  return [formatCurrency(value), "Total P/L"]
                 }}
               />
               <ReferenceLine y={0} stroke="#666" />
-              <Bar dataKey="total_unrealized_pl" name="Unrealized P/L">
+              <Bar dataKey="total_pl" name="Total P/L">
                 {chartData.map((entry) => (
-                  <Cell key={entry.rawDate} fill={entry.total_unrealized_pl >= 0 ? "#4CAF50" : "#F44336"} />
+                  <Cell key={entry.rawDate} fill={entry.total_pl >= 0 ? "#4CAF50" : "#F44336"} />
                 ))}
               </Bar>
             </BarChart>

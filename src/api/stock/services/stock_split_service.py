@@ -1,6 +1,7 @@
 from decimal import Decimal
 from typing import List, Optional
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +42,12 @@ class StockSplitService:
 
         await self.db.commit()
         await self.db.refresh(db_split)
+        logger.info(
+            "StockSplitを登録しました action=create user_id={} symbol={} split_id={}",
+            user_id,
+            split_data.symbol,
+            db_split.split_id,
+        )
         return db_split
 
     async def list_stock_splits(self, user_id: int, symbol: Optional[str] = None) -> List[models.StockSplit]:
@@ -64,7 +71,14 @@ class StockSplitService:
             query = query.where(models.StockSplit.symbol == symbol)
 
         result = await self.db.execute(query)
-        return list(result.scalars().all())
+        splits = list(result.scalars().all())
+        logger.info(
+            "StockSplitを取得しました action=select user_id={} symbol={} count={}",
+            user_id,
+            symbol or "all",
+            len(splits),
+        )
+        return splits
 
     async def delete_stock_split(self, split_id: int, user_id: int) -> bool:
         """
@@ -87,6 +101,11 @@ class StockSplitService:
         split = result.scalar_one_or_none()
 
         if not split:
+            logger.info(
+                "StockSplitが見つかりませんでした action=select user_id={} split_id={} found=false",
+                user_id,
+                split_id,
+            )
             return False
 
         symbol = split.symbol
@@ -99,6 +118,12 @@ class StockSplitService:
         await self.recalculate_adjusted_values(symbol, user_id)
 
         await self.db.commit()
+        logger.info(
+            "StockSplitを削除しました action=delete user_id={} symbol={} split_id={}",
+            user_id,
+            symbol,
+            split_id,
+        )
         return True
 
     async def recalculate_adjusted_values(self, symbol: str, user_id: int) -> None:
@@ -143,6 +168,12 @@ class StockSplitService:
                 transaction.adjusted_price = None
 
             await self.db.flush()
+            logger.info(
+                "Transactionを更新しました action=bulk_update user_id={} symbol={} count={} reason=no_splits",
+                user_id,
+                symbol,
+                len(transactions),
+            )
             return
 
         # ユーザーの全取引を取得
@@ -173,3 +204,10 @@ class StockSplitService:
                 transaction.adjusted_price = None
 
         await self.db.flush()
+        logger.info(
+            "Transactionを更新しました action=bulk_update user_id={} symbol={} count={} split_count={}",
+            user_id,
+            symbol,
+            len(transactions),
+            len(splits),
+        )

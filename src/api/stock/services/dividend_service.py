@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from sqlalchemy import extract, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from loguru import logger
 
 from .. import models, schemas
 from .holding_service import update_single_holding_pl
@@ -21,9 +22,16 @@ class DividendService:
         stock_query = select(models.Stock).where(models.Stock.symbol == dividend.symbol)
         stock_result = await self.db.execute(stock_query)
         stock = stock_result.scalar_one_or_none()
+        logger.info(
+            "Stockを取得しました action=select user_id={} symbol={} found={}",
+            user_id,
+            dividend.symbol,
+            bool(stock),
+        )
 
         if not stock:
             stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=dividend.symbol))
+            logger.info("Stockに登録しました action=create user_id={} symbol={}", user_id, dividend.symbol)
 
         # 配当情報の登録
         db_dividend = models.Dividend(**dividend.model_dump(), user_id=user_id)
@@ -36,6 +44,12 @@ class DividendService:
         )
         holdings_result = await self.db.execute(holdings_query)
         holding = holdings_result.scalar_one_or_none()
+        logger.info(
+            "Holdingsを取得しました action=select user_id={} symbol={} found={}",
+            user_id,
+            dividend.symbol,
+            bool(holding),
+        )
 
         if holding:
             # total_dividend に配当の純額（税・手数料控除後）を加算
@@ -63,6 +77,15 @@ class DividendService:
         # 配当登録後に保有損益を更新
         await update_single_holding_pl(self.db, user_id, dividend.symbol)
 
+        logger.info(
+            "Dividendに登録しました action=commit user_id={} symbol={} dividend_id={} total_amount={} payment_date={}",
+            user_id,
+            dividend.symbol,
+            db_dividend.dividend_id,
+            dividend.total_amount,
+            dividend.payment_date,
+        )
+
         return db_dividend
 
     async def list_dividends(self, user_id: int, symbol: Optional[str] = None) -> List[models.Dividend]:
@@ -83,6 +106,12 @@ class DividendService:
             dividend = row[0]
             dividend.stock_name = row[1]
             dividends.append(dividend)
+        logger.info(
+            "Dividendを取得しました action=select user_id={} symbol={} count={}",
+            user_id,
+            symbol,
+            len(dividends),
+        )
         return dividends
 
     async def get_monthly_dividends(self, user_id: int) -> List[dict]:
@@ -123,5 +152,7 @@ class DividendService:
             monthly_dividends.append(
                 {"year": int(row.year), "month": int(row.month), "total_dividend": float(row.total_dividend)}
             )
+
+        logger.info("月次配当集計を取得しました user_id={} months={}", user_id, len(monthly_dividends))
 
         return monthly_dividends

@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
 from typing import Annotated
 
-from fastapi import Cookie, Depends, Header, HTTPException, Request, status  # Request をインポート
+from fastapi import Cookie, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
+from loguru import logger
 from passlib.context import CryptContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,12 +55,9 @@ async def get_user(db: AsyncSession, username: str):
 
     注：キャッシュは5分間有効です。このため、ユーザー情報の変更は最大5分後に反映されます。
     """
-    print(f"=== get_user called for username: {username} ===")
     query = select(models.User).where(models.User.username == username)
-    print("Executing database query...")
     result = await db.execute(query)
     user = result.scalar_one_or_none()
-    print(f"User found: {'Yes' if user else 'No'}")
     return user
 
 
@@ -71,20 +69,14 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
     - password: 認証対象のパスワード
     - 戻り値: 認証成功時はUserモデル、失敗時はFalse
     """
-    print(f"=== authenticate_user started for username: {username} ===")
-    print("Attempting to get user from database...")
     user = await get_user(db, username)
 
     if not user:
-        print("User not found in database")
         return False
 
-    print("Verifying password...")
     if not verify_password(password, user.password_hash):
-        print("Password verification failed")
         return False
 
-    print("Authentication successful")
     return user
 
 
@@ -95,31 +87,24 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     - expires_delta: トークンの有効期限（オプション）
     - 戻り値: 生成されたJWTトークン
     """
-    print("=== create_access_token started ===")
-    print(f"Input data: {data}")
-
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
         expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-    print(f"Token expiry time set to: {expire}")
     to_encode.update({"exp": expire})
 
-    print("Encoding JWT token...")
     try:
         encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-        print("JWT token encoded successfully")
     except Exception as e:
-        print(f"Error encoding JWT token: {e}")
+        logger.error("JWTトークンのエンコードに失敗しました action=create error={}", str(e))
         raise
 
     return encoded_jwt
 
 
 async def get_current_user(
-    request: Request,
     access_token_cookie: Annotated[str | None, Cookie(alias="token")] = None,
     authorization: Annotated[str | None, Header()] = None,
     db: AsyncSession = Depends(get_db),
@@ -130,14 +115,6 @@ async def get_current_user(
     2. クッキーのアクセストークン
     3. Authorizationヘッダー
     """
-    # デバッグ情報の追加
-    print("=== get_current_user called ===")
-    print(f"access_token_cookie: {access_token_cookie}")
-    print(f"access_token_cookie type: {type(access_token_cookie)}")
-    if access_token_cookie:
-        print(f"access_token_cookie starts with 'Bearer ': {access_token_cookie.startswith('Bearer ')}")
-    print(f"authorization: {authorization}")
-
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -152,45 +129,26 @@ async def get_current_user(
             jwt_token = access_token_cookie.replace("Bearer ", "")
         else:
             jwt_token = access_token_cookie
-        print("クッキートークンを使用")
-        print(f"クッキートークン: {jwt_token}")
     elif authorization and authorization.startswith("Bearer "):
         jwt_token = authorization.replace("Bearer ", "")
-        print("Authorizationヘッダートークンを使用")
     else:
-        print("認証情報が見つかりません")
         raise credentials_exception
-
-    # すべてのリクエストヘッダーを表示
-    print("=== リクエストヘッダー ===")
-    if request:  # 引数のrequestをチェック
-        print("Request headers:")
-        for key, value in request.headers.items():
-            print(f"{key}: {value}")
-    else:
-        print("Request object not available")
 
     try:
         if not jwt_token:
-            print("jwt_tokenが空です")
             raise credentials_exception
 
-        print(f"JWT Token: {jwt_token}")
         payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
-            print("トークンにユーザー名が含まれていません")
             raise credentials_exception
         token_data = schemas.TokenData(username=username)
-    except JWTError as e:
-        print(f"JWTエラー: {e}")
+    except JWTError:
         raise credentials_exception
 
     user = await get_user(db, username=token_data.username)
     if user is None:
-        print(f"ユーザーが見つかりません: {token_data.username}")
         raise credentials_exception
-    print(f"認証成功: ユーザー {user.username}")
     return user
 
 

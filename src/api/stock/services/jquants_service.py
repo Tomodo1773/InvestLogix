@@ -16,6 +16,7 @@ from typing import Dict, List, Optional
 import aiohttp
 from dotenv import load_dotenv
 from jquantsapi import ClientV2
+from loguru import logger
 
 from ..database import settings
 
@@ -109,26 +110,23 @@ def test_api():
         prices = asyncio.run(
             client.get_prices(symbol=test_symbol, start_date="2024-01-01", end_date="2024-02-01")
         )
-        print("\n=== 株価情報 ===")
-        print(f"取得件数: {len(prices)}")
-        if prices:
-            print("最新の株価:", prices[0])
+        logger.info(
+            "株価情報を取得しました action=external_io symbol={} count={}",
+            test_symbol,
+            len(prices),
+        )
 
         # 企業情報の取得
         company = client.get_company_info(test_symbol)
-        print("\n=== 企業情報 ===")
         if company:
-            print("企業情報", company)
+            logger.info("企業情報を取得しました action=external_io symbol={}", test_symbol)
 
         # 市場区分情報の取得
         segments = client.get_market_segment()
-        print("\n=== 市場区分情報 ===")
-        print(f"取得件数: {len(segments)}")
-        if segments:
-            print("市場区分:", segments)
+        logger.info("市場区分情報を取得しました action=external_io count={}", len(segments))
 
     except Exception as e:
-        print(f"エラーが発生しました: {e}")
+        logger.error("J-Quants APIのテストに失敗しました action=external_io error={}", str(e))
 
 
 if __name__ == "__main__":
@@ -139,7 +137,7 @@ if __name__ == "__main__":
     api_key = os.getenv("JQUANTS_API_KEY")
 
     if not api_key:
-        print("環境変数 JQUANTS_API_KEY を設定してください。")
+        logger.error("環境変数 JQUANTS_API_KEY が未設定です action=external_io")
         exit(1)
 
     # クライアントを初期化

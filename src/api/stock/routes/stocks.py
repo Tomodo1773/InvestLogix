@@ -1,6 +1,7 @@
 from typing import Annotated, List
 
 from fastapi import APIRouter, Depends, HTTPException
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
@@ -27,6 +28,11 @@ async def create_stock(
     try:
         stock_service = StockService(db)
         db_stock = await stock_service.create_stock(stock)
+        logger.info(
+            "Stockに登録しました action=create user_id={} symbol={}",
+            current_user.user_id,
+            db_stock.symbol,
+        )
         return db_stock
     except ValueError:
         raise HTTPException(status_code=404, detail="Stock not found")
@@ -44,7 +50,14 @@ async def list_stocks(
     - 成功時: 銘柄情報のリストを返却
     """
     stock_service = StockService(db)
-    return await stock_service.list_stocks(market)
+    stocks = await stock_service.list_stocks(market)
+    logger.info(
+        "Stockを取得しました action=select user_id={} market={} count={}",
+        current_user.user_id,
+        market,
+        len(stocks),
+    )
+    return stocks
 
 
 @router.delete("/{symbol}", response_model=bool)
@@ -62,4 +75,9 @@ async def delete_stock(
     success = await stock_service.delete_stock(symbol)
     if not success:
         raise HTTPException(status_code=404, detail="Stock not found")
+    logger.info(
+        "Stockを削除しました action=delete user_id={} symbol={}",
+        current_user.user_id,
+        symbol,
+    )
     return success

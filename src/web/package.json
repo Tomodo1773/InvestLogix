@@ -44,6 +44,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "happy-dom": "^20.3.7",
     "knip": "^5.82.1",
+    "next": "16.1.6",
     "postcss": "^8.5",
     "postcss-load-config": "^6.0.1",
     "tailwindcss": "^4.1.18",

@@ -136,24 +136,24 @@ function HoldingDetailContent() {
                   <p className="text-sm text-muted-foreground">損益</p>
                   <p
                     className={`text-lg font-semibold ${
-                      holding.unrealized_pl && Number(holding.unrealized_pl) >= 0
+                      holding.total_pl && Number(holding.total_pl) >= 0
                         ? "text-[#4CAF50]"
                         : "text-destructive"
                     }`}
                   >
-                    {holding.unrealized_pl ? formatCurrency(holding.unrealized_pl) : "-"}
+                    {holding.total_pl ? formatCurrency(holding.total_pl) : "-"}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">損益率</p>
                   <p
                     className={`text-lg font-semibold ${
-                      holding.unrealized_pl_percentage && Number(holding.unrealized_pl_percentage) >= 0
+                      holding.total_pl_percentage && Number(holding.total_pl_percentage) >= 0
                         ? "text-[#4CAF50]"
                         : "text-destructive"
                     }`}
                   >
-                    {holding.unrealized_pl_percentage ? formatPercent(holding.unrealized_pl_percentage) : "-"}
+                    {holding.total_pl_percentage ? formatPercent(holding.total_pl_percentage) : "-"}
                   </p>
                 </div>
               </div>

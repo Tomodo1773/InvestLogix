@@ -12,6 +12,8 @@ describe("filterDataByTimeFrame", () => {
       total_unrealized_pl_percentage: 10,
       total_realized_pl: 0,
       total_dividend: 50000,
+      total_pl: 150000,
+      total_pl_percentage: 15,
     },
     {
       date: "2024-01-15",
@@ -21,6 +23,8 @@ describe("filterDataByTimeFrame", () => {
       total_unrealized_pl_percentage: 9.5,
       total_realized_pl: 0,
       total_dividend: 55000,
+      total_pl: 155000,
+      total_pl_percentage: 14.8,
     },
     {
       date: "2024-02-01",
@@ -30,6 +34,8 @@ describe("filterDataByTimeFrame", () => {
       total_unrealized_pl_percentage: 9.1,
       total_realized_pl: 0,
       total_dividend: 60000,
+      total_pl: 160000,
+      total_pl_percentage: 14.5,
     },
     {
       date: "2024-02-15",
@@ -39,6 +45,8 @@ describe("filterDataByTimeFrame", () => {
       total_unrealized_pl_percentage: 8.7,
       total_realized_pl: 0,
       total_dividend: 65000,
+      total_pl: 165000,
+      total_pl_percentage: 14.3,
     },
     {
       date: "2025-01-01",
@@ -48,6 +56,8 @@ describe("filterDataByTimeFrame", () => {
       total_unrealized_pl_percentage: 8.3,
       total_realized_pl: 0,
       total_dividend: 70000,
+      total_pl: 170000,
+      total_pl_percentage: 14.2,
     },
   ]
 

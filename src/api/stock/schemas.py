@@ -163,6 +163,8 @@ class HoldingBase(BaseModel):
     total_dividend: Optional[Decimal]
     unrealized_pl: Optional[Decimal]
     unrealized_pl_percentage: Optional[Decimal]
+    total_pl: Optional[Decimal]
+    total_pl_percentage: Optional[Decimal]
 
 
 class Holding(HoldingBase):
@@ -221,6 +223,8 @@ class PortfolioHistoryBase(BaseModel):
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal
+    total_pl: Decimal
+    total_pl_percentage: Decimal
 
     @field_serializer("date")
     def serialize_date(self, v: datetime) -> str:
@@ -274,6 +278,8 @@ class PortfolioHistoryResponse(BaseModel):
     total_unrealized_pl_percentage: float
     total_realized_pl: float
     total_dividend: float
+    total_pl: float
+    total_pl_percentage: float
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -403,6 +409,8 @@ class PortfolioSummary(BaseModel):
     total_unrealized_pl_percentage: Decimal
     total_realized_pl: Decimal
     total_dividend: Decimal
+    total_pl: Decimal
+    total_pl_percentage: Decimal
     holdings_by_market: dict[str, Decimal]
     holdings_by_currency: dict[str, Decimal]
 

@@ -79,6 +79,10 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
     # 米国株: 1500円 - 300円 = 1200円
     assert Decimal(str(data["total_dividend"])) == Decimal("2000")
 
+    # total_plとtotal_pl_percentageの存在確認
+    assert data["total_pl"] is not None
+    assert data["total_pl_percentage"] is not None
+
     # 市場別集計のチェック
     assert len(data["holdings_by_market"]) == 2
     assert data["holdings_by_market"]["JPX"] is not None
@@ -225,6 +229,8 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
         assert "total_unrealized_pl_percentage" in record
         assert "total_realized_pl" in record
         assert "total_dividend" in record
+        assert "total_pl" in record
+        assert "total_pl_percentage" in record
 
     # 値の正確性をチェック（最新のレコードを使用）
     latest_record = data[0]

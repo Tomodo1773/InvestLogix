@@ -12,7 +12,7 @@ import {
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPriceHistory } from "@/lib/api/client"
-import type { PriceHistoryInterval, PriceHistoryPeriod, TransactionWithPL } from "@/lib/api/types"
+import type { PriceHistoryInterval, TransactionWithPL } from "@/lib/api/types"
 
 interface PriceChartProps {
   symbol: string
@@ -21,12 +21,11 @@ interface PriceChartProps {
 }
 
 export function PriceChart({ symbol, securityType, transactions }: PriceChartProps) {
-  const [period, setPeriod] = useState<PriceHistoryPeriod>("1Y")
   const [interval, setInterval] = useState<PriceHistoryInterval>("daily")
 
   const { data, isLoading, error } = useSWR(
-    securityType === "FUND" ? null : `/stocks/${symbol}/price-history?period=${period}&interval=${interval}`,
-    () => getPriceHistory(symbol, period, interval)
+    securityType === "FUND" ? null : `/stocks/${symbol}/price-history?interval=${interval}&limit=80`,
+    () => getPriceHistory(symbol, interval, 80)
   )
 
   // 投資信託の場合は非表示
@@ -34,19 +33,55 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     return null
   }
 
-  const periodButtons: { label: string; value: PriceHistoryPeriod }[] = [
-    { label: "1M", value: "1M" },
-    { label: "3M", value: "3M" },
-    { label: "6M", value: "6M" },
-    { label: "1Y", value: "1Y" },
-    { label: "3Y", value: "3Y" },
-  ]
-
   const intervalButtons: { label: string; value: PriceHistoryInterval }[] = [
     { label: "日足", value: "daily" },
     { label: "週足", value: "weekly" },
     { label: "月足", value: "monthly" },
   ]
+
+  // X軸のフォーマット関数（間隔ごとに異なる形式）
+  const formatXAxis = (value: string, index: number) => {
+    if (!data?.data) return ""
+    const date = new Date(value)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+
+    // 最初のデータポイントの年
+    const firstDate = new Date(data.data[0].date)
+    const firstYear = firstDate.getFullYear()
+
+    if (interval === "daily") {
+      // 日足: mm形式、月初のみ表示。最初と年が変わった時はyyyy/mm
+      const isFirstOfMonth = date.getDate() === 1 || index === 0
+      if (!isFirstOfMonth) return ""
+
+      const isFirstPoint = index === 0
+      const isYearChange = year !== firstYear && month === 1
+
+      if (isFirstPoint || isYearChange) {
+        return `${year}/${month.toString().padStart(2, "0")}`
+      }
+      return month.toString().padStart(2, "0")
+    }
+
+    if (interval === "weekly") {
+      // 週足: mm形式、3ヶ月毎（1,4,7,10月）。最初と年が変わった時はyyyy/mm
+      const isQuarterStart = [1, 4, 7, 10].includes(month)
+      if (!isQuarterStart && index !== 0) return ""
+
+      const isFirstPoint = index === 0
+      const isYearChange = year !== firstYear && month === 1
+
+      if (isFirstPoint || isYearChange) {
+        return `${year}/${month.toString().padStart(2, "0")}`
+      }
+      return month.toString().padStart(2, "0")
+    }
+
+    // 月足: yyyy/mm形式、1月のみ表示
+    if (month !== 1) return ""
+    return `${year}/${month.toString().padStart(2, "0")}`
+  }
 
   // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
   const buyDates = (() => {
@@ -70,24 +105,6 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
       <CardHeader>
         <CardTitle>株価推移</CardTitle>
         <div className="flex flex-wrap items-center gap-2">
-          {/* 期間選択 */}
-          <div className="flex gap-1">
-            {periodButtons.map((btn) => (
-              <button
-                key={btn.value}
-                type="button"
-                onClick={() => setPeriod(btn.value)}
-                className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
-                  period === btn.value
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
-
           {/* 間隔選択 */}
           <div className="flex gap-1">
             {intervalButtons.map((btn) => (
@@ -120,13 +137,7 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data.data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => {
-                  const date = new Date(value)
-                  return `${date.getMonth() + 1}/${date.getDate()}`
-                }}
-              />
+              <XAxis dataKey="date" tickFormatter={formatXAxis} />
               <YAxis domain={["auto", "auto"]} tickFormatter={(value) => value.toLocaleString()} />
               <Tooltip
                 contentStyle={{

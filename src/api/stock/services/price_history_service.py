@@ -12,7 +12,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
-from ..schemas import PriceDataPoint, PriceHistoryInterval, PriceHistoryPeriod
+from ..schemas import PriceDataPoint, PriceHistoryInterval
 from ..utils.cache import timed_cache
 from .jquants_service import get_jquants_client
 
@@ -24,21 +24,19 @@ class PriceHistoryService:
         self.db = db
 
     @staticmethod
-    def _calculate_start_date(period: PriceHistoryPeriod) -> str:
-        """期間から開始日を計算する"""
+    def _calculate_start_date(interval: PriceHistoryInterval, limit: int) -> str:
+        """間隔と取得件数から開始日を計算する（十分な余裕を持たせる）"""
         today = datetime.now()
-        if period == PriceHistoryPeriod.ONE_MONTH:
-            start = today - timedelta(days=30)
-        elif period == PriceHistoryPeriod.THREE_MONTHS:
-            start = today - timedelta(days=90)
-        elif period == PriceHistoryPeriod.SIX_MONTHS:
-            start = today - timedelta(days=180)
-        elif period == PriceHistoryPeriod.ONE_YEAR:
-            start = today - timedelta(days=365)
-        elif period == PriceHistoryPeriod.THREE_YEARS:
-            start = today - timedelta(days=365 * 3)
-        else:
-            start = today - timedelta(days=365)  # デフォルトは1年
+        if interval == PriceHistoryInterval.DAILY:
+            # 平日営業日を考慮して、limit * 1.5日分遡る
+            days_back = int(limit * 1.5)
+        elif interval == PriceHistoryInterval.WEEKLY:
+            # 週足なら limit週 * 7日
+            days_back = limit * 7
+        else:  # MONTHLY
+            # 月足なら limit月 * 31日
+            days_back = limit * 31
+        start = today - timedelta(days=days_back)
         return start.strftime("%Y-%m-%d")
 
     @staticmethod
@@ -223,16 +221,16 @@ class PriceHistoryService:
     async def get_price_history(
         self,
         symbol: str,
-        period: PriceHistoryPeriod = PriceHistoryPeriod.ONE_YEAR,
         interval: PriceHistoryInterval = PriceHistoryInterval.DAILY,
+        limit: int = 80,
     ) -> dict:
         """
         株価時系列データを取得
 
         Args:
             symbol: 銘柄コード
-            period: 取得期間
             interval: データ間隔
+            limit: 取得件数
 
         Returns:
             株価履歴データ
@@ -257,7 +255,7 @@ class PriceHistoryService:
             raise ValueError("Price history is not available for investment funds")
 
         # 開始日・終了日を計算
-        start_date = self._calculate_start_date(period)
+        start_date = self._calculate_start_date(interval, limit)
         end_date = datetime.now().strftime("%Y-%m-%d")
 
         # 市場に応じてデータを取得
@@ -272,11 +270,14 @@ class PriceHistoryService:
         elif interval == PriceHistoryInterval.MONTHLY:
             data = self._aggregate_to_monthly(data)
 
+        # 最新のlimit件のみを返す
+        data = data[-limit:] if len(data) > limit else data
+
         logger.info(
-            "PriceHistoryを取得しました action=aggregate symbol={} period={} interval={} count={}",
+            "PriceHistoryを取得しました action=aggregate symbol={} interval={} limit={} count={}",
             symbol,
-            period.value,
             interval.value,
+            limit,
             len(data),
         )
-        return {"symbol": symbol, "period": period.value, "interval": interval.value, "data": data}
+        return {"symbol": symbol, "interval": interval.value, "data": data}

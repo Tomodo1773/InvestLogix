@@ -31,7 +31,6 @@ vi.mock("recharts", () => ({
 
 const mockPriceData: PriceHistoryResponse = {
   symbol: "7203",
-  period: "1Y",
   interval: "daily",
   data: [
     {
@@ -59,7 +58,7 @@ describe("PriceChart", () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it("期間切り替えボタンが表示されること", async () => {
+  it("期間切り替えボタンが表示されないこと", async () => {
     const useSWR = await import("swr")
     vi.mocked(useSWR.default).mockReturnValue({
       data: mockPriceData,
@@ -71,12 +70,12 @@ describe("PriceChart", () => {
 
     render(<PriceChart symbol="7203" securityType="STOCK" />)
 
-    // 期間ボタンが表示されること
-    expect(screen.getByText("1M")).toBeInTheDocument()
-    expect(screen.getByText("3M")).toBeInTheDocument()
-    expect(screen.getByText("6M")).toBeInTheDocument()
-    expect(screen.getByText("1Y")).toBeInTheDocument()
-    expect(screen.getByText("3Y")).toBeInTheDocument()
+    // 期間ボタンは削除されたため表示されないこと
+    expect(screen.queryByText("1M")).not.toBeInTheDocument()
+    expect(screen.queryByText("3M")).not.toBeInTheDocument()
+    expect(screen.queryByText("6M")).not.toBeInTheDocument()
+    expect(screen.queryByText("1Y")).not.toBeInTheDocument()
+    expect(screen.queryByText("3Y")).not.toBeInTheDocument()
   })
 
   it("間隔切り替えボタンが表示されること", async () => {
@@ -132,7 +131,7 @@ describe("PriceChart", () => {
   it("データが空の場合にメッセージが表示されること", async () => {
     const useSWR = await import("swr")
     vi.mocked(useSWR.default).mockReturnValue({
-      data: { symbol: "7203", period: "1Y", interval: "daily", data: [] },
+      data: { symbol: "7203", interval: "daily", data: [] },
       isLoading: false,
       error: null,
       isValidating: false,
@@ -142,32 +141,6 @@ describe("PriceChart", () => {
     render(<PriceChart symbol="7203" securityType="STOCK" />)
 
     expect(screen.getByText("データがありません")).toBeInTheDocument()
-  })
-
-  it("期間ボタンをクリックすると選択状態が変わること", async () => {
-    const user = userEvent.setup()
-    const useSWR = await import("swr")
-    vi.mocked(useSWR.default).mockReturnValue({
-      data: mockPriceData,
-      isLoading: false,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    })
-
-    render(<PriceChart symbol="7203" securityType="STOCK" />)
-
-    const button3M = screen.getByText("3M")
-
-    // 初期状態では1Yが選択されている
-    const button1Y = screen.getByText("1Y")
-    expect(button1Y).toHaveClass("bg-primary")
-
-    // 3Mボタンをクリック
-    await user.click(button3M)
-
-    // 3Mが選択状態になる
-    expect(button3M).toHaveClass("bg-primary")
   })
 
   it("間隔ボタンをクリックすると選択状態が変わること", async () => {

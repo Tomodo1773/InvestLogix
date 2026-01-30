@@ -454,7 +454,7 @@ async def test_get_price_history_monthly_limit_validation(
     """月足のlimit上限検証テスト
 
     期待する動作:
-    - limit > 200の場合、ステータスコード400
+    - limit > 60の場合、ステータスコード400
     - エラーメッセージが返されること
 
     Args:
@@ -463,13 +463,13 @@ async def test_get_price_history_monthly_limit_validation(
         auth_token: 認証トークン
         setup_japanese_stock_data: 日本株テストデータ
     """
-    # limit=300でリクエスト（月足の推奨上限200を超える）
+    # limit=61でリクエスト（月足の上限60を超える）
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
-        params={"interval": "monthly", "limit": 300},
+        params={"interval": "monthly", "limit": 61},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 400
     data = response.json()
-    assert "200" in data["detail"]
+    assert "60" in data["detail"]

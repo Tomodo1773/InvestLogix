@@ -85,10 +85,11 @@ function calculateTicksForInterval(
 
 export function PriceChart({ symbol, securityType, transactions }: PriceChartProps) {
   const [interval, setInterval] = useState<PriceHistoryInterval>("daily")
+  const limit = interval === "monthly" ? 60 : 80
 
   const { data, isLoading, error } = useSWR(
-    securityType === "FUND" ? null : `/stocks/${symbol}/price-history?interval=${interval}&limit=80`,
-    () => getPriceHistory(symbol, interval, 80)
+    securityType === "FUND" ? null : `/stocks/${symbol}/price-history?interval=${interval}&limit=${limit}`,
+    () => getPriceHistory(symbol, interval, limit)
   )
 
   const chartData = useMemo(() => {

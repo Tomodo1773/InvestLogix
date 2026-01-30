@@ -32,7 +32,7 @@ async def get_price_history(
     Args:
         symbol: 銘柄コード
         interval: データ間隔（デフォルト: daily）
-        limit: 取得件数（デフォルト: 80、月足は最大200件まで推奨）
+        limit: 取得件数（デフォルト: 80、月足は最大60件まで）
         current_user: 現在のユーザー（認証必須）
         db: データベースセッション
 
@@ -42,11 +42,11 @@ async def get_price_history(
     Raises:
         HTTPException: 銘柄が存在しない、または投資信託など非対応の証券種別の場合
     """
-    # 月足の場合は実用的な上限を警告（200件=約16年分）
-    if interval == PriceHistoryInterval.MONTHLY and limit > 200:
+    # 月足はJ-Quantsの5年制限に合わせて上限を60件に制限
+    if interval == PriceHistoryInterval.MONTHLY and limit > 60:
         raise HTTPException(
             status_code=400,
-            detail="For monthly interval, limit should not exceed 200 (approximately 16 years of data)",
+            detail="For monthly interval, limit should not exceed 60 (approximately 5 years of data)",
         )
 
     service = PriceHistoryService(db)

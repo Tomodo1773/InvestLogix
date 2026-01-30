@@ -407,9 +407,12 @@ async def test_get_price_history_with_limit(
         mocker: モッカー
     """
     # 多数のデータを生成
+    from datetime import datetime, timedelta
+
+    base_date = datetime(2025, 1, 1)
     mock_jquants_prices = [
         {
-            "Date": f"2025-01-{i:02d}",
+            "Date": (base_date + timedelta(days=i - 1)).strftime("%Y-%m-%d"),
             "AdjO": 3000.0,
             "AdjH": 3050.0,
             "AdjL": 2980.0,
@@ -439,3 +442,34 @@ async def test_get_price_history_with_limit(
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) == 10
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_monthly_limit_validation(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_japanese_stock_data,
+):
+    """月足のlimit上限検証テスト
+
+    期待する動作:
+    - limit > 200の場合、ステータスコード400
+    - エラーメッセージが返されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株テストデータ
+    """
+    # limit=300でリクエスト（月足の推奨上限200を超える）
+    response = await client.get(
+        "/api/v1/stocks/8058/price-history",
+        params={"interval": "monthly", "limit": 300},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "200" in data["detail"]

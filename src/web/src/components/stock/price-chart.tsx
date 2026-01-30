@@ -51,11 +51,20 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     const firstYear = firstDate.getFullYear()
 
     if (interval === "daily") {
-      // 日足: mm形式、月初のみ表示。最初と年が変わった時はyyyy/mm
-      const isFirstOfMonth = date.getDate() === 1 || index === 0
+      // 日足: mm形式、毎月最初のデータポイントのみ表示。最初と年が変わった時はyyyy/mm
+      const isFirstPoint = index === 0
+      let isFirstOfMonth = false
+
+      if (isFirstPoint) {
+        isFirstOfMonth = true
+      } else {
+        const prevDate = new Date(data.data[index - 1].date)
+        const prevMonth = prevDate.getMonth() + 1
+        isFirstOfMonth = month !== prevMonth
+      }
+
       if (!isFirstOfMonth) return ""
 
-      const isFirstPoint = index === 0
       const isYearChange = year !== firstYear && month === 1
 
       if (isFirstPoint || isYearChange) {
@@ -65,14 +74,26 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     }
 
     if (interval === "weekly") {
-      // 週足: mm形式、3ヶ月毎（1,4,7,10月）。最初と年が変わった時はyyyy/mm
-      const isQuarterStart = [1, 4, 7, 10].includes(month)
-      if (!isQuarterStart && index !== 0) return ""
-
+      // 週足: mm形式、3ヶ月毎（1,4,7,10月）の「その月の最初のデータポイント」のみに表示。
+      // 最初と年が変わった時はyyyy/mm、それ以外はmm。
       const isFirstPoint = index === 0
-      const isYearChange = year !== firstYear && month === 1
+      if (isFirstPoint) {
+        return `${year}/${month.toString().padStart(2, "0")}`
+      }
 
-      if (isFirstPoint || isYearChange) {
+      // 前データポイントと比較し、月が変わったタイミングのみラベル候補とする
+      const prevDate = new Date(data.data[index - 1].date)
+      const prevMonth = prevDate.getMonth() + 1
+      const prevYear = prevDate.getFullYear()
+      const hasMonthChanged = month !== prevMonth
+
+      const isQuarterStartMonth = [1, 4, 7, 10].includes(month)
+      const isFirstDataInQuarter = isQuarterStartMonth && hasMonthChanged
+      if (!isFirstDataInQuarter) return ""
+
+      // 年が実際に変わった時のみyyyy/mm表示（前データの年と比較）
+      const isYearChange = year !== prevYear
+      if (isYearChange) {
         return `${year}/${month.toString().padStart(2, "0")}`
       }
       return month.toString().padStart(2, "0")

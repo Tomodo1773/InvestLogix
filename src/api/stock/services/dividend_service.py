@@ -60,16 +60,7 @@ class DividendService:
                 net_dividend -= Decimal(dividend.fee)
 
             holding.total_dividend = (holding.total_dividend or Decimal("0")) + net_dividend
-            # 未実現損益の更新
-            if holding.market_value is not None:
-                holding.unrealized_pl = (
-                    holding.market_value
-                    + (holding.realized_pl or Decimal("0"))
-                    + holding.total_dividend
-                    - holding.total_cost
-                )
-                if holding.total_cost > 0:
-                    holding.unrealized_pl_percentage = (holding.unrealized_pl / holding.total_cost) * 100
+            # 注: unrealized_pl等の損益計算はupdate_single_holding_plに一元化
 
         await self.db.commit()
         await self.db.refresh(db_dividend)

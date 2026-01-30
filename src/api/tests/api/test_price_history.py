@@ -63,7 +63,7 @@ async def test_get_japanese_stock_price_history(
     # APIリクエスト実行
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
-        params={"period": "1Y", "interval": "daily"},
+        params={"interval": "daily", "limit": 80},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -71,7 +71,6 @@ async def test_get_japanese_stock_price_history(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "8058"
-    assert data["period"] == "1Y"
     assert data["interval"] == "daily"
     assert len(data["data"]) == 2
 
@@ -136,7 +135,7 @@ async def test_get_us_stock_price_history(
     # APIリクエスト実行
     response = await client.get(
         "/api/v1/stocks/AAPL/price-history",
-        params={"period": "1Y", "interval": "daily"},
+        params={"interval": "daily", "limit": 80},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -144,7 +143,6 @@ async def test_get_us_stock_price_history(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
-    assert data["period"] == "1Y"
     assert data["interval"] == "daily"
     assert len(data["data"]) == 2
 
@@ -219,7 +217,7 @@ async def test_get_price_history_with_weekly_interval(
     # APIリクエスト実行（週次指定）
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
-        params={"period": "1Y", "interval": "weekly"},
+        params={"interval": "weekly", "limit": 80},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -301,7 +299,7 @@ async def test_get_price_history_with_monthly_interval(
     # APIリクエスト実行（月次指定）
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
-        params={"period": "1Y", "interval": "monthly"},
+        params={"interval": "monthly", "limit": 80},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -333,7 +331,7 @@ async def test_get_price_history_stock_not_found(
     # APIリクエスト実行（存在しない銘柄）
     response = await client.get(
         "/api/v1/stocks/INVALID/price-history",
-        params={"period": "1Y", "interval": "daily"},
+        params={"interval": "daily", "limit": 80},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 
@@ -378,7 +376,7 @@ async def test_get_price_history_without_auth(
         # APIリクエスト実行（認証ヘッダーなし、cookieなし）
         response = await test_client.get(
             "/api/v1/stocks/8058/price-history",
-            params={"period": "1Y", "interval": "daily"},
+            params={"interval": "daily", "limit": 80},
         )
 
         # レスポンス検証
@@ -388,18 +386,18 @@ async def test_get_price_history_without_auth(
 
 
 @pytest.mark.asyncio
-async def test_get_price_history_different_periods(
+async def test_get_price_history_with_limit(
     client: AsyncClient,
     db_session: AsyncSession,
     auth_token: str,
     setup_japanese_stock_data,
     mocker,
 ):
-    """異なる期間パラメータのテスト
+    """limitパラメータのテスト
 
     期待する動作:
     - ステータスコード200
-    - 指定した期間パラメータが正しく反映されること
+    - 指定したlimitパラメータ以下のデータ件数が返されること
 
     Args:
         client: 非同期HTTPクライアント
@@ -408,15 +406,20 @@ async def test_get_price_history_different_periods(
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
+    # 多数のデータを生成
+    from datetime import datetime, timedelta
+
+    base_date = datetime(2025, 1, 1)
     mock_jquants_prices = [
         {
-            "Date": "2025-01-20",
+            "Date": (base_date + timedelta(days=i - 1)).strftime("%Y-%m-%d"),
             "AdjO": 3000.0,
             "AdjH": 3050.0,
             "AdjL": 2980.0,
             "AdjC": 3020.0,
             "AdjVo": 1000000,
-        },
+        }
+        for i in range(1, 101)
     ]
 
     from unittest.mock import AsyncMock
@@ -429,15 +432,44 @@ async def test_get_price_history_different_periods(
         return_value=mock_client,
     )
 
-    # 各期間パラメータをテスト
-    periods = ["1M", "3M", "6M", "1Y", "3Y"]
-    for period in periods:
-        response = await client.get(
-            "/api/v1/stocks/8058/price-history",
-            params={"period": period, "interval": "daily"},
-            headers={"Authorization": f"Bearer {auth_token}"},
-        )
+    # limit=10でテスト
+    response = await client.get(
+        "/api/v1/stocks/8058/price-history",
+        params={"interval": "daily", "limit": 10},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["period"] == period
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 10
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_monthly_limit_validation(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_japanese_stock_data,
+):
+    """月足のlimit上限検証テスト
+
+    期待する動作:
+    - limit > 200の場合、ステータスコード400
+    - エラーメッセージが返されること
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+        setup_japanese_stock_data: 日本株テストデータ
+    """
+    # limit=300でリクエスト（月足の推奨上限200を超える）
+    response = await client.get(
+        "/api/v1/stocks/8058/price-history",
+        params={"interval": "monthly", "limit": 300},
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "200" in data["detail"]

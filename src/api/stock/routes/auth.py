@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import authenticate_user, create_access_token, get_current_user
+from ..auth import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
 from ..database import get_db
 from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
@@ -47,7 +47,7 @@ async def login_for_access_token(
         httponly=True,
         secure=is_production,
         samesite="none" if is_production else "lax",
-        max_age=3600,
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 分を秒に変換
         path="/",
     )
     logger.info("Authトークンを発行しました action=create user_id={}", user.user_id)

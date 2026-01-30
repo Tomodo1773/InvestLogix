@@ -91,6 +91,14 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     () => getPriceHistory(symbol, interval, 80)
   )
 
+  const chartData = useMemo(() => {
+    if (!data?.data) return []
+    return data.data.map((point) => ({
+      ...point,
+      dateMs: new Date(point.date).getTime(),
+    }))
+  }, [data?.data])
+
   // ティックの計算
   const ticksConfig = useMemo(() => {
     if (!data?.data) {
@@ -98,6 +106,18 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     }
     return calculateTicksForInterval(data.data, interval)
   }, [data?.data, interval])
+
+  const ticksMs = useMemo(() => ticksConfig.ticks.map((date) => new Date(date).getTime()), [ticksConfig])
+  const tickFormatMapMs = useMemo(() => {
+    const map = new Map<number, TickFormat>()
+    for (const date of ticksConfig.ticks) {
+      const format = ticksConfig.formatMap.get(date)
+      if (format) {
+        map.set(new Date(date).getTime(), format)
+      }
+    }
+    return map
+  }, [ticksConfig])
 
   // 投資信託の場合は非表示
   if (securityType === "FUND") {
@@ -111,20 +131,18 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
   ]
 
   // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
-  const buyDates = (() => {
-    if (!transactions || !data?.data || data.data.length === 0) return []
+  const buyDatesMs = (() => {
+    if (!transactions || chartData.length === 0) return []
 
-    // 株価データの日付はYYYY-MM-DD形式
-    const chartDates = new Set(data.data.map((d) => d.date))
+    const chartDateMsList = chartData.map((point) => point.dateMs)
+    const minDateMs = Math.min(...chartDateMsList)
+    const maxDateMs = Math.max(...chartDateMsList)
 
-    // トランザクションの日付はISO形式（例: 2024-01-15T00:00:00+09:00）なので
-    // YYYY-MM-DD部分のみを抽出して比較する
-    const buyTransactionDates = transactions
+    return transactions
       .filter((t) => t.transaction_type === "buy")
       .map((t) => t.transaction_date.split("T")[0])
-
-    // グラフの日付範囲内にある買付日のみを返す
-    return buyTransactionDates.filter((date) => chartDates.has(date))
+      .map((date) => new Date(date).getTime())
+      .filter((dateMs) => dateMs >= minDateMs && dateMs <= maxDateMs)
   })()
 
   return (
@@ -160,16 +178,18 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
           <div className="flex h-[400px] items-center justify-center">
             <p className="text-muted-foreground">データを取得できませんでした</p>
           </div>
-        ) : data?.data && data.data.length > 0 ? (
+        ) : chartData.length > 0 ? (
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={data.data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+            <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
-                dataKey="date"
-                ticks={ticksConfig.ticks}
+                dataKey="dateMs"
+                type="number"
+                domain={["dataMin", "dataMax"]}
+                ticks={ticksMs}
                 interval={0}
-                tickFormatter={(value: string) => {
-                  const format = ticksConfig.formatMap.get(value)
+                tickFormatter={(value: number) => {
+                  const format = tickFormatMapMs.get(value)
                   if (!format) return ""
 
                   const date = new Date(value)
@@ -188,14 +208,15 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
                   borderRadius: "var(--radius)",
                 }}
                 labelFormatter={(value) => {
+                  if (typeof value !== "number") return ""
                   const date = new Date(value)
                   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
                 }}
                 formatter={(value: number | undefined) => [value?.toLocaleString() ?? "0", "終値"]}
               />
               <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
-              {buyDates.map((date) => (
-                <ReferenceLine key={date} x={date} stroke="red" />
+              {buyDatesMs.map((dateMs) => (
+                <ReferenceLine key={dateMs} x={dateMs} stroke="red" />
               ))}
             </LineChart>
           </ResponsiveContainer>

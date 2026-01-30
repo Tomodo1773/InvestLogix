@@ -18,7 +18,12 @@ vi.mock("swr", () => ({
 
 // Rechartsをモック化（グラフライブラリ自体のテストは不要）
 // ただし、XAxisのpropsは保存してテスト可能にする
-let capturedXAxisProps: any = null
+type CapturedXAxisProps = {
+  ticks?: number[]
+  tickFormatter?: (value: number) => string
+}
+
+let capturedXAxisProps: CapturedXAxisProps | null = null
 
 vi.mock("recharts", () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
@@ -26,7 +31,7 @@ vi.mock("recharts", () => ({
   ),
   LineChart: ({ children }: { children: React.ReactNode }) => <div data-testid="line-chart">{children}</div>,
   Line: () => <div data-testid="line" />,
-  XAxis: (props: any) => {
+  XAxis: (props: CapturedXAxisProps) => {
     capturedXAxisProps = props
     return <div data-testid="x-axis" />
   },
@@ -57,6 +62,14 @@ const mockPriceData: PriceHistoryResponse = {
       volume: 1200000,
     },
   ],
+}
+
+const toMs = (date: string) => new Date(date).getTime()
+const getCapturedXAxisProps = () => {
+  if (!capturedXAxisProps) {
+    throw new Error("XAxis propsが取得できませんでした")
+  }
+  return capturedXAxisProps
 }
 
 describe("PriceChart", () => {
@@ -218,16 +231,18 @@ describe("PriceChart", () => {
       render(<PriceChart symbol="7203" securityType="STOCK" />)
 
       // XAxisのpropsを取得
-      expect(capturedXAxisProps).toBeDefined()
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
       // ティックは月変わりの最初のデータポイントのみ
-      expect(ticks).toEqual(["2025-11-28", "2025-12-06"])
+      expect(ticks).toEqual([toMs("2025-11-28"), toMs("2025-12-06")])
 
       // 最初のデータポイントは年月表示
-      expect(tickFormatter("2025-11-28")).toBe("2025/11")
+      expect(tickFormatter(toMs("2025-11-28"))).toBe("2025/11")
       // 同じ年の月変わりは月のみ表示
-      expect(tickFormatter("2025-12-06")).toBe("12")
+      expect(tickFormatter(toMs("2025-12-06"))).toBe("12")
     })
 
     it("日足で年が変わる場合、年変わりの月はyyyy/mm形式で表示される", async () => {
@@ -253,17 +268,20 @@ describe("PriceChart", () => {
 
       render(<PriceChart symbol="7203" securityType="STOCK" />)
 
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
       // ティックは月変わりのみ
-      expect(ticks).toEqual(["2024-11-01", "2024-12-02", "2025-01-06"])
+      expect(ticks).toEqual([toMs("2024-11-01"), toMs("2024-12-02"), toMs("2025-01-06")])
 
       // 最初のデータポイント
-      expect(tickFormatter("2024-11-01")).toBe("2024/11")
+      expect(tickFormatter(toMs("2024-11-01"))).toBe("2024/11")
       // 同じ年の月変わり
-      expect(tickFormatter("2024-12-02")).toBe("12")
+      expect(tickFormatter(toMs("2024-12-02"))).toBe("12")
       // 年が変わった月
-      expect(tickFormatter("2025-01-06")).toBe("2025/01")
+      expect(tickFormatter(toMs("2025-01-06"))).toBe("2025/01")
     })
 
     it("週足の場合、四半期開始月（1,4,7,10月）の最初のデータポイントがティックになる", async () => {
@@ -293,17 +311,20 @@ describe("PriceChart", () => {
       const buttonWeekly = screen.getByText("週足")
       await userEvent.setup().click(buttonWeekly)
 
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
       // ティックは最初と四半期開始月（1,4月）のみ
-      expect(ticks).toEqual(["2024-12-30", "2025-01-06", "2025-04-07"])
+      expect(ticks).toEqual([toMs("2024-12-30"), toMs("2025-01-06"), toMs("2025-04-07")])
 
       // 最初のデータポイント
-      expect(tickFormatter("2024-12-30")).toBe("2024/12")
+      expect(tickFormatter(toMs("2024-12-30"))).toBe("2024/12")
       // 1月（年が変わっているのでyyyy/mm）
-      expect(tickFormatter("2025-01-06")).toBe("2025/01")
+      expect(tickFormatter(toMs("2025-01-06"))).toBe("2025/01")
       // 4月（同じ年なのでmm）
-      expect(tickFormatter("2025-04-07")).toBe("04")
+      expect(tickFormatter(toMs("2025-04-07"))).toBe("04")
     })
 
     it("月足の場合、1月のみがティックになる", async () => {
@@ -332,14 +353,17 @@ describe("PriceChart", () => {
       const buttonMonthly = screen.getByText("月足")
       await userEvent.setup().click(buttonMonthly)
 
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
       // ティックは1月のみ
-      expect(ticks).toEqual(["2024-01-01", "2025-01-01"])
+      expect(ticks).toEqual([toMs("2024-01-01"), toMs("2025-01-01")])
 
       // 月足は常にyyyy/mm形式
-      expect(tickFormatter("2024-01-01")).toBe("2024/01")
-      expect(tickFormatter("2025-01-01")).toBe("2025/01")
+      expect(tickFormatter(toMs("2024-01-01"))).toBe("2024/01")
+      expect(tickFormatter(toMs("2025-01-01"))).toBe("2025/01")
     })
 
     it("月足の場合、1月以外の月は全てyyyy/mm形式で表示される", async () => {
@@ -363,11 +387,14 @@ describe("PriceChart", () => {
       const buttonMonthly = screen.getByText("月足")
       await userEvent.setup().click(buttonMonthly)
 
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
       // 1月のみティック
-      expect(ticks).toEqual(["2024-01-01"])
-      expect(tickFormatter("2024-01-01")).toBe("2024/01")
+      expect(ticks).toEqual([toMs("2024-01-01")])
+      expect(tickFormatter(toMs("2024-01-01"))).toBe("2024/01")
     })
 
     it("エッジケース: 年変わり後の最初のデータが1月以外（2024/12 → 2025/02）", async () => {
@@ -391,14 +418,17 @@ describe("PriceChart", () => {
 
       render(<PriceChart symbol="7203" securityType="STOCK" />)
 
-      const { ticks, tickFormatter } = capturedXAxisProps
+      const { ticks, tickFormatter } = getCapturedXAxisProps()
+      if (!tickFormatter) {
+        throw new Error("tickFormatterが取得できませんでした")
+      }
 
-      expect(ticks).toEqual(["2024-12-28", "2025-02-03"])
+      expect(ticks).toEqual([toMs("2024-12-28"), toMs("2025-02-03")])
 
       // 最初
-      expect(tickFormatter("2024-12-28")).toBe("2024/12")
+      expect(tickFormatter(toMs("2024-12-28"))).toBe("2024/12")
       // 年変わりの2月
-      expect(tickFormatter("2025-02-03")).toBe("2025/02")
+      expect(tickFormatter(toMs("2025-02-03"))).toBe("2025/02")
     })
   })
 })

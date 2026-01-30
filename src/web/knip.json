@@ -1,5 +1,4 @@
 {
   "$schema": "./node_modules/knip/schema.json",
-  "ignore": ["dist/**"],
-  "ignoreDependencies": ["@testing-library/user-event"]
+  "ignore": ["dist/**"]
 }

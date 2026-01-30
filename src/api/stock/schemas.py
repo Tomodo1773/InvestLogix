@@ -469,20 +469,9 @@ class PriceHistoryInterval(str, Enum):
     MONTHLY = "monthly"
 
 
-class PriceHistoryPeriod(str, Enum):
-    """株価データの取得期間"""
-
-    ONE_MONTH = "1M"
-    THREE_MONTHS = "3M"
-    SIX_MONTHS = "6M"
-    ONE_YEAR = "1Y"
-    THREE_YEARS = "3Y"
-
-
 class PriceHistoryResponse(BaseModel):
     """株価履歴レスポンス"""
 
     symbol: str = Field(..., description="銘柄コード")
-    period: str = Field(..., description="取得期間（1M, 3M, 6M, 1Y, 3Y）")
     interval: str = Field(..., description="データ間隔（daily, weekly, monthly）")
     data: List[PriceDataPoint] = Field(..., description="株価データのリスト")

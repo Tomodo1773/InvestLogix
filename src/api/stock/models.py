@@ -186,8 +186,6 @@ class Holding(Base):
     user = relationship("User", back_populates="holdings")
     stock = relationship("Stock", back_populates="holdings")
 
-    __table_args__ = (UniqueConstraint("user_id", "symbol", name="uq_user_symbol"),)
-
 
 class Transaction(Base):
     __tablename__ = "transactions"

@@ -25,13 +25,15 @@ def upgrade() -> None:
     op.add_column(
         "holdings", sa.Column("total_pl_percentage", sa.Numeric(precision=5, scale=2), nullable=True)
     )
-    op.create_unique_constraint("uq_user_symbol", "holdings", ["user_id", "symbol"])
     op.add_column(
-        "portfolio_history", sa.Column("total_pl", sa.Numeric(precision=10, scale=2), nullable=False)
+        "portfolio_history",
+        sa.Column("total_pl", sa.Numeric(precision=10, scale=2), nullable=False, server_default="0"),
     )
     op.add_column(
         "portfolio_history",
-        sa.Column("total_pl_percentage", sa.Numeric(precision=5, scale=2), nullable=False),
+        sa.Column(
+            "total_pl_percentage", sa.Numeric(precision=5, scale=2), nullable=False, server_default="0"
+        ),
     )
     op.alter_column("stock_splits", "user_id", existing_type=sa.INTEGER(), nullable=False)
     # ### end Alembic commands ###
@@ -42,7 +44,6 @@ def downgrade() -> None:
     op.alter_column("stock_splits", "user_id", existing_type=sa.INTEGER(), nullable=True)
     op.drop_column("portfolio_history", "total_pl_percentage")
     op.drop_column("portfolio_history", "total_pl")
-    op.drop_constraint("uq_user_symbol", "holdings", type_="unique")
     op.drop_column("holdings", "total_pl_percentage")
     op.drop_column("holdings", "total_pl")
     # ### end Alembic commands ###

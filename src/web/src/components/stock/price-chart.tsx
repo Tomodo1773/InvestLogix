@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   CartesianGrid,
   Line,
@@ -12,12 +12,75 @@ import {
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPriceHistory } from "@/lib/api/client"
-import type { PriceHistoryInterval, TransactionWithPL } from "@/lib/api/types"
+import type { PriceDataPoint, PriceHistoryInterval, TransactionWithPL } from "@/lib/api/types"
 
 interface PriceChartProps {
   symbol: string
   securityType?: string | null
   transactions?: TransactionWithPL[]
+}
+
+type TickFormat = "yyyy/mm" | "mm"
+
+/**
+ * 指定されたインターバルに基づいて、X軸に表示するティックと、各ティックのフォーマット形式を計算する
+ * @param dataPoints - 株価データポイントの配列
+ * @param interval - 表示間隔（daily, weekly, monthly）
+ * @returns ティックの日付文字列配列と、各日付のフォーマット形式を持つMap
+ */
+function calculateTicksForInterval(
+  dataPoints: PriceDataPoint[],
+  interval: PriceHistoryInterval
+): { ticks: string[]; formatMap: Map<string, TickFormat> } {
+  const ticks: string[] = []
+  const formatMap = new Map<string, TickFormat>()
+
+  if (dataPoints.length === 0) {
+    return { ticks, formatMap }
+  }
+
+  const quarterMonths = [1, 4, 7, 10]
+  let prevYear: number | null = null
+  let prevMonth: number | null = null
+
+  for (const point of dataPoints) {
+    const date = new Date(point.date)
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+
+    const isFirst = prevMonth === null
+    const hasMonthChanged = prevMonth !== null && month !== prevMonth
+    const isYearChange = prevYear !== null && year !== prevYear
+
+    let shouldAddTick = false
+
+    if (interval === "daily") {
+      // 日足: 月が変わった最初のデータ
+      shouldAddTick = isFirst || hasMonthChanged
+    } else if (interval === "weekly") {
+      // 週足: 最初 or 四半期開始月の最初のデータ
+      shouldAddTick = isFirst || (hasMonthChanged && quarterMonths.includes(month))
+    } else {
+      // 月足: 1月のみ
+      shouldAddTick = month === 1
+    }
+
+    if (shouldAddTick) {
+      ticks.push(point.date)
+
+      // 月足は常にyyyy/mm、他は最初or年変わりでyyyy/mm
+      if (interval === "monthly") {
+        formatMap.set(point.date, "yyyy/mm")
+      } else {
+        formatMap.set(point.date, isFirst || isYearChange ? "yyyy/mm" : "mm")
+      }
+    }
+
+    prevYear = year
+    prevMonth = month
+  }
+
+  return { ticks, formatMap }
 }
 
 export function PriceChart({ symbol, securityType, transactions }: PriceChartProps) {
@@ -27,6 +90,14 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     securityType === "FUND" ? null : `/stocks/${symbol}/price-history?interval=${interval}&limit=80`,
     () => getPriceHistory(symbol, interval, 80)
   )
+
+  // ティックの計算
+  const ticksConfig = useMemo(() => {
+    if (!data?.data) {
+      return { ticks: [], formatMap: new Map<string, TickFormat>() }
+    }
+    return calculateTicksForInterval(data.data, interval)
+  }, [data?.data, interval])
 
   // 投資信託の場合は非表示
   if (securityType === "FUND") {
@@ -38,71 +109,6 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
     { label: "週足", value: "weekly" },
     { label: "月足", value: "monthly" },
   ]
-
-  // X軸のフォーマット関数（間隔ごとに異なる形式）
-  const formatXAxis = (value: string, index: number) => {
-    if (!data?.data) return ""
-    const date = new Date(value)
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-
-    // 最初のデータポイントの年
-    const firstDate = new Date(data.data[0].date)
-    const firstYear = firstDate.getFullYear()
-
-    if (interval === "daily") {
-      // 日足: mm形式、毎月最初のデータポイントのみ表示。最初と年が変わった時はyyyy/mm
-      const isFirstPoint = index === 0
-      let isFirstOfMonth = false
-
-      if (isFirstPoint) {
-        isFirstOfMonth = true
-      } else {
-        const prevDate = new Date(data.data[index - 1].date)
-        const prevMonth = prevDate.getMonth() + 1
-        isFirstOfMonth = month !== prevMonth
-      }
-
-      if (!isFirstOfMonth) return ""
-
-      const isYearChange = year !== firstYear && month === 1
-
-      if (isFirstPoint || isYearChange) {
-        return `${year}/${month.toString().padStart(2, "0")}`
-      }
-      return month.toString().padStart(2, "0")
-    }
-
-    if (interval === "weekly") {
-      // 週足: mm形式、3ヶ月毎（1,4,7,10月）の「その月の最初のデータポイント」のみに表示。
-      // 最初と年が変わった時はyyyy/mm、それ以外はmm。
-      const isFirstPoint = index === 0
-      if (isFirstPoint) {
-        return `${year}/${month.toString().padStart(2, "0")}`
-      }
-
-      // 前データポイントと比較し、月が変わったタイミングのみラベル候補とする
-      const prevDate = new Date(data.data[index - 1].date)
-      const prevMonth = prevDate.getMonth() + 1
-      const prevYear = prevDate.getFullYear()
-      const hasMonthChanged = month !== prevMonth
-
-      const isQuarterStartMonth = [1, 4, 7, 10].includes(month)
-      const isFirstDataInQuarter = isQuarterStartMonth && hasMonthChanged
-      if (!isFirstDataInQuarter) return ""
-
-      // 年が実際に変わった時のみyyyy/mm表示（前データの年と比較）
-      const isYearChange = year !== prevYear
-      if (isYearChange) {
-        return `${year}/${month.toString().padStart(2, "0")}`
-      }
-      return month.toString().padStart(2, "0")
-    }
-
-    // 月足: yyyy/mm形式、1月のみ表示
-    if (month !== 1) return ""
-    return `${year}/${month.toString().padStart(2, "0")}`
-  }
 
   // 買付日を抽出し、グラフの日付範囲内のもののみをフィルタリング
   const buyDates = (() => {
@@ -158,7 +164,22 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={data.data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" tickFormatter={formatXAxis} />
+              <XAxis
+                dataKey="date"
+                ticks={ticksConfig.ticks}
+                interval={0}
+                tickFormatter={(value: string) => {
+                  const format = ticksConfig.formatMap.get(value)
+                  if (!format) return ""
+
+                  const date = new Date(value)
+                  const year = date.getFullYear()
+                  const month = date.getMonth() + 1
+                  const monthStr = month.toString().padStart(2, "0")
+
+                  return format === "yyyy/mm" ? `${year}/${monthStr}` : monthStr
+                }}
+              />
               <YAxis domain={["auto", "auto"]} tickFormatter={(value) => value.toLocaleString()} />
               <Tooltip
                 contentStyle={{

@@ -193,8 +193,8 @@ describe("PriceChart", () => {
     expect(screen.getByTestId("line-chart")).toBeInTheDocument()
   })
 
-  describe("X軸フォーマット", () => {
-    it("日足の場合、月変わりの最初のデータポイントでラベルが表示されること", async () => {
+  describe("X軸ティック計算とフォーマット", () => {
+    it("日足の場合、月変わりの最初のデータポイントがティックになる", async () => {
       const useSWR = await import("swr")
       const dailyData: PriceHistoryResponse = {
         symbol: "7203",
@@ -219,27 +219,27 @@ describe("PriceChart", () => {
 
       // XAxisのpropsを取得
       expect(capturedXAxisProps).toBeDefined()
-      const formatter = capturedXAxisProps.tickFormatter
+      const { ticks, tickFormatter } = capturedXAxisProps
+
+      // ティックは月変わりの最初のデータポイントのみ
+      expect(ticks).toEqual(["2025-11-28", "2025-12-06"])
 
       // 最初のデータポイントは年月表示
-      expect(formatter("2025-11-28", 0)).toBe("2025/11")
-      // 同じ月の別の日は非表示
-      expect(formatter("2025-11-30", 1)).toBe("")
-      // 月が変わった最初のデータポイントは月のみ表示
-      expect(formatter("2025-12-06", 2)).toBe("12")
-      // 同じ月の別の日は非表示
-      expect(formatter("2025-12-08", 3)).toBe("")
+      expect(tickFormatter("2025-11-28")).toBe("2025/11")
+      // 同じ年の月変わりは月のみ表示
+      expect(tickFormatter("2025-12-06")).toBe("12")
     })
 
-    it("日足で年が変わる場合、yyyy/mm形式で表示されること", async () => {
+    it("日足で年が変わる場合、年変わりの月はyyyy/mm形式で表示される", async () => {
       const useSWR = await import("swr")
       const dailyData: PriceHistoryResponse = {
         symbol: "7203",
         interval: "daily",
         data: [
           { date: "2024-11-01", open: 3000, high: 3050, low: 2980, close: 3020, volume: 1000000 },
-          { date: "2024-12-02", open: 3020, high: 3080, low: 3010, close: 3060, volume: 1200000 },
-          { date: "2025-01-06", open: 3060, high: 3100, low: 3040, close: 3080, volume: 1100000 },
+          { date: "2024-11-15", open: 3020, high: 3080, low: 3010, close: 3060, volume: 1200000 },
+          { date: "2024-12-02", open: 3060, high: 3100, low: 3040, close: 3080, volume: 1100000 },
+          { date: "2025-01-06", open: 3080, high: 3120, low: 3070, close: 3100, volume: 1300000 },
         ],
       }
 
@@ -253,17 +253,20 @@ describe("PriceChart", () => {
 
       render(<PriceChart symbol="7203" securityType="STOCK" />)
 
-      const formatter = capturedXAxisProps.tickFormatter
+      const { ticks, tickFormatter } = capturedXAxisProps
+
+      // ティックは月変わりのみ
+      expect(ticks).toEqual(["2024-11-01", "2024-12-02", "2025-01-06"])
 
       // 最初のデータポイント
-      expect(formatter("2024-11-01", 0)).toBe("2024/11")
+      expect(tickFormatter("2024-11-01")).toBe("2024/11")
       // 同じ年の月変わり
-      expect(formatter("2024-12-02", 1)).toBe("12")
-      // 年が変わった1月
-      expect(formatter("2025-01-06", 2)).toBe("2025/01")
+      expect(tickFormatter("2024-12-02")).toBe("12")
+      // 年が変わった月
+      expect(tickFormatter("2025-01-06")).toBe("2025/01")
     })
 
-    it("週足の場合、四半期開始月の最初のデータポイントでラベルが表示されること", async () => {
+    it("週足の場合、四半期開始月（1,4,7,10月）の最初のデータポイントがティックになる", async () => {
       const useSWR = await import("swr")
       const weeklyData: PriceHistoryResponse = {
         symbol: "7203",
@@ -272,7 +275,8 @@ describe("PriceChart", () => {
           { date: "2024-12-30", open: 3000, high: 3050, low: 2980, close: 3020, volume: 5000000 },
           { date: "2025-01-06", open: 3020, high: 3080, low: 3010, close: 3060, volume: 6000000 },
           { date: "2025-01-13", open: 3060, high: 3100, low: 3040, close: 3080, volume: 5500000 },
-          { date: "2025-04-07", open: 3080, high: 3120, low: 3070, close: 3100, volume: 6500000 },
+          { date: "2025-02-03", open: 3080, high: 3120, low: 3070, close: 3100, volume: 6500000 },
+          { date: "2025-04-07", open: 3100, high: 3150, low: 3090, close: 3120, volume: 6200000 },
         ],
       }
 
@@ -289,19 +293,20 @@ describe("PriceChart", () => {
       const buttonWeekly = screen.getByText("週足")
       await userEvent.setup().click(buttonWeekly)
 
-      const formatter = capturedXAxisProps.tickFormatter
+      const { ticks, tickFormatter } = capturedXAxisProps
 
-      // 最初のデータポイントは年月表示
-      expect(formatter("2024-12-30", 0)).toBe("2024/12")
-      // 1月（四半期開始月）の最初のデータポイント（年が変わっているのでyyyy/mm）
-      expect(formatter("2025-01-06", 1)).toBe("2025/01")
-      // 同じ月の別の週は非表示
-      expect(formatter("2025-01-13", 2)).toBe("")
-      // 4月（四半期開始月）の最初のデータポイント（同じ年なのでmm）
-      expect(formatter("2025-04-07", 3)).toBe("04")
+      // ティックは最初と四半期開始月（1,4月）のみ
+      expect(ticks).toEqual(["2024-12-30", "2025-01-06", "2025-04-07"])
+
+      // 最初のデータポイント
+      expect(tickFormatter("2024-12-30")).toBe("2024/12")
+      // 1月（年が変わっているのでyyyy/mm）
+      expect(tickFormatter("2025-01-06")).toBe("2025/01")
+      // 4月（同じ年なのでmm）
+      expect(tickFormatter("2025-04-07")).toBe("04")
     })
 
-    it("月足の場合、1月のみラベルが表示されること", async () => {
+    it("月足の場合、1月のみがティックになる", async () => {
       const useSWR = await import("swr")
       const monthlyData: PriceHistoryResponse = {
         symbol: "7203",
@@ -309,6 +314,7 @@ describe("PriceChart", () => {
         data: [
           { date: "2024-01-01", open: 3000, high: 3050, low: 2980, close: 3020, volume: 20000000 },
           { date: "2024-06-01", open: 3020, high: 3080, low: 3010, close: 3060, volume: 24000000 },
+          { date: "2024-12-01", open: 3040, high: 3090, low: 3020, close: 3070, volume: 23000000 },
           { date: "2025-01-01", open: 3060, high: 3100, low: 3040, close: 3080, volume: 22000000 },
         ],
       }
@@ -326,14 +332,73 @@ describe("PriceChart", () => {
       const buttonMonthly = screen.getByText("月足")
       await userEvent.setup().click(buttonMonthly)
 
-      const formatter = capturedXAxisProps.tickFormatter
+      const { ticks, tickFormatter } = capturedXAxisProps
 
-      // 1月のみyyyy/mm形式で表示
-      expect(formatter("2024-01-01", 0)).toBe("2024/01")
-      // 6月は非表示
-      expect(formatter("2024-06-01", 1)).toBe("")
-      // 翌年の1月
-      expect(formatter("2025-01-01", 2)).toBe("2025/01")
+      // ティックは1月のみ
+      expect(ticks).toEqual(["2024-01-01", "2025-01-01"])
+
+      // 月足は常にyyyy/mm形式
+      expect(tickFormatter("2024-01-01")).toBe("2024/01")
+      expect(tickFormatter("2025-01-01")).toBe("2025/01")
+    })
+
+    it("月足の場合、1月以外の月は全てyyyy/mm形式で表示される", async () => {
+      const useSWR = await import("swr")
+      const monthlyData: PriceHistoryResponse = {
+        symbol: "7203",
+        interval: "monthly",
+        data: [{ date: "2024-01-01", open: 3000, high: 3050, low: 2980, close: 3020, volume: 20000000 }],
+      }
+
+      vi.mocked(useSWR.default).mockReturnValue({
+        data: monthlyData,
+        isLoading: false,
+        error: null,
+        isValidating: false,
+        mutate: vi.fn(),
+      })
+
+      render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+      const buttonMonthly = screen.getByText("月足")
+      await userEvent.setup().click(buttonMonthly)
+
+      const { ticks, tickFormatter } = capturedXAxisProps
+
+      // 1月のみティック
+      expect(ticks).toEqual(["2024-01-01"])
+      expect(tickFormatter("2024-01-01")).toBe("2024/01")
+    })
+
+    it("エッジケース: 年変わり後の最初のデータが1月以外（2024/12 → 2025/02）", async () => {
+      const useSWR = await import("swr")
+      const dailyData: PriceHistoryResponse = {
+        symbol: "7203",
+        interval: "daily",
+        data: [
+          { date: "2024-12-28", open: 3000, high: 3050, low: 2980, close: 3020, volume: 1000000 },
+          { date: "2025-02-03", open: 3020, high: 3080, low: 3010, close: 3060, volume: 1200000 },
+        ],
+      }
+
+      vi.mocked(useSWR.default).mockReturnValue({
+        data: dailyData,
+        isLoading: false,
+        error: null,
+        isValidating: false,
+        mutate: vi.fn(),
+      })
+
+      render(<PriceChart symbol="7203" securityType="STOCK" />)
+
+      const { ticks, tickFormatter } = capturedXAxisProps
+
+      expect(ticks).toEqual(["2024-12-28", "2025-02-03"])
+
+      // 最初
+      expect(tickFormatter("2024-12-28")).toBe("2024/12")
+      // 年変わりの2月
+      expect(tickFormatter("2025-02-03")).toBe("2025/02")
     })
   })
 })

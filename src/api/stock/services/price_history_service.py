@@ -34,8 +34,8 @@ class PriceHistoryService:
             # 週足なら limit週 * 7日
             days_back = limit * 7
         else:  # MONTHLY
-            # 月足なら limit月 * 31日
-            days_back = limit * 31
+            # 月足なら limit月 * 31日（ただし最大5年=1825日まで）
+            days_back = min(limit * 31, 1825)
         start = today - timedelta(days=days_back)
         return start.strftime("%Y-%m-%d")
 

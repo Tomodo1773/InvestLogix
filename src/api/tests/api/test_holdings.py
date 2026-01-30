@@ -38,6 +38,8 @@ async def test_recalculate_holding_pl_japanese_stock(
     assert data["market_value"] is not None
     assert data["unrealized_pl"] is not None
     assert data["unrealized_pl_percentage"] is not None
+    assert data["total_pl"] is not None
+    assert data["total_pl_percentage"] is not None
 
 
 @pytest.mark.asyncio
@@ -71,6 +73,8 @@ async def test_recalculate_holding_pl_us_stock(
     assert data["market_value"] is not None
     assert data["unrealized_pl"] is not None
     assert data["unrealized_pl_percentage"] is not None
+    assert data["total_pl"] is not None
+    assert data["total_pl_percentage"] is not None
 
     # トランザクション登録時の1回のAPI呼び出しを確認
     mock_external_apis["overview"].assert_called_once_with("AAPL")
@@ -225,11 +229,12 @@ async def test_recalculate_holding_pl_delisted_stock(
     create_dividend,
     mocker,
 ):
-    """上場廃止銘柄でも実現損益と配当を反映した評価損益が計算されることを検証する
+    """上場廃止銘柄でも含み損益と全体損益が正しく計算されることを検証する
 
     期待する動作:
-    - 株価が取得できない（0）場合でも、unrealized_pl が null にならない
-    - unrealized_pl = market_value(0) + realized_pl + total_dividend - total_cost が計算される
+    - 株価が取得できない（0）場合でも、unrealized_pl と total_pl が null にならない
+    - unrealized_pl = market_value(0) - total_cost が計算される（純粋な含み益）
+    - total_pl = unrealized_pl + realized_pl + total_dividend が計算される（全体損益）
     - 売却益と配当が正しく反映される
 
     Args:
@@ -313,8 +318,17 @@ async def test_recalculate_holding_pl_delisted_stock(
     # unrealized_pl が null ではなく計算されていることを確認
     assert data["unrealized_pl"] is not None
 
-    # unrealized_pl = market_value(0) + realized_pl(2500) + total_dividend(800) - total_cost(15000)
-    #                = 0 + 2500 + 800 - 15000
-    #                = -11700
-    expected_unrealized_pl = Decimal("0") + Decimal("2500") + Decimal("800") - Decimal("15000")
+    # unrealized_pl = market_value(0) - total_cost(15000)
+    #                = 0 - 15000
+    #                = -15000
+    expected_unrealized_pl = Decimal("0") - Decimal("15000")
     assert Decimal(data["unrealized_pl"]) == expected_unrealized_pl
+
+    # total_pl が null ではなく計算されていることを確認
+    assert data["total_pl"] is not None
+
+    # total_pl = unrealized_pl(-15000) + realized_pl(2500) + total_dividend(800)
+    #          = -15000 + 2500 + 800
+    #          = -11700
+    expected_total_pl = Decimal("-15000") + Decimal("2500") + Decimal("800")
+    assert Decimal(data["total_pl"]) == expected_total_pl

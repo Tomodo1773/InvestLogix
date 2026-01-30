@@ -19,6 +19,8 @@ describe("transformHoldingsToChartData", () => {
     total_dividend: "0",
     unrealized_pl: "10000",
     unrealized_pl_percentage: "10",
+    total_pl: "10000",
+    total_pl_percentage: "10",
     user_id: 1,
     last_updated: "2024-01-01",
     stock_name: stockName,

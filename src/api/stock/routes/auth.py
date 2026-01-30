@@ -50,7 +50,7 @@ async def login_for_access_token(
         max_age=3600,
         path="/",
     )
-    logger.info("Authトークンを発行しました action=create user_id={}", user.id)
+    logger.info("Authトークンを発行しました action=create user_id={}", user.user_id)
     return {"access_token": access_token, "token_type": "bearer"}
 
 

@@ -11,17 +11,11 @@ interface HoldingsTableProps {
   isLoading: boolean
 }
 
-type SortKey =
-  | "symbol"
-  | "quantity"
-  | "current_price"
-  | "market_value"
-  | "unrealized_pl"
-  | "unrealized_pl_percentage"
+type SortKey = "symbol" | "quantity" | "current_price" | "market_value" | "total_pl" | "total_pl_percentage"
 type SortDirection = "asc" | "desc"
 
 export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("unrealized_pl_percentage")
+  const [sortKey, setSortKey] = useState<SortKey>("total_pl_percentage")
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
 
   const handleSort = (key: SortKey) => {
@@ -67,13 +61,13 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
           aValue = a.market_value ? Number(a.market_value) : 0
           bValue = b.market_value ? Number(b.market_value) : 0
           break
-        case "unrealized_pl":
-          aValue = a.unrealized_pl ? Number(a.unrealized_pl) : 0
-          bValue = b.unrealized_pl ? Number(b.unrealized_pl) : 0
+        case "total_pl":
+          aValue = a.total_pl ? Number(a.total_pl) : 0
+          bValue = b.total_pl ? Number(b.total_pl) : 0
           break
-        case "unrealized_pl_percentage":
-          aValue = a.unrealized_pl_percentage ? Number(a.unrealized_pl_percentage) : 0
-          bValue = b.unrealized_pl_percentage ? Number(b.unrealized_pl_percentage) : 0
+        case "total_pl_percentage":
+          aValue = a.total_pl_percentage ? Number(a.total_pl_percentage) : 0
+          bValue = b.total_pl_percentage ? Number(b.total_pl_percentage) : 0
           break
       }
 
@@ -139,20 +133,20 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                   </TableHead>
                   <TableHead
                     className="cursor-pointer select-none text-right"
-                    onClick={() => handleSort("unrealized_pl")}
+                    onClick={() => handleSort("total_pl")}
                   >
                     <div className="flex items-center justify-end">
                       損益
-                      {getSortIcon("unrealized_pl")}
+                      {getSortIcon("total_pl")}
                     </div>
                   </TableHead>
                   <TableHead
                     className="cursor-pointer select-none text-right"
-                    onClick={() => handleSort("unrealized_pl_percentage")}
+                    onClick={() => handleSort("total_pl_percentage")}
                   >
                     <div className="flex items-center justify-end">
                       損益%
-                      {getSortIcon("unrealized_pl_percentage")}
+                      {getSortIcon("total_pl_percentage")}
                     </div>
                   </TableHead>
                 </TableRow>
@@ -160,7 +154,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <TableBody>
                 {sortedHoldings && sortedHoldings.length > 0 ? (
                   sortedHoldings.map((holding) => {
-                    const plValue = holding.unrealized_pl ? Number(holding.unrealized_pl) : 0
+                    const plValue = holding.total_pl ? Number(holding.total_pl) : 0
                     const plColor = plValue >= 0 ? "text-[#4CAF50]" : "text-destructive"
 
                     return (
@@ -185,12 +179,10 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                           {holding.market_value ? formatCurrency(holding.market_value) : "-"}
                         </TableCell>
                         <TableCell className={`text-right font-medium ${plColor}`}>
-                          {holding.unrealized_pl ? formatCurrency(holding.unrealized_pl) : "-"}
+                          {holding.total_pl ? formatCurrency(holding.total_pl) : "-"}
                         </TableCell>
                         <TableCell className={`text-right font-medium ${plColor}`}>
-                          {holding.unrealized_pl_percentage
-                            ? formatPercent(holding.unrealized_pl_percentage)
-                            : "-"}
+                          {holding.total_pl_percentage ? formatPercent(holding.total_pl_percentage) : "-"}
                         </TableCell>
                       </TableRow>
                     )

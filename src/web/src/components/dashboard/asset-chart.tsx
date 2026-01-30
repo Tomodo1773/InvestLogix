@@ -129,8 +129,8 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
               <Tooltip
                 formatter={(value: number | undefined, name: string | undefined) => {
                   if (value === undefined) return ["-", name ?? ""]
-                  if (name === "total_unrealized_pl_percentage") {
-                    return [formatPercent(value), "Unrealized P/L %"]
+                  if (name === "total_pl_percentage") {
+                    return [formatPercent(value), "Total P/L %"]
                   }
                   return [formatCurrency(value), name === "total_cost" ? "Total Cost" : "Market Value"]
                 }}
@@ -156,11 +156,11 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
               <Line
                 yAxisId="right"
                 type="monotone"
-                dataKey="total_unrealized_pl_percentage"
+                dataKey="total_pl_percentage"
                 stroke="#F44336"
                 strokeWidth={2}
                 dot={false}
-                name="total_unrealized_pl_percentage"
+                name="total_pl_percentage"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -179,14 +179,14 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
               <YAxis yAxisId="right" orientation="right" width={50} tick={false} axisLine={false} />
               <Tooltip
                 formatter={(value: number | undefined) => {
-                  if (value === undefined) return ["-", "Unrealized P/L"]
-                  return [formatCurrency(value), "Unrealized P/L"]
+                  if (value === undefined) return ["-", "Total P/L"]
+                  return [formatCurrency(value), "Total P/L"]
                 }}
               />
               <ReferenceLine y={0} stroke="#666" />
-              <Bar dataKey="total_unrealized_pl" name="Unrealized P/L">
+              <Bar dataKey="total_pl" name="Total P/L">
                 {chartData.map((entry) => (
-                  <Cell key={entry.rawDate} fill={entry.total_unrealized_pl >= 0 ? "#4CAF50" : "#F44336"} />
+                  <Cell key={entry.rawDate} fill={entry.total_pl >= 0 ? "#4CAF50" : "#F44336"} />
                 ))}
               </Bar>
             </BarChart>

@@ -299,7 +299,7 @@ async def test_get_price_history_with_monthly_interval(
     # APIリクエスト実行（月次指定）
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
-        params={"interval": "monthly", "limit": 80},
+        params={"interval": "monthly", "limit": 60},
         headers={"Authorization": f"Bearer {auth_token}"},
     )
 

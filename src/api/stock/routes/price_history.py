@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import User
-from ..schemas import PriceHistoryInterval, PriceHistoryResponse
+from ..schemas import PriceHistoryInterval, PriceHistoryPeriod, PriceHistoryResponse
 from ..services.price_history_service import PriceHistoryService
 
 router = APIRouter()
@@ -19,10 +19,12 @@ router = APIRouter()
 @router.get("/{symbol}/price-history", response_model=PriceHistoryResponse)
 async def get_price_history(
     symbol: str,
+    period: Annotated[
+        PriceHistoryPeriod, Query(description="取得期間（1M, 3M, 6M, 1Y, 3Y）")
+    ] = PriceHistoryPeriod.ONE_YEAR,
     interval: Annotated[
         PriceHistoryInterval, Query(description="データ間隔（daily, weekly, monthly）")
     ] = PriceHistoryInterval.DAILY,
-    limit: Annotated[int, Query(description="取得件数", ge=1, le=500)] = 80,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -31,8 +33,8 @@ async def get_price_history(
 
     Args:
         symbol: 銘柄コード
+        period: 取得期間（デフォルト: 1Y）
         interval: データ間隔（デフォルト: daily）
-        limit: 取得件数（デフォルト: 80、月足は最大200件まで推奨）
         current_user: 現在のユーザー（認証必須）
         db: データベースセッション
 
@@ -42,17 +44,10 @@ async def get_price_history(
     Raises:
         HTTPException: 銘柄が存在しない、または投資信託など非対応の証券種別の場合
     """
-    # 月足の場合は実用的な上限を警告（200件=約16年分）
-    if interval == PriceHistoryInterval.MONTHLY and limit > 200:
-        raise HTTPException(
-            status_code=400,
-            detail="For monthly interval, limit should not exceed 200 (approximately 16 years of data)",
-        )
-
     service = PriceHistoryService(db)
 
     try:
-        result = await service.get_price_history(symbol, interval, limit)
+        result = await service.get_price_history(symbol, period, interval)
         return result
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

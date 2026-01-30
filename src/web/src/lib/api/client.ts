@@ -6,7 +6,6 @@ import type {
   PortfolioHistoryItem,
   PortfolioSummary,
   PriceHistoryInterval,
-  PriceHistoryPeriod,
   PriceHistoryResponse,
   Stock,
   StockSplit,
@@ -121,12 +120,12 @@ export async function getStocks(market?: string): Promise<Stock[]> {
 // Price History API
 export async function getPriceHistory(
   symbol: string,
-  period: PriceHistoryPeriod = "1Y",
-  interval: PriceHistoryInterval = "daily"
+  interval: PriceHistoryInterval = "daily",
+  limit: number = 80
 ): Promise<PriceHistoryResponse> {
   const params = new URLSearchParams({
-    period,
     interval,
+    limit: limit.toString(),
   })
   return fetchWithAuth<PriceHistoryResponse>(
     `/api/v1/stocks/${encodeURIComponent(symbol)}/price-history?${params.toString()}`

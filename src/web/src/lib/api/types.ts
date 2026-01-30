@@ -125,6 +125,7 @@ export interface Stock {
 }
 
 // Price History
+export type PriceHistoryPeriod = "1M" | "3M" | "6M" | "1Y" | "3Y"
 export type PriceHistoryInterval = "daily" | "weekly" | "monthly"
 
 export interface PriceDataPoint {
@@ -138,6 +139,7 @@ export interface PriceDataPoint {
 
 export interface PriceHistoryResponse {
   symbol: string
+  period: string
   interval: string
   data: PriceDataPoint[]
 }

@@ -1,0 +1,48 @@
+name: Biome Auto Fix and Commit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint-and-fix:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: "src/web/pnpm-lock.yaml"
+
+      - name: Install dependencies
+        working-directory: src/web
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Biome lint with fix
+        working-directory: src/web
+        run: pnpm run lint
+
+      - name: Run Biome format
+        working-directory: src/web
+        run: pnpm run format
+
+      - name: Commit fixed files
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "style: apply biome auto-fix"
+          skip_ci: true

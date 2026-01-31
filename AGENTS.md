@@ -54,6 +54,7 @@ InvestLogix/
 | `web-ci.yml` | フロントエンドのビルド・チェック |
 | `appservice_deploy.yml` | Azure App Serviceへのデプロイ |
 | `ruff-autofix.yml` | Ruffによるコードの自動修正とコミット（手動実行） |
+| `biome-autofix.yml` | Biomeによるコードの自動修正とコミット（手動実行） |
 
 ## フロントエンド (src/web)
 

@@ -45,4 +45,3 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "style: apply biome auto-fix"
-          skip_ci: true

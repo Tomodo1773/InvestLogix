@@ -159,8 +159,8 @@ class PortfolioService:
         portfolio_data = {
             "total_cost": portfolio_history.total_cost,
             "total_market_value": portfolio_history.total_market_value,
-            "total_unrealized_pl": portfolio_history.total_unrealized_pl,
-            "total_unrealized_pl_percentage": portfolio_history.total_unrealized_pl_percentage,
+            "total_pl": portfolio_history.total_pl,
+            "total_pl_percentage": portfolio_history.total_pl_percentage,
             "total_realized_pl": portfolio_history.total_realized_pl,
             "total_dividend": portfolio_history.total_dividend,
         }

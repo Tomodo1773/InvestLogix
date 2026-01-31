@@ -58,13 +58,13 @@ class NotificationService:
             # ポートフォリオデータのフォーマット
             total_cost = _format_currency(portfolio_data["total_cost"])
             total_market_value = _format_currency(portfolio_data["total_market_value"])
-            total_unrealized_pl = _format_currency(portfolio_data["total_unrealized_pl"])
-            total_unrealized_pl_percentage = _format_decimal(portfolio_data["total_unrealized_pl_percentage"])
+            total_pl = _format_currency(portfolio_data["total_pl"])
+            total_pl_percentage = _format_decimal(portfolio_data["total_pl_percentage"])
             total_realized_pl = _format_currency(portfolio_data["total_realized_pl"])
             total_dividend = _format_currency(portfolio_data["total_dividend"])
 
             # 損益に応じたコメント
-            comment = _generate_comment(portfolio_data["total_unrealized_pl_percentage"])
+            comment = _generate_comment(portfolio_data["total_pl_percentage"])
 
             # LINEのFlex Message作成
             flex_contents = {
@@ -148,16 +148,16 @@ class NotificationService:
                                     "contents": [
                                         {
                                             "type": "text",
-                                            "text": "評価損益",
+                                            "text": "総損益",
                                             "size": "sm",
                                             "color": "#555555",
                                         },
                                         {
                                             "type": "text",
-                                            "text": f"{total_unrealized_pl}円 ({total_unrealized_pl_percentage}%)",
+                                            "text": f"{total_pl}円 ({total_pl_percentage}%)",
                                             "size": "sm",
                                             "color": _get_profit_loss_color(
-                                                float(portfolio_data["total_unrealized_pl_percentage"])
+                                                float(portfolio_data["total_pl_percentage"])
                                             ),
                                             "align": "end",
                                         },

@@ -64,7 +64,7 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
 3. `pnpm install` で依存関係を更新する
-4. web-test-creatorスキルを使ってテストコードを実装する
+4. テストコードを実装する（`src/web/docs/testing-guide.md`を参照）
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
 6. `pnpm test`でテストを実行する
 7. ドキュメント(CLAUDE.md, README.md)を更新する
@@ -120,11 +120,11 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
 3. `uv sync'`で依存関係をインストールし、仮想環境を有効化する
-4. api-test-creatorスキルを使ってテストコードを実装する
+4. テストコードを実装する（`src/api/docs/testing-guide.md`を参照）
 5. `uv run ruff format` でコードを整形する
 6. `uv run ruff check --fix` でコードスタイルを整える
 7. api-test-runnerサブエージェントでテストを行う
-8. ドキュメント(CLAUDE.md, README.md, .claude/skills/api-test-creator/SKILL.md)を更新する
+8. ドキュメント(CLAUDE.md, README.md)を更新する
 9. コミットする
 
 ### 実装の指針

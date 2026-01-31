@@ -1,6 +1,7 @@
 import {
   CircleDollarSign,
   Database,
+  History,
   LayoutDashboard,
   PanelLeft,
   PanelLeftClose,
@@ -23,6 +24,11 @@ const navItems = [
     to: "/holdings",
     label: "保有状況",
     icon: TrendingUp,
+  },
+  {
+    to: "/portfolio-history",
+    label: "資産推移",
+    icon: History,
   },
   {
     to: "/transactions",

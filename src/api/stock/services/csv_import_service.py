@@ -12,6 +12,7 @@ from datetime import datetime
 from decimal import Decimal
 
 import pandas as pd
+from loguru import logger
 
 from ..utils.datetime import to_jst
 
@@ -123,6 +124,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         except UnicodeDecodeError:
             continue
     else:
+        logger.error("CSVデコードエラー action=parse_csv error=unsupported_encoding")
         raise ValueError("CSVの文字コードがutf-8でもcp932でもありません")
 
     # ヘッダー行を検索
@@ -131,6 +133,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         None,
     )
     if header_index is None:
+        logger.error("CSVヘッダー検出エラー action=parse_csv error=header_not_found")
         raise ValueError("CSV内に約定日または国内約定日ヘッダが見つかりませんでした")
 
     # 外貨建てCSVか円建てCSVかを判定
@@ -298,6 +301,12 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
             )
         )
 
+    logger.info(
+        "CSVパースが完了しました action=parse_csv parsed_count={} skipped_count={}",
+        len(transactions),
+        len(errors),
+    )
+
     return transactions, errors
 
 
@@ -338,5 +347,12 @@ def detect_new_transactions(
     # 差分を計算
     parsed_set = set(parsed_transactions)
     new_transactions = list(parsed_set - existing_set)
+
+    logger.info(
+        "差分検出が完了しました action=detect_new_transactions new_count={} existing_count={} parsed_count={}",
+        len(new_transactions),
+        len(existing_transactions),
+        len(parsed_transactions),
+    )
 
     return new_transactions

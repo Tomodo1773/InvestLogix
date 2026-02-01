@@ -75,8 +75,9 @@ class TestParseCsvContent:
 
     def test_invalid_encoding(self):
         """不正なエンコーディングのテスト"""
-        # UTF-16でエンコード（サポート外）
-        csv_content = "テスト".encode("utf-16")
+        # UTF-8でもCP932でもデコードできない不正なバイト列
+        # 0x80はCP932で未定義、0xC0-0xC1はUTF-8で無効
+        csv_content = b"\x80\x81\xc0\xc1\xfe\xff"
 
         with pytest.raises(ValueError, match="CSVの文字コード"):
             parse_csv_content(csv_content)

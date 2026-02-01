@@ -208,8 +208,21 @@ async def confirm_csv_import(
 
     for transaction in request.transactions:
         try:
-            await transaction_service.create_transaction(transaction, current_user.user_id)
-            created_count += 1
+            created_transaction = await transaction_service.create_transaction(
+                transaction, current_user.user_id
+            )
+            if created_transaction is None:
+                failed_count += 1
+                errors.append(
+                    f"登録失敗: {transaction.symbol} - 保有なしの売却/数量不足などの理由で登録できませんでした"
+                )
+                logger.error(
+                    "CSV取引登録失敗 action=csv_confirm user_id={} symbol={} error=invalid_transaction_condition",
+                    current_user.user_id,
+                    transaction.symbol,
+                )
+            else:
+                created_count += 1
         except StockNotFoundError:
             failed_count += 1
             errors.append(f"銘柄が見つかりません: {transaction.symbol}")

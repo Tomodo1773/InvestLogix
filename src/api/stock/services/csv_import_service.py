@@ -72,7 +72,7 @@ def to_number(val, default=0.0) -> float:
     return float(str(val).replace(",", ""))
 
 
-def parse_date(val) -> str:
+def parse_date(val) -> str | None:
     """日付文字列をYYYY/MM/DD形式に変換"""
     if is_empty(val):
         return None
@@ -216,10 +216,22 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
     # 外貨建ての場合、約定単価をドル価格として保存し、円建て単価を計算
     if is_foreign:
-        df_raw["約定単価_doller"] = df_raw["約定単価"]
+        df_raw["約定単価_dollar"] = df_raw["約定単価"]
+
+        # 約定数量が0の行は除外（ゼロ除算防止）
+        non_zero_qty_mask = df_raw["約定数量"] != 0
+        zero_qty_rows = df_raw[~non_zero_qty_mask]
+        if not zero_qty_rows.empty:
+            logger.warning(
+                "約定数量が0の外貨建て取引を{}件スキップします action=parse_csv",
+                len(zero_qty_rows),
+            )
+
+        # 約定数量が0でない行のみ、円建て単価を計算
+        df_raw = df_raw[non_zero_qty_mask].copy()
         df_raw["約定単価"] = df_raw["受渡金額/決済損益"] / df_raw["約定数量"]
     else:
-        df_raw["約定単価_doller"] = None
+        df_raw["約定単価_dollar"] = None
 
     # 取引種別の正規化
     df_raw["取引"] = df_raw["取引"].apply(
@@ -243,7 +255,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
             "取引",
             "約定数量",
             "約定単価",
-            "約定単価_doller",
+            "約定単価_dollar",
             "手数料/諸経費等",
             "税額",
         ]
@@ -256,7 +268,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         "type",
         "amount",
         "price",
-        "price_doller",
+        "price_dollar",
         "fee",
         "tax",
     ]
@@ -269,7 +281,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
     # 数値の丸め
     sbi_data["amount"] = sbi_data["amount"].astype(float).round(4)
     sbi_data["price"] = sbi_data["price"].astype(float).round(2)
-    sbi_data["price_doller"] = sbi_data["price_doller"].apply(
+    sbi_data["price_dollar"] = sbi_data["price_dollar"].apply(
         lambda x: round(x, 2) if pd.notnull(x) else None
     )
 
@@ -294,7 +306,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
                 transaction_type=row["type"],
                 quantity=Decimal(str(row["amount"])),
                 price=Decimal(str(row["price"])),
-                usd_price=Decimal(str(row["price_doller"])) if pd.notnull(row["price_doller"]) else None,
+                usd_price=Decimal(str(row["price_dollar"])) if pd.notnull(row["price_dollar"]) else None,
                 account_type=row["custody_type"],
                 fee=Decimal(str(row["fee"])),
                 tax=Decimal(str(row["tax"])),
@@ -347,7 +359,17 @@ def detect_new_transactions(
 
     # 差分を計算
     parsed_set = set(parsed_transactions)
-    new_transactions = list(parsed_set - existing_set)
+    diff_set = parsed_set - existing_set
+    # UI側でのプレビュー順が毎回変わらないよう、日付等で順序を安定化
+    new_transactions = sorted(
+        diff_set,
+        key=lambda tx: (
+            tx.transaction_date,
+            tx.symbol,
+            tx.account_type,
+            tx.transaction_type,
+        ),
+    )
 
     logger.info(
         "差分検出が完了しました action=detect_new_transactions new_count={} existing_count={} parsed_count={}",

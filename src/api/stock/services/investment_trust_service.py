@@ -28,6 +28,10 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
     )
     name = name_elem.text.strip() if name_elem else None
 
+    if not name:
+        logger.error("投資信託の名前が取得できませんでした action=external_io symbol={}", symbol)
+        raise ValueError(f"投資信託の名前が取得できませんでした: {symbol}")
+
     return {
         "name": name,
         "market": None,

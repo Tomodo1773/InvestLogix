@@ -146,23 +146,10 @@ export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResp
   const formData = new FormData()
   formData.append("file", file)
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/transactions/import/preview`, {
+  return fetchWithAuth<ImportPreviewResponse>("/api/v1/transactions/import/preview", {
     method: "POST",
     body: formData,
-    credentials: "include",
   })
-
-  if (response.status === 401) {
-    window.location.href = "/login"
-    throw new Error("Unauthorized")
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "An error occurred" }))
-    throw new Error(typeof error.detail === "string" ? error.detail : "An error occurred")
-  }
-
-  return response.json()
 }
 
 export async function confirmImport(request: ImportConfirmRequest): Promise<ImportConfirmResponse> {

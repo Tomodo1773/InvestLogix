@@ -11,7 +11,7 @@ description: |
     user: "holding_service.pyに新しい損益計算機能を追加しました。テストを実行してください"
     assistant: "api-test-runnerエージェントを使ってテストを実行します"
     <commentary>
-    コード変更後のテスト実行が必要なため、api-test-runnerエージェントを起動して
+    コード変更後のテスト実行が必要なため、api-**test**-runnerエージェントを起動して
     uv run pytestを実行し、結果を報告する
     </commentary>
     </example>

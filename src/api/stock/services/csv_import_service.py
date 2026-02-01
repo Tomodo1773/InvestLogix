@@ -1,0 +1,342 @@
+"""CSV取引履歴インポートサービス
+
+SBI証券からエクスポートした約定履歴CSVをパースし、
+既存の取引履歴との差分を検出する機能を提供する。
+"""
+
+import io
+import re
+import unicodedata
+from dataclasses import dataclass
+from datetime import datetime
+from decimal import Decimal
+
+import pandas as pd
+
+from ..utils.datetime import to_jst
+
+
+@dataclass
+class ParsedTransaction:
+    """CSVからパースされた取引データ"""
+
+    symbol: str
+    name: str
+    transaction_type: str  # "買付" or "売却"
+    quantity: Decimal
+    price: Decimal
+    usd_price: Decimal | None
+    account_type: str
+    fee: Decimal
+    tax: Decimal
+    transaction_date: datetime
+
+    def __key(self):
+        """差分検出用のハッシュキー"""
+        trade_date = self._date_key(self.transaction_date)
+        return (
+            self.symbol,
+            trade_date,
+            self.account_type,
+            round(float(self.quantity), 4),
+            round(float(self.price), 2),
+        )
+
+    @staticmethod
+    def _date_key(dt: datetime) -> str:
+        if dt.tzinfo is None:
+            # CSVはJST日付として扱う（時刻なし）
+            return dt.strftime("%Y-%m-%d")
+        return to_jst(dt).strftime("%Y-%m-%d")
+
+    def __hash__(self):
+        return hash(self.__key())
+
+    def __eq__(self, other):
+        if not isinstance(other, ParsedTransaction):
+            return NotImplemented
+        return self.__key() == other.__key()
+
+
+def is_empty(val) -> bool:
+    """値が空かどうかを判定"""
+    return pd.isna(val) or str(val).strip() in ["", "--", "nan", "None"]
+
+
+def to_number(val, default=0.0) -> float:
+    """文字列を数値に変換"""
+    if is_empty(val):
+        return default
+    return float(str(val).replace(",", ""))
+
+
+def parse_date(val) -> str:
+    """日付文字列をYYYY/MM/DD形式に変換"""
+    if is_empty(val):
+        return None
+    val_str = str(val).strip()
+    if "年" in val_str:
+        return pd.to_datetime(val_str, format="%Y年%m月%d日").strftime("%Y/%m/%d")
+    if re.match(r"^\d{2}/\d{2}/\d{2}$", val_str):
+        return pd.to_datetime(val_str, format="%y/%m/%d").strftime("%Y/%m/%d")
+    return pd.to_datetime(val_str, format="%Y/%m/%d").strftime("%Y/%m/%d")
+
+
+def get_fund_symbol(fund_name: str) -> str | None:
+    """ファンド名からシンボルを取得"""
+    fund_dict = {
+        "eMAXIS Slim 全世界株式(オール・カントリー)": "JP90C000H1T1",
+        "eMAXIS Slim 新興国株式インデックス": "JP90C000F7H5",
+        "SBI・iシェアーズ・インド株式インデックス・ファンド": "JP90C000PZX1",
+        "SBI・V・S&P500インデックス・ファンド": "JP90C000J569",
+        "EXE-i グローバルサウス株式ファンド": "JP90C000Q3K5",
+        "eMAXIS Slim 国内株式(TOPIX)": "JP90C000ENA9",
+        "SBI・S・米国高配当株式ファンド(年4回決算型)": "JP90C000REE2",
+        "ＳＢＩ・Ｓ・米国高配当株式ファンド(年４回決算型)": "JP90C000REE2",
+        "eMAXIS Neo 自動運転": "JP90C000HR52",
+    }
+    normalized_map = {unicodedata.normalize("NFKC", k): v for k, v in fund_dict.items()}
+    key = unicodedata.normalize("NFKC", fund_name) if fund_name else ""
+    return normalized_map.get(key)
+
+
+def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str]]:
+    """CSVバイト列をパースして取引データのリストを返す
+
+    Args:
+        content: CSVファイルのバイト列
+
+    Returns:
+        tuple[list[ParsedTransaction], list[str]]: (パース済み取引リスト, エラーメッセージリスト)
+
+    Raises:
+        ValueError: CSVが不正な形式の場合
+    """
+    errors = []
+
+    # エンコーディング自動検出
+    for enc in ("utf-8", "cp932"):
+        try:
+            text = content.decode(enc)
+            lines = text.splitlines(keepends=True)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise ValueError("CSVの文字コードがutf-8でもcp932でもありません")
+
+    # ヘッダー行を検索
+    header_index = next(
+        (i for i, line in enumerate(lines) if line.startswith("約定日") or line.startswith("国内約定日")),
+        None,
+    )
+    if header_index is None:
+        raise ValueError("CSV内に約定日または国内約定日ヘッダが見つかりませんでした")
+
+    # 外貨建てCSVか円建てCSVかを判定
+    is_foreign = lines[header_index].startswith("国内約定日")
+
+    # ヘッダー行以降をDataFrameに読み込み
+    df_raw = pd.read_csv(io.StringIO("".join(lines[header_index:])), dtype=str)
+
+    if is_foreign:
+        # 外貨建てCSV: 「通貨」=「日本円」のみ抽出
+        df_raw = df_raw[df_raw["通貨"] == "日本円"]
+
+        # カラム名を統一
+        rename_map = {
+            "国内約定日": "約定日",
+            "銘柄名": "銘柄",
+            "預り区分": "預り",
+            "国内受渡日": "受渡日",
+            "受渡金額": "受渡金額/決済損益",
+        }
+        df_raw.rename(columns=rename_map, inplace=True)
+
+        # 外貨建ては手数料・税金情報がない
+        df_raw["手数料/諸経費等"] = "0"
+        df_raw["税額"] = "0"
+        df_raw["is_foreign"] = True
+    else:
+        df_raw["is_foreign"] = False
+
+    # 銘柄コードの抽出・正規化
+    if is_foreign:
+        # 外貨建て: 銘柄名から ticker を抽出
+        def extract_ticker(name):
+            if pd.isna(name):
+                return ""
+            match = re.search(r"\s([A-Z]+)\s*/\s*", str(name))
+            return match.group(1) if match else ""
+
+        df_raw["銘柄コード"] = df_raw["銘柄"].apply(extract_ticker)
+    else:
+        # 円建て: 銘柄コードから取得、投資信託はファンド名から変換
+        df_raw["銘柄コード"] = df_raw["銘柄コード"].fillna("").astype(str)
+        missing_code_mask = (df_raw["銘柄コード"] == "") | (df_raw["銘柄コード"] == "--")
+        df_raw.loc[missing_code_mask, "銘柄コード"] = df_raw.loc[missing_code_mask, "銘柄"].map(
+            get_fund_symbol
+        )
+
+    df_raw.rename(columns={"銘柄コード": "コード"}, inplace=True)
+
+    # コードの正規化（.0除去など）
+    def normalize_code(val, name):
+        if is_empty(val):
+            cand = get_fund_symbol(name)
+            return cand if cand else ""
+        code_str = str(val)
+        code_str = code_str[:-2] if code_str.endswith(".0") else code_str
+        return code_str
+
+    df_raw["コード"] = df_raw.apply(lambda row: normalize_code(row["コード"], row["銘柄"]), axis=1)
+
+    # 預り区分の正規化（スラッシュ除去）
+    df_raw["預り"] = df_raw["預り"].apply(lambda x: str(x).replace("/", "").strip() if pd.notnull(x) else x)
+
+    # 数値項目の変換
+    df_raw["手数料/諸経費等"] = df_raw["手数料/諸経費等"].apply(lambda x: to_number(x, 0.0))
+    df_raw["税額"] = df_raw["税額"].apply(lambda x: to_number(x, 0.0))
+    df_raw["受渡金額/決済損益"] = df_raw["受渡金額/決済損益"].apply(to_number)
+    df_raw["約定単価"] = df_raw["約定単価"].apply(to_number)
+
+    # 数量の変換（投資信託は万口単位なので10000で割る）
+    def parse_amount(row):
+        qty = row["約定数量"]
+        if is_empty(qty):
+            return 0.0
+        qty_float = float(str(qty).replace(",", ""))
+        return qty_float / 10000 if str(row["取引"]).startswith("投信") else qty_float
+
+    df_raw["約定数量"] = df_raw.apply(parse_amount, axis=1)
+
+    # 外貨建ての場合、約定単価をドル価格として保存し、円建て単価を計算
+    if is_foreign:
+        df_raw["約定単価_doller"] = df_raw["約定単価"]
+        df_raw["約定単価"] = df_raw["受渡金額/決済損益"] / df_raw["約定数量"]
+    else:
+        df_raw["約定単価_doller"] = None
+
+    # 取引種別の正規化
+    df_raw["取引"] = df_raw["取引"].apply(
+        lambda x: "買付"
+        if x in ["株式現物買", "投信金額買付", "買付"]
+        else "売却"
+        if x in ["株式現物売", "投信金額解約", "投信口数解約", "売却"]
+        else "形式外"
+    )
+
+    # 日付の変換
+    df_raw["約定日"] = df_raw["約定日"].apply(parse_date)
+
+    # 必要なカラムのみ抽出
+    sbi_data = df_raw[
+        [
+            "コード",
+            "銘柄",
+            "預り",
+            "約定日",
+            "取引",
+            "約定数量",
+            "約定単価",
+            "約定単価_doller",
+            "手数料/諸経費等",
+            "税額",
+        ]
+    ].copy()
+    sbi_data.columns = [
+        "symbol",
+        "name",
+        "custody_type",
+        "trade_date",
+        "type",
+        "amount",
+        "price",
+        "price_doller",
+        "fee",
+        "tax",
+    ]
+
+    # 預り区分の表記統一
+    sbi_data["custody_type"] = sbi_data["custody_type"].replace(
+        {"NISA(成)": "NISA(成長投資枠)", "NISA(つ)": "NISA(つみたて投資枠)", "NISA": "NISA(成長投資枠)"}
+    )
+
+    # 数値の丸め
+    sbi_data["amount"] = sbi_data["amount"].astype(float).round(4)
+    sbi_data["price"] = sbi_data["price"].astype(float).round(2)
+    sbi_data["price_doller"] = sbi_data["price_doller"].apply(
+        lambda x: round(x, 2) if pd.notnull(x) else None
+    )
+
+    # 日付をdatetimeに変換
+    sbi_data["trade_date"] = pd.to_datetime(sbi_data["trade_date"], format="%Y/%m/%d")
+
+    # ParsedTransactionオブジェクトのリストに変換
+    transactions = []
+    for _, row in sbi_data.iterrows():
+        # 形式外の取引やシンボルが取得できなかったものはスキップ
+        if row["type"] == "形式外":
+            errors.append(f"スキップ: 形式外の取引 - {row['name']}")
+            continue
+        if not row["symbol"] or pd.isna(row["symbol"]):
+            errors.append(f"スキップ: シンボル不明 - {row['name']}")
+            continue
+
+        transactions.append(
+            ParsedTransaction(
+                symbol=str(row["symbol"]),
+                name=str(row["name"]),
+                transaction_type=row["type"],
+                quantity=Decimal(str(row["amount"])),
+                price=Decimal(str(row["price"])),
+                usd_price=Decimal(str(row["price_doller"])) if pd.notnull(row["price_doller"]) else None,
+                account_type=row["custody_type"],
+                fee=Decimal(str(row["fee"])),
+                tax=Decimal(str(row["tax"])),
+                transaction_date=row["trade_date"],
+            )
+        )
+
+    return transactions, errors
+
+
+def detect_new_transactions(
+    parsed_transactions: list[ParsedTransaction], existing_transactions: list
+) -> list[ParsedTransaction]:
+    """パース済み取引と既存取引を比較して新規取引を抽出
+
+    Args:
+        parsed_transactions: CSVからパースした取引リスト
+        existing_transactions: DBから取得した既存取引リスト（Transaction型）
+
+    Returns:
+        list[ParsedTransaction]: 新規取引のリスト
+    """
+    # 既存取引をParsedTransactionに変換してセット化
+    existing_set = set()
+    for tx in existing_transactions:
+        # Enumか文字列かに対応
+        tx_type = tx.transaction_type.value if hasattr(tx.transaction_type, "value") else tx.transaction_type
+        acc_type = tx.account_type.value if hasattr(tx.account_type, "value") else tx.account_type
+
+        existing_set.add(
+            ParsedTransaction(
+                symbol=tx.symbol,
+                name="",  # 名前は比較に使わない
+                transaction_type="買付" if tx_type == "buy" else "売却",
+                quantity=tx.quantity,
+                price=tx.price,
+                usd_price=tx.usd_price,
+                account_type=acc_type,
+                fee=tx.fee,
+                tax=tx.tax,
+                transaction_date=tx.transaction_date,
+            )
+        )
+
+    # 差分を計算
+    parsed_set = set(parsed_transactions)
+    new_transactions = list(parsed_set - existing_set)
+
+    return new_transactions

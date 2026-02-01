@@ -1,6 +1,9 @@
 import type {
   Dividend,
   Holding,
+  ImportConfirmRequest,
+  ImportConfirmResponse,
+  ImportPreviewResponse,
   MonthlyDividendItem,
   MonthlySummaryItem,
   PortfolioHistoryItem,
@@ -136,4 +139,38 @@ export async function getPriceHistory(
 export async function getStockSplits(symbol?: string): Promise<StockSplit[]> {
   const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""
   return fetchWithAuth<StockSplit[]>(`/api/v1/stock-splits/${params}`)
+}
+
+// CSV Import APIs
+export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResponse> {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/transactions/import/preview`, {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  })
+
+  if (response.status === 401) {
+    window.location.href = "/login"
+    throw new Error("Unauthorized")
+  }
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "An error occurred" }))
+    throw new Error(typeof error.detail === "string" ? error.detail : "An error occurred")
+  }
+
+  return response.json()
+}
+
+export async function confirmImport(request: ImportConfirmRequest): Promise<ImportConfirmResponse> {
+  return fetchWithAuth<ImportConfirmResponse>("/api/v1/transactions/import/confirm", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  })
 }

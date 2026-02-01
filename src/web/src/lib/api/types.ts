@@ -151,3 +151,45 @@ export interface StockSplit {
   split_ratio: string
   created_at: string
 }
+
+// CSV Import
+export interface CsvTransactionPreview {
+  symbol: string
+  name: string
+  transaction_type: "buy" | "sell"
+  quantity: string
+  price: string
+  usd_price: string | null
+  account_type: AccountType
+  fee: string
+  tax: string
+  transaction_date: string
+}
+
+export interface ImportPreviewResponse {
+  new_transactions: CsvTransactionPreview[]
+  existing_count: number
+  csv_total_count: number
+  skipped_count: number
+  errors: string[]
+}
+
+export interface ImportConfirmRequest {
+  transactions: {
+    symbol: string
+    transaction_type: "buy" | "sell"
+    quantity: string
+    price: string
+    usd_price: string | null
+    account_type: AccountType
+    fee: string
+    tax: string
+    transaction_date: string
+  }[]
+}
+
+export interface ImportConfirmResponse {
+  created_count: number
+  failed_count: number
+  errors: string[]
+}

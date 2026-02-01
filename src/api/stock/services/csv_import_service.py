@@ -37,6 +37,7 @@ class ParsedTransaction:
         trade_date = self._date_key(self.transaction_date)
         return (
             self.symbol,
+            self.transaction_type,
             trade_date,
             self.account_type,
             round(float(self.quantity), 4),

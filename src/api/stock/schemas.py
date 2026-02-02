@@ -122,6 +122,7 @@ class StockSplit(StockSplitBase):
     split_id: int
     user_id: int
     created_at: datetime
+    stock_name: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("split_date", "created_at")

@@ -20,7 +20,7 @@ interface StockSplitsTableProps {
   isLoading: boolean
 }
 
-type SortKey = "symbol" | "split_date" | "split_ratio"
+type SortKey = "symbol" | "stock_name" | "split_date" | "split_ratio"
 type SortDirection = "asc" | "desc"
 
 const PAGE_SIZE = 20
@@ -58,6 +58,10 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
       case "symbol":
         aValue = a.symbol
         bValue = b.symbol
+        break
+      case "stock_name":
+        aValue = a.stock_name || ""
+        bValue = b.stock_name || ""
         break
       case "split_date":
         aValue = new Date(a.split_date).getTime()
@@ -111,6 +115,12 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
                       {getSortIcon("symbol")}
                     </div>
                   </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort("stock_name")}>
+                    <div className="flex items-center">
+                      銘柄名
+                      {getSortIcon("stock_name")}
+                    </div>
+                  </TableHead>
                   <TableHead
                     className="cursor-pointer select-none text-right"
                     onClick={() => handleSort("split_date")}
@@ -140,6 +150,9 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
                         <TableCell>
                           <div className="font-medium">{stockSplit.symbol}</div>
                         </TableCell>
+                        <TableCell>
+                          <div className="text-sm text-muted-foreground">{stockSplit.stock_name || "-"}</div>
+                        </TableCell>
                         <TableCell className="text-right">{formatDate(stockSplit.split_date)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {formatSplitRatio(stockSplit.split_ratio)}
@@ -152,7 +165,7 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
                       株式分割履歴がありません
                     </TableCell>
                   </TableRow>

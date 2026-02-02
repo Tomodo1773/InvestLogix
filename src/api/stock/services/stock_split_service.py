@@ -62,7 +62,8 @@ class StockSplitService:
             株式分割履歴のリスト
         """
         query = (
-            select(models.StockSplit)
+            select(models.StockSplit, models.Stock.name)
+            .join(models.Stock, models.StockSplit.symbol == models.Stock.symbol)
             .where(models.StockSplit.user_id == user_id)
             .order_by(models.StockSplit.split_date.desc())
         )
@@ -71,7 +72,11 @@ class StockSplitService:
             query = query.where(models.StockSplit.symbol == symbol)
 
         result = await self.db.execute(query)
-        splits = list(result.scalars().all())
+        splits = []
+        for row in result:
+            stock_split = row[0]
+            stock_split.stock_name = row[1]
+            splits.append(stock_split)
         logger.info(
             "StockSplitを取得しました action=select user_id={} symbol={} count={}",
             user_id,

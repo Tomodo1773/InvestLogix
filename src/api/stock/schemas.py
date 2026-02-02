@@ -475,3 +475,48 @@ class PriceHistoryResponse(BaseModel):
     symbol: str = Field(..., description="銘柄コード")
     interval: str = Field(..., description="データ間隔（daily, weekly, monthly）")
     data: List[PriceDataPoint] = Field(..., description="株価データのリスト")
+
+
+# CSVインポート用のスキーマ
+class CsvTransactionPreview(BaseModel):
+    """CSVから解析された取引データ（プレビュー用）"""
+
+    symbol: str
+    name: str
+    transaction_type: TransactionType
+    quantity: Decimal
+    price: Decimal
+    usd_price: Optional[Decimal] = None
+    account_type: AccountType
+    fee: Decimal
+    tax: Decimal
+    transaction_date: datetime
+
+    @field_serializer("transaction_date")
+    def serialize_transaction_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
+
+class ImportPreviewResponse(BaseModel):
+    """インポートプレビューレスポンス"""
+
+    new_transactions: List[CsvTransactionPreview]
+    existing_count: int
+    csv_total_count: int
+    skipped_count: int
+    errors: List[str]
+
+
+class ImportConfirmRequest(BaseModel):
+    """インポート確認リクエスト"""
+
+    transactions: List[TransactionCreate]
+
+
+class ImportConfirmResponse(BaseModel):
+    """インポート確認レスポンス"""
+
+    created_count: int
+    failed_count: int
+    errors: List[str]

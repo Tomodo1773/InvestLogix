@@ -1,6 +1,9 @@
 import type {
   Dividend,
   Holding,
+  ImportConfirmRequest,
+  ImportConfirmResponse,
+  ImportPreviewResponse,
   MonthlyDividendItem,
   MonthlySummaryItem,
   PortfolioHistoryItem,
@@ -136,4 +139,25 @@ export async function getPriceHistory(
 export async function getStockSplits(symbol?: string): Promise<StockSplit[]> {
   const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""
   return fetchWithAuth<StockSplit[]>(`/api/v1/stock-splits/${params}`)
+}
+
+// CSV Import APIs
+export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResponse> {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  return fetchWithAuth<ImportPreviewResponse>("/api/v1/transactions/import/preview", {
+    method: "POST",
+    body: formData,
+  })
+}
+
+export async function confirmImport(request: ImportConfirmRequest): Promise<ImportConfirmResponse> {
+  return fetchWithAuth<ImportConfirmResponse>("/api/v1/transactions/import/confirm", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  })
 }

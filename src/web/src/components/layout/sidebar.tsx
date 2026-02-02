@@ -1,6 +1,7 @@
 import {
   CircleDollarSign,
   Database,
+  FileUp,
   History,
   LayoutDashboard,
   PanelLeft,
@@ -34,6 +35,11 @@ const navItems = [
     to: "/transactions",
     label: "取引履歴",
     icon: Receipt,
+  },
+  {
+    to: "/transactions/import",
+    label: "CSVインポート",
+    icon: FileUp,
   },
   {
     to: "/dividends",

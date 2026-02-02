@@ -39,6 +39,10 @@ InvestLogix/
 │   └── docker-compose.yaml     # ローカル開発用のDocker構成
 ├── infra/                      # Azure Bicep テンプレート
 ├── csv/                        # データサンプル
+├── samples/                    # SBI証券エクスポートcsvサンプル
+│   └── sbi_export_file/
+│       ├── SaveFile_000001_000137.csv  # 円建て口座のサンプル(cp932エンコーディング)
+│       └── yakujo20260201135112.csv    # 外貨建て口座のサンプル(cp932エンコーディング)
 ├── .github/workflows/          # CI/CD定義
 └── openapi.json                # バックエンドAPIのOpenAPI仕様
 ```

@@ -11,6 +11,7 @@ const mockStockSplits: StockSplit[] = [
     split_date: "2024-06-10",
     split_ratio: "4.0",
     created_at: "2024-06-11T10:00:00+09:00",
+    stock_name: "Apple Inc.",
   },
   {
     split_id: 2,
@@ -19,6 +20,7 @@ const mockStockSplits: StockSplit[] = [
     split_date: "2022-08-25",
     split_ratio: "3.0",
     created_at: "2022-08-26T10:00:00+09:00",
+    stock_name: "Tesla, Inc.",
   },
   {
     split_id: 3,
@@ -27,6 +29,7 @@ const mockStockSplits: StockSplit[] = [
     split_date: "2022-07-15",
     split_ratio: "20.0",
     created_at: "2022-07-16T10:00:00+09:00",
+    stock_name: "Alphabet Inc.",
   },
 ]
 
@@ -38,6 +41,11 @@ describe("StockSplitsTable", () => {
     expect(screen.getByText("AAPL")).toBeInTheDocument()
     expect(screen.getByText("TSLA")).toBeInTheDocument()
     expect(screen.getByText("GOOGL")).toBeInTheDocument()
+
+    // 銘柄名
+    expect(screen.getByText("Apple Inc.")).toBeInTheDocument()
+    expect(screen.getByText("Tesla, Inc.")).toBeInTheDocument()
+    expect(screen.getByText("Alphabet Inc.")).toBeInTheDocument()
 
     // 分割日
     expect(screen.getByText("2024/06/10")).toBeInTheDocument()
@@ -86,6 +94,7 @@ describe("StockSplitsTable", () => {
       split_date: `2024-01-${String((i % 28) + 1).padStart(2, "0")}`,
       split_ratio: "2.0",
       created_at: `2024-01-${String((i % 28) + 1).padStart(2, "0")}T10:00:00+09:00`,
+      stock_name: `Stock ${i + 1}`,
     }))
 
     render(<StockSplitsTable stockSplits={manyStockSplits} isLoading={false} />)
@@ -104,6 +113,7 @@ describe("StockSplitsTable", () => {
         split_date: "2024-01-01",
         split_ratio: "5.0",
         created_at: "2024-01-02T10:00:00+09:00",
+        stock_name: "Test Company",
       },
     ]
 

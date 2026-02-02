@@ -150,6 +150,7 @@ export interface StockSplit {
   split_date: string
   split_ratio: string
   created_at: string
+  stock_name: string | null
 }
 
 // CSV Import

@@ -296,8 +296,10 @@ async def test_list_stock_splits_all(client: AsyncClient, db_session: AsyncSessi
     assert response.status_code == 200
     result = response.json()
 
-    # 3. 2件の分割情報が取得できることを確認
+    # 3. 2件の分割情報が取得でき、銘柄名が含まれることを確認
     assert len(result) == 2
+    for split in result:
+        assert split["stock_name"] is not None
 
 
 @pytest.mark.asyncio
@@ -347,10 +349,11 @@ async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: Asyn
     assert response.status_code == 200
     result = response.json()
 
-    # 3. 1件のみ取得され、8058の情報であることを確認
+    # 3. 1件のみ取得され、8058の情報と銘柄名が含まれることを確認
     assert len(result) == 1
     assert result[0]["symbol"] == "8058"
     assert Decimal(result[0]["split_ratio"]) == Decimal("4.0")
+    assert result[0]["stock_name"] is not None
 
 
 @pytest.mark.asyncio

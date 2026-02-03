@@ -193,7 +193,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                         <TableCell>{getAccountTypeLabel(transaction.account_type)}</TableCell>
                         <TableCell className="text-right">{transaction.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right">{formatCurrency(transaction.price)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(totalAmount.toString())}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
                         <TableCell className="text-right">
                           {formatDate(transaction.transaction_date)}
                         </TableCell>

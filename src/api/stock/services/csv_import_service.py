@@ -9,7 +9,6 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 
 import pandas as pd
 from loguru import logger
@@ -24,12 +23,12 @@ class ParsedTransaction:
     symbol: str
     name: str
     transaction_type: str  # "買付" or "売却"
-    quantity: Decimal
-    price: Decimal
-    usd_price: Decimal | None
+    quantity: float
+    price: float
+    usd_price: float | None
     account_type: str
-    fee: Decimal
-    tax: Decimal
+    fee: float
+    tax: float
     transaction_date: datetime
 
     def __key(self):
@@ -304,12 +303,12 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
                 symbol=str(row["symbol"]),
                 name=str(row["name"]),
                 transaction_type=row["type"],
-                quantity=Decimal(str(row["amount"])),
-                price=Decimal(str(row["price"])),
-                usd_price=Decimal(str(row["price_dollar"])) if pd.notnull(row["price_dollar"]) else None,
+                quantity=float(row["amount"]),
+                price=float(row["price"]),
+                usd_price=float(row["price_dollar"]) if pd.notnull(row["price_dollar"]) else None,
                 account_type=row["custody_type"],
-                fee=Decimal(str(row["fee"])),
-                tax=Decimal(str(row["tax"])),
+                fee=float(row["fee"]),
+                tax=float(row["tax"]),
                 transaction_date=row["trade_date"],
             )
         )

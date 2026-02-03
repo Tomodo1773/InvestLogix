@@ -5,22 +5,22 @@ import { transformHoldingsToChartData } from "./holding-allocation-chart"
 describe("transformHoldingsToChartData", () => {
   const createHolding = (
     symbol: string,
-    marketValue: string,
+    marketValue: number,
     stockName: string | null = null,
     securityType: string | null = "STOCK"
   ): Holding => ({
     symbol,
-    quantity: "100",
-    average_cost: "1000",
-    total_cost: "100000",
-    current_price: "1100",
+    quantity: 100,
+    average_cost: 1000,
+    total_cost: 100000,
+    current_price: 1100,
     market_value: marketValue,
-    realized_pl: "0",
-    total_dividend: "0",
-    unrealized_pl: "10000",
-    unrealized_pl_percentage: "10",
-    total_pl: "10000",
-    total_pl_percentage: "10",
+    realized_pl: 0,
+    total_dividend: 0,
+    unrealized_pl: 10000,
+    unrealized_pl_percentage: 10,
+    total_pl: 10000,
+    total_pl_percentage: 10,
     user_id: 1,
     last_updated: "2024-01-01",
     stock_name: stockName,
@@ -30,7 +30,7 @@ describe("transformHoldingsToChartData", () => {
 
   it("上位20銘柄を個別に表示する", () => {
     const holdings: Holding[] = Array.from({ length: 15 }, (_, i) =>
-      createHolding(`STOCK${i + 1}`, ((20 - i) * 100000).toString(), `株式${i + 1}`)
+      createHolding(`STOCK${i + 1}`, (20 - i) * 100000, `株式${i + 1}`)
     )
 
     const result = transformHoldingsToChartData(holdings)
@@ -43,7 +43,7 @@ describe("transformHoldingsToChartData", () => {
 
   it("21位以降を「その他」として集約する", () => {
     const holdings: Holding[] = Array.from({ length: 25 }, (_, i) =>
-      createHolding(`STOCK${i + 1}`, ((30 - i) * 10000).toString(), `株式${i + 1}`)
+      createHolding(`STOCK${i + 1}`, (30 - i) * 10000, `株式${i + 1}`)
     )
 
     const result = transformHoldingsToChartData(holdings)
@@ -64,9 +64,9 @@ describe("transformHoldingsToChartData", () => {
 
   it("評価額でソートされる（降順）", () => {
     const holdings: Holding[] = [
-      createHolding("AAPL", "1000000", "Apple"),
-      createHolding("GOOGL", "3000000", "Google"),
-      createHolding("MSFT", "2000000", "Microsoft"),
+      createHolding("AAPL", 1000000, "Apple"),
+      createHolding("GOOGL", 3000000, "Google"),
+      createHolding("MSFT", 2000000, "Microsoft"),
     ]
 
     const result = transformHoldingsToChartData(holdings)
@@ -79,10 +79,10 @@ describe("transformHoldingsToChartData", () => {
 
   it("評価額が0または負の銘柄はフィルタリングされる", () => {
     const holdings: Holding[] = [
-      createHolding("AAPL", "1000000", "Apple"),
-      createHolding("GOOGL", "0", "Google"),
-      createHolding("MSFT", "-100000", "Microsoft"),
-      createHolding("TSLA", "500000", "Tesla"),
+      createHolding("AAPL", 1000000, "Apple"),
+      createHolding("GOOGL", 0, "Google"),
+      createHolding("MSFT", -100000, "Microsoft"),
+      createHolding("TSLA", 500000, "Tesla"),
     ]
 
     const result = transformHoldingsToChartData(holdings)
@@ -93,7 +93,7 @@ describe("transformHoldingsToChartData", () => {
   })
 
   it("stock_nameがnullの場合はsymbolを使用する", () => {
-    const holdings: Holding[] = [createHolding("AAPL", "1000000", null)]
+    const holdings: Holding[] = [createHolding("AAPL", 1000000, null)]
 
     const result = transformHoldingsToChartData(holdings)
 
@@ -113,7 +113,7 @@ describe("transformHoldingsToChartData", () => {
 
   it("20銘柄以下の場合は「その他」が追加されない", () => {
     const holdings: Holding[] = Array.from({ length: 10 }, (_, i) =>
-      createHolding(`STOCK${i + 1}`, ((20 - i) * 100000).toString(), `株式${i + 1}`)
+      createHolding(`STOCK${i + 1}`, (20 - i) * 100000, `株式${i + 1}`)
     )
 
     const result = transformHoldingsToChartData(holdings)
@@ -125,9 +125,9 @@ describe("transformHoldingsToChartData", () => {
 
   it("market_valueがnullまたは空文字の場合は0として扱われフィルタリングされる", () => {
     const holdings: Holding[] = [
-      createHolding("AAPL", "1000000", "Apple"),
-      { ...createHolding("GOOGL", "", "Google"), market_value: null },
-      { ...createHolding("MSFT", "", "Microsoft"), market_value: "" },
+      createHolding("AAPL", 1000000, "Apple"),
+      { ...createHolding("GOOGL", 0, "Google"), market_value: null },
+      { ...createHolding("MSFT", 0, "Microsoft"), market_value: null },
     ]
 
     const result = transformHoldingsToChartData(holdings)
@@ -139,10 +139,10 @@ describe("transformHoldingsToChartData", () => {
   describe("フィルタ機能", () => {
     it("フィルタなし（ALL）の場合、すべてのsecurity_typeが表示される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("VTI", "800000", "Vanguard Total Stock", "ETF"),
-        createHolding("REIT1", "600000", "REIT1", "REIT"),
-        createHolding("FUND1", "400000", "Fund1", "FUND"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("VTI", 800000, "Vanguard Total Stock", "ETF"),
+        createHolding("REIT1", 600000, "REIT1", "REIT"),
+        createHolding("FUND1", 400000, "Fund1", "FUND"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "ALL")
@@ -153,10 +153,10 @@ describe("transformHoldingsToChartData", () => {
 
     it("STOCKフィルタで株式のみが表示される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("GOOGL", "900000", "Google", "STOCK"),
-        createHolding("VTI", "800000", "Vanguard Total Stock", "ETF"),
-        createHolding("REIT1", "600000", "REIT1", "REIT"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("GOOGL", 900000, "Google", "STOCK"),
+        createHolding("VTI", 800000, "Vanguard Total Stock", "ETF"),
+        createHolding("REIT1", 600000, "REIT1", "REIT"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "STOCK")
@@ -167,10 +167,10 @@ describe("transformHoldingsToChartData", () => {
 
     it("ETFフィルタでETFのみが表示される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("VTI", "900000", "Vanguard Total Stock", "ETF"),
-        createHolding("VOO", "800000", "Vanguard S&P 500", "ETF"),
-        createHolding("REIT1", "600000", "REIT1", "REIT"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("VTI", 900000, "Vanguard Total Stock", "ETF"),
+        createHolding("VOO", 800000, "Vanguard S&P 500", "ETF"),
+        createHolding("REIT1", 600000, "REIT1", "REIT"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "ETF")
@@ -181,10 +181,10 @@ describe("transformHoldingsToChartData", () => {
 
     it("FUNDフィルタで投資信託のみが表示される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("FUND1", "900000", "Fund1", "FUND"),
-        createHolding("FUND2", "800000", "Fund2", "FUND"),
-        createHolding("VTI", "700000", "Vanguard Total Stock", "ETF"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("FUND1", 900000, "Fund1", "FUND"),
+        createHolding("FUND2", 800000, "Fund2", "FUND"),
+        createHolding("VTI", 700000, "Vanguard Total Stock", "ETF"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "FUND")
@@ -195,10 +195,10 @@ describe("transformHoldingsToChartData", () => {
 
     it("REITフィルタでREITのみが表示される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("REIT1", "900000", "REIT1", "REIT"),
-        createHolding("REIT2", "800000", "REIT2", "REIT"),
-        createHolding("VTI", "700000", "Vanguard Total Stock", "ETF"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("REIT1", 900000, "REIT1", "REIT"),
+        createHolding("REIT2", 800000, "REIT2", "REIT"),
+        createHolding("VTI", 700000, "Vanguard Total Stock", "ETF"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "REIT")
@@ -209,7 +209,7 @@ describe("transformHoldingsToChartData", () => {
 
     it("フィルタ適用後も上位20銘柄制限が機能する", () => {
       const holdings: Holding[] = Array.from({ length: 25 }, (_, i) =>
-        createHolding(`STOCK${i + 1}`, ((30 - i) * 10000).toString(), `株式${i + 1}`, "STOCK")
+        createHolding(`STOCK${i + 1}`, (30 - i) * 10000, `株式${i + 1}`, "STOCK")
       )
 
       const result = transformHoldingsToChartData(holdings, "STOCK")
@@ -221,8 +221,8 @@ describe("transformHoldingsToChartData", () => {
 
     it("フィルタ条件に一致する銘柄がない場合は空配列を返す", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("GOOGL", "900000", "Google", "STOCK"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("GOOGL", 900000, "Google", "STOCK"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "ETF")
@@ -232,9 +232,9 @@ describe("transformHoldingsToChartData", () => {
 
     it("security_typeがnullの銘柄はフィルタで除外される", () => {
       const holdings: Holding[] = [
-        createHolding("AAPL", "1000000", "Apple", "STOCK"),
-        createHolding("UNKNOWN", "900000", "Unknown", null),
-        createHolding("GOOGL", "800000", "Google", "STOCK"),
+        createHolding("AAPL", 1000000, "Apple", "STOCK"),
+        createHolding("UNKNOWN", 900000, "Unknown", null),
+        createHolding("GOOGL", 800000, "Google", "STOCK"),
       ]
 
       const result = transformHoldingsToChartData(holdings, "STOCK")

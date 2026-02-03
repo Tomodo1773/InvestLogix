@@ -30,7 +30,7 @@ export function SecurityTypeChart({ data, isLoading }: SecurityTypeChartProps) {
     const grouped = data.reduce(
       (acc, holding) => {
         const securityType = holding.security_type || "UNKNOWN"
-        const marketValue = parseFloat(holding.market_value || "0")
+        const marketValue = holding.market_value ?? 0
 
         if (!acc[securityType]) {
           acc[securityType] = 0

@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
@@ -7,9 +6,9 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Integer,
-    Numeric,
     String,
     UniqueConstraint,
 )
@@ -113,9 +112,7 @@ class StockSplit(Base):
     split_date = Column(
         DateTime(timezone=True), nullable=False
     )  # [USER_INPUT] 分割基準日（この日以前の取引が調整対象）
-    split_ratio = Column(
-        Numeric(10, 4), nullable=False
-    )  # [USER_INPUT] 分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）
+    split_ratio = Column(Float, nullable=False)  # [USER_INPUT] 分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
 
     user = relationship("User", backref="stock_splits")  # User モデルとの関連
@@ -162,23 +159,19 @@ class Holding(Base):
     symbol = Column(String(15), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
 
     # 保有情報
-    quantity = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有数量
-    average_cost = Column(
-        Numeric(10, 2), nullable=False
-    )  # [AUTO_CALC] 平均取得単価（取得価格合計 / 保有数量）
-    total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価格合計（Transactionから取得）
+    quantity = Column(Float, nullable=False)  # [AUTO_CALC] 保有数量
+    average_cost = Column(Float, nullable=False)  # [AUTO_CALC] 平均取得単価（取得価格合計 / 保有数量）
+    total_cost = Column(Float, nullable=False)  # [AUTO_CALC] 取得価格合計（Transactionから取得）
 
     # 現在値情報
-    current_price = Column(Numeric(10, 2))  # [API_FETCH] 現在価格
-    market_value = Column(Numeric(10, 2))  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
-    realized_pl = Column(
-        Numeric(10, 2), default=Decimal("0")
-    )  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
-    total_dividend = Column(Numeric(10, 2), default=Decimal("0"))  # [AUTO_CALC] 配当総額
-    unrealized_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 評価損益（時価評価額 - 取得価格合計）
-    unrealized_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
-    total_pl = Column(Numeric(10, 2))  # [AUTO_CALC] 全体損益（含み益 + 実現損益 + 配当）
-    total_pl_percentage = Column(Numeric(5, 2))  # [AUTO_CALC] 全体損益率（全体損益 / 取得価格合計）
+    current_price = Column(Float)  # [API_FETCH] 現在価格
+    market_value = Column(Float)  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
+    realized_pl = Column(Float, default=0.0)  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
+    total_dividend = Column(Float, default=0.0)  # [AUTO_CALC] 配当総額
+    unrealized_pl = Column(Float)  # [AUTO_CALC] 評価損益（時価評価額 - 取得価格合計）
+    unrealized_pl_percentage = Column(Float)  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
+    total_pl = Column(Float)  # [AUTO_CALC] 全体損益（含み益 + 実現損益 + 配当）
+    total_pl_percentage = Column(Float)  # [AUTO_CALC] 全体損益率（全体損益 / 取得価格合計）
     last_updated = Column(
         DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
     )  # [SYSTEM] 最終更新日時（JST）
@@ -196,11 +189,11 @@ class Transaction(Base):
     transaction_type = Column(
         Enum("buy", "sell", name="transaction_types"), nullable=False
     )  # [USER_INPUT] トランザクションタイプ (例: "buy", "sell")
-    quantity = Column(Numeric(10, 4), nullable=False)  # [USER_INPUT] 数量
-    price = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 価格（日本円）
-    usd_price = Column(Numeric(10, 2))  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
-    adjusted_price = Column(Numeric(10, 2))  # [AUTO_CALC] 株式分割による調整後の価格
-    adjusted_quantity = Column(Numeric(10, 4))  # [AUTO_CALC] 株式分割による調整後の数量
+    quantity = Column(Float, nullable=False)  # [USER_INPUT] 数量
+    price = Column(Float, nullable=False)  # [USER_INPUT] 価格（日本円）
+    usd_price = Column(Float)  # [USER_INPUT] 米国株のドル建て価格（API取得値など）
+    adjusted_price = Column(Float)  # [AUTO_CALC] 株式分割による調整後の価格
+    adjusted_quantity = Column(Float)  # [AUTO_CALC] 株式分割による調整後の数量
     transaction_date = Column(
         DateTime(timezone=True), default=get_jst_now
     )  # [USER_INPUT] トランザクション日時（JST固定）
@@ -210,12 +203,10 @@ class Transaction(Base):
         ),
         nullable=False,
     )  # [USER_INPUT] 預かり種別
-    fee = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 手数料
-    tax = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 税金
+    fee = Column(Float, nullable=False)  # [USER_INPUT] 手数料
+    tax = Column(Float, nullable=False)  # [USER_INPUT] 税金
     realized_pl = Column(
-        Numeric(10, 2),
-        default=Decimal("0"),
-        nullable=False,
+        Float, default=0.0, nullable=False
     )  # [AUTO_CALC] この取引での実現損益（売却時のみ。買付時は0）
 
     user = relationship("User", back_populates="transactions")
@@ -234,14 +225,14 @@ class PortfolioHistory(Base):
     date = Column(
         DateTime(timezone=True), nullable=False, default=get_jst_now
     )  # [SYSTEM] 記録日時（JST固定）
-    total_cost = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 取得価額合計
-    total_market_value = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 時価評価額合計
-    total_unrealized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 評価損益合計
-    total_unrealized_pl_percentage = Column(Numeric(5, 2), nullable=False)  # [AUTO_CALC] 評価損益率
-    total_realized_pl = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 実現損益合計
-    total_dividend = Column(Numeric(10, 2), nullable=False)  # [AUTO_CALC] 配当金合計
-    total_pl = Column(Numeric(10, 2), nullable=False, default=0)  # [AUTO_CALC] 全体損益合計
-    total_pl_percentage = Column(Numeric(5, 2), nullable=False, default=0)  # [AUTO_CALC] 全体損益率
+    total_cost = Column(Float, nullable=False)  # [AUTO_CALC] 取得価額合計
+    total_market_value = Column(Float, nullable=False)  # [AUTO_CALC] 時価評価額合計
+    total_unrealized_pl = Column(Float, nullable=False)  # [AUTO_CALC] 評価損益合計
+    total_unrealized_pl_percentage = Column(Float, nullable=False)  # [AUTO_CALC] 評価損益率
+    total_realized_pl = Column(Float, nullable=False)  # [AUTO_CALC] 実現損益合計
+    total_dividend = Column(Float, nullable=False)  # [AUTO_CALC] 配当金合計
+    total_pl = Column(Float, nullable=False, default=0.0)  # [AUTO_CALC] 全体損益合計
+    total_pl_percentage = Column(Float, nullable=False, default=0.0)  # [AUTO_CALC] 全体損益率
 
     user = relationship("User", back_populates="portfolio_history")
 
@@ -257,10 +248,10 @@ class Dividend(Base):
     payment_date = Column(
         DateTime(timezone=True), nullable=False, default=get_jst_now
     )  # [USER_INPUT] 支払日（JST固定）
-    shares_owned = Column(Numeric(10, 4), nullable=False)  # [AUTO_CALC] 保有株数
-    total_amount = Column(Numeric(10, 2), nullable=False)  # [USER_INPUT] 配当金総額
-    tax = Column(Numeric(10, 2))  # [USER_INPUT] 税金
-    fee = Column(Numeric(10, 2))  # [USER_INPUT] 手数料
+    shares_owned = Column(Float, nullable=False)  # [AUTO_CALC] 保有株数
+    total_amount = Column(Float, nullable=False)  # [USER_INPUT] 配当金総額
+    tax = Column(Float)  # [USER_INPUT] 税金
+    fee = Column(Float)  # [USER_INPUT] 手数料
 
     user = relationship("User", back_populates="dividend")
     stock = relationship("Stock", back_populates="dividend")

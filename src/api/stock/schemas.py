@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 from enum import Enum
 from typing import List, Optional
 
@@ -101,7 +100,7 @@ class StockSplitBase(BaseModel):
         ...,
         json_schema_extra={"examples": ["2024-01-15T00:00:00+09:00", "2024-01-15T00:00:00", "2024-01-15"]},
     )
-    split_ratio: Decimal = Field(..., description="分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）")
+    split_ratio: float = Field(..., description="分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）")
 
     @field_validator("split_date", mode="before")
     @classmethod
@@ -155,17 +154,17 @@ class User(UserBase):
 
 class HoldingBase(BaseModel):
     symbol: str
-    quantity: Decimal
-    average_cost: Decimal
-    total_cost: Decimal
-    current_price: Optional[Decimal]
-    market_value: Optional[Decimal]
-    realized_pl: Optional[Decimal]
-    total_dividend: Optional[Decimal]
-    unrealized_pl: Optional[Decimal]
-    unrealized_pl_percentage: Optional[Decimal]
-    total_pl: Optional[Decimal]
-    total_pl_percentage: Optional[Decimal]
+    quantity: float
+    average_cost: float
+    total_cost: float
+    current_price: Optional[float]
+    market_value: Optional[float]
+    realized_pl: Optional[float]
+    total_dividend: Optional[float]
+    unrealized_pl: Optional[float]
+    unrealized_pl_percentage: Optional[float]
+    total_pl: Optional[float]
+    total_pl_percentage: Optional[float]
 
 
 class Holding(HoldingBase):
@@ -185,15 +184,15 @@ class Holding(HoldingBase):
 class TransactionBase(BaseModel):
     symbol: str
     transaction_type: TransactionType
-    quantity: Decimal
-    price: Decimal
-    usd_price: Optional[Decimal] = None
-    adjusted_price: Optional[Decimal] = None
-    adjusted_quantity: Optional[Decimal] = None
+    quantity: float
+    price: float
+    usd_price: Optional[float] = None
+    adjusted_price: Optional[float] = None
+    adjusted_quantity: Optional[float] = None
     account_type: AccountType
-    fee: Decimal
-    tax: Decimal
-    realized_pl: Optional[Decimal] = None
+    fee: float
+    tax: float
+    realized_pl: Optional[float] = None
 
 
 class Transaction(TransactionBase):
@@ -212,20 +211,20 @@ class Transaction(TransactionBase):
 class TransactionWithPL(Transaction):
     """買付損益情報を含む取引情報"""
 
-    unrealized_pl: Optional[Decimal] = None  # 未実現損益金額（現在価格×数量 - 取得価格×数量）
-    unrealized_pl_percentage: Optional[Decimal] = None  # 未実現損益率（%）
+    unrealized_pl: Optional[float] = None  # 未実現損益金額（現在価格×数量 - 取得価格×数量）
+    unrealized_pl_percentage: Optional[float] = None  # 未実現損益率（%）
 
 
 class PortfolioHistoryBase(BaseModel):
     date: datetime
-    total_cost: Decimal
-    total_market_value: Decimal
-    total_unrealized_pl: Decimal
-    total_unrealized_pl_percentage: Decimal
-    total_realized_pl: Decimal
-    total_dividend: Decimal
-    total_pl: Decimal
-    total_pl_percentage: Decimal
+    total_cost: float
+    total_market_value: float
+    total_unrealized_pl: float
+    total_unrealized_pl_percentage: float
+    total_realized_pl: float
+    total_dividend: float
+    total_pl: float
+    total_pl_percentage: float
 
     @field_serializer("date")
     def serialize_date(self, v: datetime) -> str:
@@ -245,10 +244,10 @@ class DividendBase(BaseModel):
         ...,
         json_schema_extra={"examples": ["2024-03-15T00:00:00+09:00", "2024-03-15T00:00:00", "2024-03-15"]},
     )
-    shares_owned: Decimal
-    total_amount: Decimal
-    tax: Optional[Decimal]
-    fee: Optional[Decimal]
+    shares_owned: float
+    total_amount: float
+    tax: Optional[float]
+    fee: Optional[float]
 
     @field_validator("payment_date", mode="before")
     @classmethod
@@ -377,12 +376,12 @@ class TransactionCreate(BaseModel):
 
     symbol: str
     transaction_type: TransactionType
-    quantity: Decimal
-    price: Decimal
-    usd_price: Optional[Decimal] = None
+    quantity: float
+    price: float
+    usd_price: Optional[float] = None
     account_type: AccountType
-    fee: Decimal
-    tax: Decimal
+    fee: float
+    tax: float
     transaction_date: datetime = Field(
         ...,
         json_schema_extra={"examples": ["2024-01-15T10:30:00+09:00", "2024-01-15T10:30:00", "2024-01-15"]},
@@ -404,16 +403,16 @@ class DividendCreate(DividendBase):
 class PortfolioSummary(BaseModel):
     """ポートフォリオサマリーレスポンス"""
 
-    total_cost: Decimal
-    total_market_value: Decimal
-    total_unrealized_pl: Decimal
-    total_unrealized_pl_percentage: Decimal
-    total_realized_pl: Decimal
-    total_dividend: Decimal
-    total_pl: Decimal
-    total_pl_percentage: Decimal
-    holdings_by_market: dict[str, Decimal]
-    holdings_by_currency: dict[str, Decimal]
+    total_cost: float
+    total_market_value: float
+    total_unrealized_pl: float
+    total_unrealized_pl_percentage: float
+    total_realized_pl: float
+    total_dividend: float
+    total_pl: float
+    total_pl_percentage: float
+    holdings_by_market: dict[str, float]
+    holdings_by_currency: dict[str, float]
 
 
 class LoginRequest(BaseModel):
@@ -436,9 +435,9 @@ class StockWeeklyPerformance(BaseModel):
 
     symbol: str
     name: str
-    latest_price: Decimal
-    old_price: Decimal
-    change_rate: Decimal  # 騰落率（%）
+    latest_price: float
+    old_price: float
+    change_rate: float  # 騰落率（%）
 
 
 class WeeklyPerformanceNotifyResponse(BaseModel):
@@ -485,12 +484,12 @@ class CsvTransactionPreview(BaseModel):
     symbol: str
     name: str
     transaction_type: TransactionType
-    quantity: Decimal
-    price: Decimal
-    usd_price: Optional[Decimal] = None
+    quantity: float
+    price: float
+    usd_price: Optional[float] = None
     account_type: AccountType
-    fee: Decimal
-    tax: Decimal
+    fee: float
+    tax: float
     transaction_date: datetime
 
     @field_serializer("transaction_date")

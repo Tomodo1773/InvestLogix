@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 import pytest
 from httpx import AsyncClient
@@ -46,9 +45,9 @@ async def test_create_dividend(
     parsed_dt = datetime.fromisoformat(data["payment_date"])
     # UTC 2024-03-15T00:00:00Z → JST 2024-03-15T09:00:00+09:00
     assert parsed_dt.strftime("%Y-%m-%dT%H:%M:%S") == "2024-03-15T09:00:00"
-    assert Decimal(data["total_amount"]) == Decimal(dividend_data["total_amount"])
-    assert Decimal(data["tax"]) == Decimal(dividend_data["tax"])
-    assert Decimal(data["fee"]) == Decimal(dividend_data["fee"])
+    assert float(data["total_amount"]) == float(dividend_data["total_amount"])
+    assert float(data["tax"]) == float(dividend_data["tax"])
+    assert float(data["fee"]) == float(dividend_data["fee"])
 
     # 保有情報の確認（配当金が反映されているか）
     holdings_response = await client.get(
@@ -59,7 +58,7 @@ async def test_create_dividend(
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
     assert holding is not None
     # 配当金の純額（税引き後）= 22500 が反映されていることを確認
-    assert Decimal(holding["total_dividend"]) == Decimal("22500.0")
+    assert float(holding["total_dividend"]) == 22500.0
 
 
 @pytest.mark.asyncio
@@ -149,9 +148,9 @@ async def test_list_dividends(
     # 各配当情報の内容を確認
     for dividend in data:
         assert dividend["symbol"] == "8058"
-        assert Decimal(dividend["total_amount"]) == Decimal("25000.0")
-        assert Decimal(dividend["tax"]) == Decimal("2500.0")
-        assert Decimal(dividend["fee"]) == Decimal("0.0")
+        assert float(dividend["total_amount"]) == 25000.0
+        assert float(dividend["tax"]) == 2500.0
+        assert float(dividend["fee"]) == 0.0
         assert dividend["stock_name"] == "三菱商事"
 
 

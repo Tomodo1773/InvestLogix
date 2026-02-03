@@ -79,7 +79,7 @@ export function transformHoldingsToChartData(
     .map((holding) => ({
       symbol: holding.symbol,
       name: holding.stock_name || holding.symbol,
-      value: parseFloat(holding.market_value || "0"),
+      value: holding.market_value ?? 0,
     }))
     .filter((item) => item.value > 0)
     .sort((a, b) => b.value - a.value)

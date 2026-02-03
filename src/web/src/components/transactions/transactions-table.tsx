@@ -64,16 +64,16 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
         bValue = new Date(b.transaction_date).getTime()
         break
       case "quantity":
-        aValue = Number(a.quantity)
-        bValue = Number(b.quantity)
+        aValue = a.quantity
+        bValue = b.quantity
         break
       case "price":
-        aValue = Number(a.price)
-        bValue = Number(b.price)
+        aValue = a.price
+        bValue = b.price
         break
       case "total_amount":
-        aValue = Number(a.quantity) * Number(a.price)
-        bValue = Number(b.quantity) * Number(b.price)
+        aValue = a.quantity * a.price
+        bValue = b.quantity * b.price
         break
     }
 
@@ -170,7 +170,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
               <TableBody>
                 {paginatedData && paginatedData.length > 0 ? (
                   paginatedData.map((transaction) => {
-                    const totalAmount = Number(transaction.quantity) * Number(transaction.price)
+                    const totalAmount = transaction.quantity * transaction.price
                     const isBuy = transaction.transaction_type === "buy"
 
                     return (
@@ -191,9 +191,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                           </span>
                         </TableCell>
                         <TableCell>{getAccountTypeLabel(transaction.account_type)}</TableCell>
-                        <TableCell className="text-right">
-                          {Number(transaction.quantity).toLocaleString()}
-                        </TableCell>
+                        <TableCell className="text-right">{transaction.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right">{formatCurrency(transaction.price)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(totalAmount.toString())}</TableCell>
                         <TableCell className="text-right">

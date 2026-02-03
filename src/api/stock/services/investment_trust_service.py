@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import aiohttp
 from bs4 import BeautifulSoup
 from loguru import logger
@@ -39,7 +37,7 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
     }
 
 
-async def get_fund_price(symbol: str) -> Decimal:
+async def get_fund_price(symbol: str) -> float:
     """
     投資信託の基準価額を取得します。
 
@@ -47,7 +45,7 @@ async def get_fund_price(symbol: str) -> Decimal:
         symbol (str): ISINコード
 
     Returns:
-        Decimal: 基準価額。取得できない場合は0
+        float: 基準価額。取得できない場合は0
     """
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
 
@@ -62,9 +60,9 @@ async def get_fund_price(symbol: str) -> Decimal:
         if price_div and price_div.text:
             # カンマを除去して数値に変換
             price_text = price_div.text.replace(",", "").replace("円", "").strip()
-            return Decimal(price_text)
+            return float(price_text)
 
-        return Decimal("0")
+        return 0.0
 
     except (aiohttp.ClientError, ValueError) as e:
         logger.error(
@@ -72,7 +70,7 @@ async def get_fund_price(symbol: str) -> Decimal:
             symbol,
             str(e),
         )
-        return Decimal("0")
+        return 0.0
 
 
 if __name__ == "__main__":

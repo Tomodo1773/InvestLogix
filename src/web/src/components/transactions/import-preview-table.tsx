@@ -19,9 +19,9 @@ export function ImportPreviewTable({ transactions, onConfirm, isLoading }: Impor
     })
   }
 
-  const formatNumber = (num: string | null) => {
-    if (!num) return "-"
-    return Number.parseFloat(num).toLocaleString("ja-JP")
+  const formatNumber = (num: number | null) => {
+    if (num === null) return "-"
+    return num.toLocaleString("ja-JP")
   }
 
   const formatTransactionType = (type: "buy" | "sell") => {

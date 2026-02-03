@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-from decimal import Decimal
 from typing import AsyncGenerator, Generator
 
 import psycopg
@@ -292,14 +291,14 @@ MOCK_STOCK_OVERVIEW_RESPONSE = {
 }
 
 # 株価モックデータ（初期価格）
-MOCK_JAPAN_STOCK_PRICE_INITIAL = Decimal("3000.0")  # 日本株価格（初期）
-MOCK_US_STOCK_PRICE_INITIAL = Decimal("240.0")  # 米国株価格（USD）（初期）
+MOCK_JAPAN_STOCK_PRICE_INITIAL = 3000.0  # 日本株価格（初期）
+MOCK_US_STOCK_PRICE_INITIAL = 240.0  # 米国株価格（USD）（初期）
 
 # 株価モックデータ（更新後価格）
-MOCK_JAPAN_STOCK_PRICE_UPDATED = Decimal("3100.0")  # 日本株価格（更新後）
-MOCK_US_STOCK_PRICE_UPDATED = Decimal("250.0")  # 米国株価格（USD）（更新後）
+MOCK_JAPAN_STOCK_PRICE_UPDATED = 3100.0  # 日本株価格（更新後）
+MOCK_US_STOCK_PRICE_UPDATED = 250.0  # 米国株価格（USD）（更新後）
 
-MOCK_USD_JPY_RATE_RESPONSE = Decimal("150.0")  # 1 USD = 150.0 JPY
+MOCK_USD_JPY_RATE_RESPONSE = 150.0  # 1 USD = 150.0 JPY
 
 MOCK_ETF_SEARCH_RESPONSE = {
     "bestMatches": [

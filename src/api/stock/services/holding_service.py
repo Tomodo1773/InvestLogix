@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime, timedelta
-from decimal import Decimal
 from typing import List
 
 import pandas as pd
@@ -17,7 +16,7 @@ from ..services import alphavantage_service, investment_trust_service
 from .jquants_service import get_jquants_client
 
 
-async def get_japan_stock_price(symbol: str) -> Decimal:
+async def get_japan_stock_price(symbol: str) -> float:
     """
     日本株の最新株価を取得します。
 
@@ -25,7 +24,7 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
         symbol (str): 証券コード
 
     Returns:
-        Decimal: 最新株価。取得できない場合は0
+        float: 最新株価。取得できない場合は0
     """
     try:
         # 日本時間で1週間分のデータ期間を設定
@@ -41,18 +40,18 @@ async def get_japan_stock_price(symbol: str) -> Decimal:
 
         # 最新の株価を返す
         if prices and len(prices) > 0:
-            price = Decimal(str(prices[-1].get("C", "0")))
+            price = float(prices[-1].get("C", 0))
             logger.info("日本株株価を取得しました symbol={} price={}", symbol, price)
             return price
         logger.info("日本株株価を取得できませんでした symbol={}", symbol)
-        return Decimal("0")
+        return 0.0
 
     except Exception as e:
         logger.error("日本株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
-        return Decimal("0")
+        return 0.0
 
 
-async def get_us_stock_price(symbol: str) -> Decimal:
+async def get_us_stock_price(symbol: str) -> float:
     """
     米国株・ETFの最新株価を円換算して取得します。
 
@@ -60,14 +59,14 @@ async def get_us_stock_price(symbol: str) -> Decimal:
         symbol (str): ティッカーシンボル
 
     Returns:
-        Decimal: 最新株価（円換算後）。取得できない場合は0
+        float: 最新株価（円換算後）。取得できない場合は0
     """
     try:
         # まず為替レートを取得
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
         if not usdjpy_rate:
             logger.info("為替レートが取得できませんでした symbol={}", symbol)
-            return Decimal("0")
+            return 0.0
 
         # 1週間前の日付を取得（日本時間）
         end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
@@ -82,19 +81,19 @@ async def get_us_stock_price(symbol: str) -> Decimal:
             latest_close = df["Close"].iloc[0]
             if not pd.isna(latest_close):  # NaN値のチェック
                 # 円換算して返す
-                price = Decimal(str(latest_close)) * Decimal(str(usdjpy_rate))
+                price = float(latest_close) * float(usdjpy_rate)
                 logger.info("米国株株価を取得しました symbol={} price={}", symbol, price)
                 return price
 
         logger.info("米国株株価を取得できませんでした symbol={}", symbol)
-        return Decimal("0")
+        return 0.0
 
     except Exception as e:
         logger.error("米国株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
-        return Decimal("0")
+        return 0.0
 
 
-async def get_current_price(stock: Stock) -> Decimal:
+async def get_current_price(stock: Stock) -> float:
     """
     証券種別と通貨に基づいて最新株価を取得します。
     日本株、米国株、米国ETF、投資信託に対応します。
@@ -103,7 +102,7 @@ async def get_current_price(stock: Stock) -> Decimal:
         stock (Stock): 銘柄情報
 
     Returns:
-        Decimal: 最新株価
+        float: 最新株価
     """
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
@@ -114,7 +113,7 @@ async def get_current_price(stock: Stock) -> Decimal:
         return await get_us_stock_price(stock.symbol)
     elif stock.security_type == SecurityType.FUND:
         return await investment_trust_service.get_fund_price(stock.symbol)
-    return Decimal("0")
+    return 0.0
 
 
 async def calculate_holding_from_transactions(
@@ -132,7 +131,7 @@ async def calculate_holding_from_transactions(
         symbol (str): 銘柄コード
 
     Returns:
-        tuple[Decimal, Decimal, Decimal]: 保有数量、平均取得単価、取得価格合計
+        tuple[float, float, float]: 保有数量、平均取得単価、取得価格合計
     """
     # 購入トランザクションの集計（調整済み値を優先使用）
     buy_query = select(
@@ -150,8 +149,8 @@ async def calculate_holding_from_transactions(
     )
     buy_result = await db.execute(buy_query)
     buy_data = buy_result.fetchone()
-    total_buy_quantity = buy_data.total_quantity or 0
-    total_buy_cost = buy_data.total_cost or 0
+    total_buy_quantity = float(buy_data.total_quantity or 0)
+    total_buy_cost = float(buy_data.total_cost or 0)
 
     # 売却トランザクションの集計（調整済み値を優先使用）
     sell_query = select(
@@ -162,7 +161,7 @@ async def calculate_holding_from_transactions(
         models.Transaction.transaction_type == "sell",
     )
     sell_result = await db.execute(sell_query)
-    total_sell_quantity = sell_result.scalar() or 0
+    total_sell_quantity = float(sell_result.scalar() or 0)
 
     # 現在の保有数量と平均取得単価を計算
     current_quantity = total_buy_quantity - total_sell_quantity
@@ -184,7 +183,7 @@ async def calculate_realized_pl_from_transactions(
     db: AsyncSession,
     user_id: int,
     symbol: str,
-) -> Decimal:
+) -> float:
     """
     売却取引の実現損益合計を取得する
 
@@ -194,7 +193,7 @@ async def calculate_realized_pl_from_transactions(
         symbol (str): 銘柄コード
 
     Returns:
-        Decimal: 売却取引の実現損益合計（該当がなければ0）
+        float: 売却取引の実現損益合計（該当がなければ0）
     """
 
     realized_pl_query = select(func.sum(models.Transaction.realized_pl)).where(
@@ -203,7 +202,7 @@ async def calculate_realized_pl_from_transactions(
         models.Transaction.transaction_type == "sell",
     )
     result = await db.execute(realized_pl_query)
-    realized_pl = result.scalar() or Decimal("0")
+    realized_pl = float(result.scalar() or 0)
     logger.info(
         "Transactionを取得しました action=aggregate user_id={} symbol={} realized_pl={}",
         user_id,
@@ -217,7 +216,7 @@ async def calculate_total_dividend_after_tax(
     db: AsyncSession,
     user_id: int,
     symbol: str,
-) -> Decimal:
+) -> float:
     """指定銘柄の配当総額（税・手数料控除後）を取得する
 
     Args:
@@ -226,7 +225,7 @@ async def calculate_total_dividend_after_tax(
         symbol (str): 銘柄コード
 
     Returns:
-        Decimal: 税・手数料控除後の配当総額（該当がなければ0）
+        float: 税・手数料控除後の配当総額（該当がなければ0）
     """
 
     dividend_query = select(
@@ -238,7 +237,7 @@ async def calculate_total_dividend_after_tax(
     ).where(models.Dividend.user_id == user_id, models.Dividend.symbol == symbol)
 
     result = await db.execute(dividend_query)
-    total_dividend = result.scalar() or Decimal("0")
+    total_dividend = float(result.scalar() or 0)
     logger.info(
         "Dividendを取得しました action=aggregate user_id={} symbol={} total_dividend={}",
         user_id,
@@ -297,7 +296,7 @@ async def calculate_holding_pl(
         holding.current_price = current_price
     elif current_price == 0 and holding.current_price is None:
         # 上場廃止などで株価が取得できない場合は0を設定
-        holding.current_price = Decimal("0")
+        holding.current_price = 0.0
 
     # 現在値がない場合でも、初回取得時以外は既存の価格で計算を続行
     # 上場廃止銘柄でも実現損益と配当を反映するため、損益計算は必ず実行
@@ -317,19 +316,15 @@ async def calculate_holding_pl(
 
     # 含み損益率
     holding.unrealized_pl_percentage = (
-        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
+        (holding.unrealized_pl / holding.total_cost * 100) if holding.total_cost > 0 else 0.0
     )
 
     # 全体損益（含み益 + 実現損益 + 配当）
-    holding.total_pl = (
-        holding.unrealized_pl
-        + (holding.realized_pl or Decimal("0"))
-        + (holding.total_dividend or Decimal("0"))
-    )
+    holding.total_pl = holding.unrealized_pl + (holding.realized_pl or 0.0) + (holding.total_dividend or 0.0)
 
     # 全体損益率
     holding.total_pl_percentage = (
-        (holding.total_pl / holding.total_cost * 100) if holding.total_cost > 0 else Decimal("0")
+        (holding.total_pl / holding.total_cost * 100) if holding.total_cost > 0 else 0.0
     )
 
     return True

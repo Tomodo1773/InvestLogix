@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 import pytest_asyncio
 
@@ -68,16 +66,16 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
     # 期待される合計値のチェック
     # 日本株: 100株 * 3000円 = 300,000円
     # 米国株: 10株 * 36054円 = 360,540円
-    assert Decimal(str(data["total_cost"])) == Decimal("660540")
+    assert float(data["total_cost"]) == 660540.0
 
     assert data["total_market_value"] is not None
     assert data["total_unrealized_pl"] is not None
-    assert Decimal(str(data["total_realized_pl"])) == Decimal("0")
+    assert float(data["total_realized_pl"]) == 0.0
 
     # 配当総額のチェック（税引後）
     # 日本株: 1000円 - 200円 = 800円
     # 米国株: 1500円 - 300円 = 1200円
-    assert Decimal(str(data["total_dividend"])) == Decimal("2000")
+    assert float(data["total_dividend"]) == 2000.0
 
     # total_plとtotal_pl_percentageの存在確認
     assert data["total_pl"] is not None
@@ -143,18 +141,16 @@ async def test_portfolio_update_with_price_changes(
     created_summary = response.json()
 
     # 期待値の確認
-    assert Decimal(str(created_summary["total_market_value"])) == Decimal("685000.00")  # 310,000 + 375,000
-    assert Decimal(str(created_summary["total_cost"])) == Decimal("660540.00")  # 取得価額の合計
-    assert Decimal(str(created_summary["total_unrealized_pl"])) == Decimal("24460.00")  # 685,000 - 660,540
-    assert Decimal(str(created_summary["total_dividend"])) == Decimal(
-        "2000.00"
-    )  # (1000 - 200) + (1500 - 300)
+    assert abs(float(created_summary["total_market_value"]) - 685000.00) < 1.0  # 310,000 + 375,000
+    assert abs(float(created_summary["total_cost"]) - 660540.00) < 1.0  # 取得価額の合計
+    assert abs(float(created_summary["total_unrealized_pl"]) - 24460.00) < 1.0  # 685,000 - 660,540
+    assert abs(float(created_summary["total_dividend"]) - 2000.00) < 1.0  # (1000 - 200) + (1500 - 300)
 
     # 市場別保有額の確認
     assert "JPX" in created_summary["holdings_by_market"]
     assert "NASDAQ" in created_summary["holdings_by_market"]
-    assert Decimal(str(created_summary["holdings_by_market"]["JPX"])) == Decimal("310000.00")
-    assert Decimal(str(created_summary["holdings_by_market"]["NASDAQ"])) == Decimal("375000.00")
+    assert abs(float(created_summary["holdings_by_market"]["JPX"]) - 310000.00) < 1.0
+    assert abs(float(created_summary["holdings_by_market"]["NASDAQ"]) - 375000.00) < 1.0
 
     # 通貨別保有額の確認
     assert "JPY" in created_summary["holdings_by_currency"]
@@ -234,7 +230,7 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
 
     # 値の正確性をチェック（最新のレコードを使用）
     latest_record = data[0]
-    assert Decimal(str(latest_record["total_cost"])) == Decimal("660540.00")
-    assert Decimal(str(latest_record["total_market_value"])) == Decimal("685000.00")
-    assert Decimal(str(latest_record["total_unrealized_pl"])) == Decimal("24460.00")
-    assert Decimal(str(latest_record["total_dividend"])) == Decimal("2000.00")
+    assert abs(float(latest_record["total_cost"]) - 660540.00) < 1.0
+    assert abs(float(latest_record["total_market_value"]) - 685000.00) < 1.0
+    assert abs(float(latest_record["total_unrealized_pl"]) - 24460.00) < 1.0
+    assert abs(float(latest_record["total_dividend"]) - 2000.00) < 1.0

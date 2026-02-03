@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -41,8 +39,8 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     data = response.json()
     assert data["symbol"] == "8058"
     assert data["transaction_type"] == "buy"
-    assert Decimal(data["quantity"]) == Decimal("10.0")
-    assert Decimal(data["price"]) == Decimal("3000.0")
+    assert float(data["quantity"]) == 10.0
+    assert float(data["price"]) == 3000.0
 
     # ホールディングテーブルの状態を確認（指定銘柄のみ）
     holdings_response = await client.get(
@@ -52,9 +50,9 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     holdings = holdings_response.json()
     holding = holdings[0]
     assert holding["symbol"] == "8058"
-    assert Decimal(holding["quantity"]) == Decimal("10.0")  # トランザクションで登録した数量と一致すること
-    assert Decimal(holding["average_cost"]) == Decimal("3000.0")  # 平均取得単価が正しいこと
-    assert Decimal(holding["total_cost"]) == Decimal("30000.0")  # 総取得価額が正しいこと
+    assert float(holding["quantity"]) == 10.0  # トランザクションで登録した数量と一致すること
+    assert float(holding["average_cost"]) == 3000.0  # 平均取得単価が正しいこと
+    assert float(holding["total_cost"]) == 30000.0  # 総取得価額が正しいこと
 
 
 @pytest.mark.asyncio
@@ -107,8 +105,8 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     data = response.json()
     assert data["symbol"] == "8058"
     assert data["transaction_type"] == "sell"
-    assert Decimal(data["quantity"]) == Decimal("5.0")
-    assert Decimal(data["price"]) == Decimal("3500.0")
+    assert float(data["quantity"]) == 5.0
+    assert float(data["price"]) == 3500.0
 
     # 売却後のホールディングの実現損益を確認
     holdings_response = await client.get(
@@ -117,7 +115,7 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = holdings[0]
-    assert Decimal(holding["realized_pl"]) == Decimal("2500.0")
+    assert float(holding["realized_pl"]) == 2500.0
 
 
 @pytest.mark.asyncio
@@ -251,9 +249,9 @@ async def test_multiple_buy_transactions_average_cost(
     # 指定した銘柄の保有情報を検索
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
     assert holding is not None
-    assert Decimal(holding["quantity"]) == Decimal("15.0")
-    assert Decimal(holding["average_cost"]) == Decimal("3333.33").quantize(Decimal("0.01"))
-    assert Decimal(holding["total_cost"]) == Decimal("50000.00").quantize(Decimal("0.01"))
+    assert float(holding["quantity"]) == 15.0
+    assert abs(float(holding["average_cost"]) - 3333.33) < 0.01
+    assert abs(float(holding["total_cost"]) - 50000.00) < 0.01
 
 
 @pytest.mark.asyncio
@@ -317,16 +315,16 @@ async def test_buy_and_partial_sell_calculation(
     assert holding is not None
 
     # 保有数量の確認（100株 - 60株 = 40株）
-    assert Decimal(holding["quantity"]) == Decimal("40.0")
+    assert float(holding["quantity"]) == 40.0
 
     # 平均取得単価の確認（1000円のまま変化なし）
-    assert Decimal(holding["average_cost"]) == Decimal("1000.0")
+    assert float(holding["average_cost"]) == 1000.0
 
     # 取得価額合計の確認（1000円 * 40株 = 40,000円）
-    assert Decimal(holding["total_cost"]) == Decimal("40000.0")
+    assert float(holding["total_cost"]) == 40000.0
 
     # 売却益の確認（(1500円 - 1000円) * 60株 = 30,000円）
-    assert Decimal(holding["realized_pl"]) == Decimal("30000.0")
+    assert float(holding["realized_pl"]) == 30000.0
 
 
 @pytest.mark.asyncio
@@ -368,8 +366,8 @@ async def test_create_transaction_with_usd_price(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
-    assert Decimal(data["price"]) == Decimal("20000.0")
-    assert Decimal(data["usd_price"]) == Decimal("135.67")
+    assert float(data["price"]) == 20000.0
+    assert float(data["usd_price"]) == 135.67
 
     # モックが呼び出されたことを確認
     mock_external_apis["overview"].assert_called_once_with("AAPL")

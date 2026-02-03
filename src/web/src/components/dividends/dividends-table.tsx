@@ -64,8 +64,8 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
         bValue = new Date(b.payment_date).getTime()
         break
       case "total_amount":
-        aValue = Number(a.total_amount)
-        bValue = Number(b.total_amount)
+        aValue = a.total_amount
+        bValue = b.total_amount
         break
     }
 
@@ -149,9 +149,7 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">{formatDate(dividend.payment_date)}</TableCell>
-                        <TableCell className="text-right">
-                          {Number(dividend.shares_owned).toLocaleString()}
-                        </TableCell>
+                        <TableCell className="text-right">{dividend.shares_owned.toLocaleString()}</TableCell>
                         <TableCell className="text-right font-medium text-[#4CAF50]">
                           {formatCurrency(dividend.total_amount)}
                         </TableCell>

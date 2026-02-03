@@ -39,7 +39,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
   }
 
   const sortedHoldings = holdings
-    ?.filter((holding) => Number(holding.quantity) > 0)
+    ?.filter((holding) => holding.quantity > 0)
     .sort((a, b) => {
       let aValue: number | string = 0
       let bValue: number | string = 0
@@ -50,24 +50,24 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
           bValue = b.symbol
           break
         case "quantity":
-          aValue = Number(a.quantity)
-          bValue = Number(b.quantity)
+          aValue = a.quantity
+          bValue = b.quantity
           break
         case "current_price":
-          aValue = a.current_price ? Number(a.current_price) : 0
-          bValue = b.current_price ? Number(b.current_price) : 0
+          aValue = a.current_price ?? 0
+          bValue = b.current_price ?? 0
           break
         case "market_value":
-          aValue = a.market_value ? Number(a.market_value) : 0
-          bValue = b.market_value ? Number(b.market_value) : 0
+          aValue = a.market_value ?? 0
+          bValue = b.market_value ?? 0
           break
         case "total_pl":
-          aValue = a.total_pl ? Number(a.total_pl) : 0
-          bValue = b.total_pl ? Number(b.total_pl) : 0
+          aValue = a.total_pl ?? 0
+          bValue = b.total_pl ?? 0
           break
         case "total_pl_percentage":
-          aValue = a.total_pl_percentage ? Number(a.total_pl_percentage) : 0
-          bValue = b.total_pl_percentage ? Number(b.total_pl_percentage) : 0
+          aValue = a.total_pl_percentage ?? 0
+          bValue = b.total_pl_percentage ?? 0
           break
       }
 
@@ -154,7 +154,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
               <TableBody>
                 {sortedHoldings && sortedHoldings.length > 0 ? (
                   sortedHoldings.map((holding) => {
-                    const plValue = holding.total_pl ? Number(holding.total_pl) : 0
+                    const plValue = holding.total_pl ?? 0
                     const plColor = plValue >= 0 ? "text-[#4CAF50]" : "text-destructive"
 
                     return (
@@ -169,9 +169,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                             </div>
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right">
-                          {Number(holding.quantity).toLocaleString()}
-                        </TableCell>
+                        <TableCell className="text-right">{holding.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
                           {holding.current_price ? formatCurrency(holding.current_price) : "-"}
                         </TableCell>

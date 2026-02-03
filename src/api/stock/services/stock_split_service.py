@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import List, Optional
 
 from loguru import logger
@@ -192,7 +191,7 @@ class StockSplitService:
 
         # 各取引の調整値を計算
         for transaction in transactions:
-            cumulative_ratio = Decimal("1.0")
+            cumulative_ratio = 1.0
 
             # 取引日より後の分割を全て適用
             for split in splits:
@@ -200,7 +199,7 @@ class StockSplitService:
                     cumulative_ratio *= split.split_ratio
 
             # 調整値を設定
-            if cumulative_ratio != Decimal("1.0"):
+            if cumulative_ratio != 1.0:
                 transaction.adjusted_quantity = transaction.quantity * cumulative_ratio
                 transaction.adjusted_price = transaction.price / cumulative_ratio
             else:

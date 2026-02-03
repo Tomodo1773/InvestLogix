@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Dict, List, Optional, Union
 
 from sqlalchemy import extract, func, select
@@ -216,7 +215,7 @@ class TransactionService:
                     cost = price * quantity
                     market_value = current_price * quantity
                     unrealized_pl = market_value - cost
-                    unrealized_pl_percentage = (unrealized_pl / cost * 100) if cost > 0 else Decimal("0")
+                    unrealized_pl_percentage = (unrealized_pl / cost * 100) if cost > 0 else 0.0
                     transaction_dict["unrealized_pl"] = unrealized_pl
                     transaction_dict["unrealized_pl_percentage"] = unrealized_pl_percentage
 

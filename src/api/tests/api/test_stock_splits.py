@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +46,7 @@ async def test_create_stock_split_and_recalculate(
     assert split_response.status_code == 201
     split_result = split_response.json()
     assert split_result["symbol"] == "8058"
-    assert Decimal(split_result["split_ratio"]) == Decimal("4.0")
+    assert float(split_result["split_ratio"]) == 4.0
 
     # 3. 取引の調整値を確認（400株@2500円）
     transactions_response = await client.get(
@@ -57,10 +55,10 @@ async def test_create_stock_split_and_recalculate(
     assert transactions_response.status_code == 200
     transactions = transactions_response.json()
     transaction = transactions[0]
-    assert Decimal(transaction["quantity"]) == Decimal("100.0")  # 元の数量は変わらない
-    assert Decimal(transaction["price"]) == Decimal("10000.0")  # 元の価格は変わらない
-    assert Decimal(transaction["adjusted_quantity"]) == Decimal("400.0")  # 調整後: 100 * 4
-    assert Decimal(transaction["adjusted_price"]) == Decimal("2500.0")  # 調整後: 10000 / 4
+    assert float(transaction["quantity"]) == 100.0  # 元の数量は変わらない
+    assert float(transaction["price"]) == 10000.0  # 元の価格は変わらない
+    assert float(transaction["adjusted_quantity"]) == 400.0  # 調整後: 100 * 4
+    assert float(transaction["adjusted_price"]) == 2500.0  # 調整後: 10000 / 4
 
 
 @pytest.mark.asyncio
@@ -117,9 +115,9 @@ async def test_holding_calculation_with_split(client: AsyncClient, db_session: A
     holding = holdings[0]
 
     # 数量=400株、平均取得単価=2500円であることを確認
-    assert Decimal(holding["quantity"]) == Decimal("400.0")
-    assert Decimal(holding["average_cost"]) == Decimal("2500.0")
-    assert Decimal(holding["total_cost"]) == Decimal("1000000.0")  # 400 * 2500
+    assert float(holding["quantity"]) == 400.0
+    assert float(holding["average_cost"]) == 2500.0
+    assert float(holding["total_cost"]) == 1000000.0  # 400 * 2500
 
 
 @pytest.mark.asyncio
@@ -180,7 +178,7 @@ async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: Asy
     sell_transaction = sell_response.json()
 
     # 4. 実現損益を確認: (3000 - 2500) * 200 = 100000円
-    assert Decimal(sell_transaction["realized_pl"]) == Decimal("100000.0")
+    assert float(sell_transaction["realized_pl"]) == 100000.0
 
     # 5. 保有株情報を確認（残り200株）
     holdings_response = await client.get(
@@ -188,8 +186,8 @@ async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: Asy
     )
     holdings = holdings_response.json()
     holding = holdings[0]
-    assert Decimal(holding["quantity"]) == Decimal("200.0")  # 400 - 200
-    assert Decimal(holding["realized_pl"]) == Decimal("100000.0")
+    assert float(holding["quantity"]) == 200.0  # 400 - 200
+    assert float(holding["realized_pl"]) == 100000.0
 
 
 @pytest.mark.asyncio
@@ -247,8 +245,8 @@ async def test_recalculate_idempotency(client: AsyncClient, db_session: AsyncSes
     transaction2 = response2.json()[0]
 
     # 6. 1回目と2回目で調整値が同じであることを確認
-    assert Decimal(transaction1["adjusted_quantity"]) == Decimal(transaction2["adjusted_quantity"])
-    assert Decimal(transaction1["adjusted_price"]) == Decimal(transaction2["adjusted_price"])
+    assert float(transaction1["adjusted_quantity"]) == float(transaction2["adjusted_quantity"])
+    assert float(transaction1["adjusted_price"]) == float(transaction2["adjusted_price"])
 
 
 @pytest.mark.asyncio
@@ -352,7 +350,7 @@ async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: Asyn
     # 3. 1件のみ取得され、8058の情報と銘柄名が含まれることを確認
     assert len(result) == 1
     assert result[0]["symbol"] == "8058"
-    assert Decimal(result[0]["split_ratio"]) == Decimal("4.0")
+    assert float(result[0]["split_ratio"]) == 4.0
     assert result[0]["stock_name"] is not None
 
 
@@ -472,5 +470,5 @@ async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, au
     transaction = response.json()[0]
 
     # 調整値は4 * 2 = 8倍
-    assert Decimal(transaction["adjusted_quantity"]) == Decimal("800.0")  # 100 * 4 * 2
-    assert Decimal(transaction["adjusted_price"]) == Decimal("1250.0")  # 10000 / 4 / 2
+    assert float(transaction["adjusted_quantity"]) == 800.0  # 100 * 4 * 2
+    assert float(transaction["adjusted_price"]) == 1250.0  # 10000 / 4 / 2

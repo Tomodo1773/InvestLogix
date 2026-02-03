@@ -1,6 +1,5 @@
 """週間騰落率通知APIのテスト"""
 
-from decimal import Decimal
 from unittest.mock import AsyncMock
 
 import pytest
@@ -20,9 +19,9 @@ class TestGetTopBottomPerformers:
             StockWeeklyPerformance(
                 symbol=f"TEST{i}",
                 name=f"Test Stock {i}",
-                latest_price=Decimal("100"),
-                old_price=Decimal("100"),
-                change_rate=Decimal(str(i - 5)),  # -4, -3, -2, -1, 0, 1, 2, 3, 4, 5
+                latest_price=100.0,
+                old_price=100.0,
+                change_rate=float(i - 5),  # -4, -3, -2, -1, 0, 1, 2, 3, 4, 5
             )
             for i in range(1, 11)
         ]
@@ -31,13 +30,13 @@ class TestGetTopBottomPerformers:
 
         # 上位5位のチェック（5, 4, 3, 2, 1）
         assert len(top) == 5
-        assert top[0].change_rate == Decimal("5")
-        assert top[4].change_rate == Decimal("1")
+        assert top[0].change_rate == 5.0
+        assert top[4].change_rate == 1.0
 
         # 下位5位のチェック（-4, -3, -2, -1, 0）
         assert len(bottom) == 5
-        assert bottom[0].change_rate == Decimal("-4")
-        assert bottom[4].change_rate == Decimal("0")
+        assert bottom[0].change_rate == -4.0
+        assert bottom[4].change_rate == 0.0
 
     def test_with_less_than_5_performers(self):
         """5銘柄未満の場合、全銘柄が返されること"""
@@ -45,9 +44,9 @@ class TestGetTopBottomPerformers:
             StockWeeklyPerformance(
                 symbol=f"TEST{i}",
                 name=f"Test Stock {i}",
-                latest_price=Decimal("100"),
-                old_price=Decimal("100"),
-                change_rate=Decimal(str(i)),
+                latest_price=100.0,
+                old_price=100.0,
+                change_rate=float(i),
             )
             for i in range(1, 4)  # 3銘柄
         ]
@@ -74,7 +73,7 @@ class TestBuildRankingRow:
             rank=1,
             name="テスト株",
             symbol="TEST1",
-            change_rate=Decimal("10.00"),
+            change_rate=10.00,
         )
 
         # 騰落率テキストが緑色であること
@@ -88,7 +87,7 @@ class TestBuildRankingRow:
             rank=1,
             name="テスト株",
             symbol="TEST1",
-            change_rate=Decimal("-5.50"),
+            change_rate=-5.50,
         )
 
         # 騰落率テキストが赤色であること
@@ -168,14 +167,14 @@ async def test_calculates_change_rate_correctly(
         "stock.services.weekly_performance_service.get_japan_stock_weekly_prices",
         new_callable=AsyncMock,
     )
-    mock_jp_prices.return_value = (Decimal("3300"), Decimal("3000"))  # 3000 -> 3300 (+10%)
+    mock_jp_prices.return_value = (3300.0, 3000.0)  # 3000 -> 3300 (+10%)
 
     # 米国株の株価取得をモック化
     mock_us_prices = mocker.patch(
         "stock.services.weekly_performance_service.get_us_stock_weekly_prices",
         new_callable=AsyncMock,
     )
-    mock_us_prices.return_value = (Decimal("216.324"), Decimal("240.36"))  # 240.36 -> 216.324 (-10%)
+    mock_us_prices.return_value = (216.324, 240.36)  # 240.36 -> 216.324 (-10%)
 
     # 週間パフォーマンスを計算
     from stock.services.weekly_performance_service import calculate_weekly_performance
@@ -188,16 +187,16 @@ async def test_calculates_change_rate_correctly(
     # 日本株の騰落率チェック
     jp_perf = next((p for p in performances if p.symbol == "8058"), None)
     assert jp_perf is not None
-    assert jp_perf.change_rate == Decimal("10.00")
-    assert jp_perf.latest_price == Decimal("3300")
-    assert jp_perf.old_price == Decimal("3000")
+    assert jp_perf.change_rate == 10.00
+    assert jp_perf.latest_price == 3300.0
+    assert jp_perf.old_price == 3000.0
 
     # 米国株の騰落率チェック
     us_perf = next((p for p in performances if p.symbol == "AAPL"), None)
     assert us_perf is not None
-    assert us_perf.change_rate == Decimal("-10.00")
-    assert us_perf.latest_price == Decimal("216.324")
-    assert us_perf.old_price == Decimal("240.36")
+    assert us_perf.change_rate == -10.00
+    assert us_perf.latest_price == 216.324
+    assert us_perf.old_price == 240.36
 
 
 @pytest.mark.asyncio
@@ -219,13 +218,13 @@ async def test_weekly_performance_notify_endpoint(
         "stock.services.weekly_performance_service.get_japan_stock_weekly_prices",
         new_callable=AsyncMock,
     )
-    mock_jp_prices.return_value = (Decimal("3100"), Decimal("3000"))
+    mock_jp_prices.return_value = (3100.0, 3000.0)
 
     mock_us_prices = mocker.patch(
         "stock.services.weekly_performance_service.get_us_stock_weekly_prices",
         new_callable=AsyncMock,
     )
-    mock_us_prices.return_value = (Decimal("250"), Decimal("240"))
+    mock_us_prices.return_value = (250.0, 240.0)
 
     # LINE通知をモック化
     mock_notification = mocker.patch(

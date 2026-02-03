@@ -1,7 +1,6 @@
 import logging
 import os
 from datetime import datetime
-from decimal import Decimal
 from typing import Any, Dict, Optional
 
 import httpx
@@ -290,18 +289,18 @@ class NotificationService:
         return user.line_user_id
 
 
-def _format_currency(value: Decimal) -> str:
+def _format_currency(value: float) -> str:
     """通貨表示用のフォーマット"""
     if value is None:
         return "0"
     return f"{int(value):,}"
 
 
-def _format_decimal(value: Decimal) -> str:
+def _format_decimal(value: float) -> str:
     """小数表示用のフォーマット"""
     if value is None:
         return "0.00"
-    return f"{float(value):.2f}"
+    return f"{value:.2f}"
 
 
 def _get_profit_loss_color(percentage: float) -> str:
@@ -337,7 +336,7 @@ WEEKLY_PERFORMANCE_COLOR_GREEN = "#00A86B"
 WEEKLY_PERFORMANCE_COLOR_RED = "#E53935"
 
 
-def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) -> dict:
+def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: float) -> dict:
     """
     ランキングの1行分のFlex Boxを作成する
 
@@ -345,7 +344,7 @@ def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) 
         rank (int): 順位
         name (str): 銘柄名
         symbol (str): 銘柄コード
-        change_rate (Decimal): 騰落率
+        change_rate (float): 騰落率
 
     Returns:
         dict: Flex Box形式の辞書
@@ -369,7 +368,7 @@ def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: Decimal) 
             },
             {
                 "type": "text",
-                "text": f"{sign}{change_rate}%",
+                "text": f"{sign}{change_rate:.2f}%",
                 "size": "sm",
                 "align": "end",
                 "color": color,

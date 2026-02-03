@@ -20,10 +20,8 @@ function HoldingDetailContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { symbol } = useParams<{ symbol: string }>()
 
-  const formatSplitRatio = (ratio: string) => {
-    const numRatio = Number(ratio)
-    if (Number.isNaN(numRatio)) return ratio
-    return `${numRatio}:1 分割`
+  const formatSplitRatio = (ratio: number) => {
+    return `${ratio}:1 分割`
   }
 
   const { data: holdings, isLoading: isLoadingHolding } = useSWR(
@@ -120,7 +118,7 @@ function HoldingDetailContent() {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">保有数</p>
-                  <p className="text-lg font-semibold">{Number(holding.quantity).toLocaleString()}株</p>
+                  <p className="text-lg font-semibold">{holding.quantity.toLocaleString()}株</p>
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">平均取得単価</p>
@@ -136,9 +134,7 @@ function HoldingDetailContent() {
                   <p className="text-sm text-muted-foreground">損益</p>
                   <p
                     className={`text-lg font-semibold ${
-                      holding.total_pl && Number(holding.total_pl) >= 0
-                        ? "text-[#4CAF50]"
-                        : "text-destructive"
+                      holding.total_pl && holding.total_pl >= 0 ? "text-[#4CAF50]" : "text-destructive"
                     }`}
                   >
                     {holding.total_pl ? formatCurrency(holding.total_pl) : "-"}
@@ -148,7 +144,7 @@ function HoldingDetailContent() {
                   <p className="text-sm text-muted-foreground">損益率</p>
                   <p
                     className={`text-lg font-semibold ${
-                      holding.total_pl_percentage && Number(holding.total_pl_percentage) >= 0
+                      holding.total_pl_percentage && holding.total_pl_percentage >= 0
                         ? "text-[#4CAF50]"
                         : "text-destructive"
                     }`}
@@ -205,7 +201,7 @@ function HoldingDetailContent() {
                         const plValue =
                           transaction.unrealized_pl_percentage !== null &&
                           transaction.unrealized_pl_percentage !== undefined
-                            ? Number(transaction.unrealized_pl_percentage)
+                            ? transaction.unrealized_pl_percentage
                             : null
                         const plColor =
                           plValue !== null ? (plValue >= 0 ? "text-[#4CAF50]" : "text-destructive") : ""
@@ -224,9 +220,7 @@ function HoldingDetailContent() {
                                 {transaction.transaction_type === "buy" ? "買付" : "売却"}
                               </span>
                             </TableCell>
-                            <TableCell className="text-right">
-                              {Number(displayQuantity).toLocaleString()}
-                            </TableCell>
+                            <TableCell className="text-right">{displayQuantity.toLocaleString()}</TableCell>
                             <TableCell className="text-right">{formatCurrency(displayPrice)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(transaction.fee)}</TableCell>
                             <TableCell className="text-right">{formatCurrency(transaction.tax)}</TableCell>
@@ -285,7 +279,7 @@ function HoldingDetailContent() {
                         <TableRow key={dividend.dividend_id}>
                           <TableCell>{formatDate(dividend.payment_date)}</TableCell>
                           <TableCell className="text-right">
-                            {Number(dividend.shares_owned).toLocaleString()}株
+                            {dividend.shares_owned.toLocaleString()}株
                           </TableCell>
                           <TableCell className="text-right">
                             {formatCurrency(dividend.total_amount)}

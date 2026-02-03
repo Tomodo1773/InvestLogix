@@ -109,9 +109,7 @@ def downgrade() -> None:
     op.alter_column(
         "portfolio_history", "total_realized_pl", type_=sa.Numeric(10, 2), existing_nullable=False
     )
-    op.alter_column(
-        "portfolio_history", "total_dividend", type_=sa.Numeric(10, 2), existing_nullable=False
-    )
+    op.alter_column("portfolio_history", "total_dividend", type_=sa.Numeric(10, 2), existing_nullable=False)
     op.alter_column("portfolio_history", "total_pl", type_=sa.Numeric(10, 2), existing_nullable=False)
     op.alter_column(
         "portfolio_history", "total_pl_percentage", type_=sa.Numeric(5, 2), existing_nullable=False

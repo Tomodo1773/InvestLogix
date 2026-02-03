@@ -144,8 +144,8 @@ async def test_recalculate_all_holdings_pl(
     # 日本株（8058）の検証
     assert "8058" in holdings
     jp_holding = holdings["8058"]
-    assert (
-        float(jp_holding["current_price"]) == float(MOCK_JAPAN_STOCK_PRICE_UPDATED)
+    assert float(jp_holding["current_price"]) == float(
+        MOCK_JAPAN_STOCK_PRICE_UPDATED
     )  # 更新後の価格であることを確認
     assert float(jp_holding["market_value"]) == float(MOCK_JAPAN_STOCK_PRICE_UPDATED) * 100.0
     assert jp_holding["unrealized_pl"] is not None
@@ -154,12 +154,13 @@ async def test_recalculate_all_holdings_pl(
     # 米国株（AAPL）の検証
     assert "AAPL" in holdings
     us_holding = holdings["AAPL"]
-    assert (
-        float(us_holding["current_price"]) == float(MOCK_US_STOCK_PRICE_UPDATED) * float(MOCK_USD_JPY_RATE_RESPONSE)
+    assert float(us_holding["current_price"]) == float(MOCK_US_STOCK_PRICE_UPDATED) * float(
+        MOCK_USD_JPY_RATE_RESPONSE
     )  # 更新後の価格であることを確認
-    assert float(
-        us_holding["market_value"]
-    ) == float(MOCK_US_STOCK_PRICE_UPDATED) * float(MOCK_USD_JPY_RATE_RESPONSE) * 10.0
+    assert (
+        float(us_holding["market_value"])
+        == float(MOCK_US_STOCK_PRICE_UPDATED) * float(MOCK_USD_JPY_RATE_RESPONSE) * 10.0
+    )
     assert us_holding["unrealized_pl"] is not None
     assert us_holding["unrealized_pl_percentage"] is not None
 

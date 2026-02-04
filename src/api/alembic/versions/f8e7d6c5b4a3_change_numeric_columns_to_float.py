@@ -1,7 +1,7 @@
 """Change numeric columns to float
 
 Revision ID: f8e7d6c5b4a3
-Revises: a1b2c3d4e5f6
+Revises: e9bc1da32174
 Create Date: 2026-02-03 06:20:00.000000
 
 """
@@ -14,7 +14,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f8e7d6c5b4a3"
-down_revision: Union[str, None] = "a1b2c3d4e5f6"
+down_revision: Union[str, None] = "e9bc1da32174"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

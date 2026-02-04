@@ -44,7 +44,7 @@ class PortfolioService:
             func.sum(models.Dividend.total_amount - func.coalesce(models.Dividend.tax, 0))
         ).where(models.Dividend.user_id == user_id)
         dividend_result = await self.db.execute(dividend_query)
-        total_dividend = dividend_result.scalar() or 0
+        total_dividend = float(dividend_result.scalar() or 0)
 
         # 全体損益の計算
         total_unrealized_pl = total_market_value - total_cost

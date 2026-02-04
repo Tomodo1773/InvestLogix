@@ -85,10 +85,9 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
   const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
     usePagination(sortedStockSplits, PAGE_SIZE)
 
-  const formatSplitRatio = (ratio: string) => {
-    const numRatio = Number(ratio)
-    if (Number.isNaN(numRatio)) return ratio
-    return `${numRatio}:1 分割`
+  const formatSplitRatio = (ratio: number) => {
+    if (Number.isNaN(ratio)) return String(ratio)
+    return `${ratio}:1 分割`
   }
 
   return (

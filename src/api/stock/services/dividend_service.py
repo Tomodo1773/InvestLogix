@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import List, Optional
 
 from sqlalchemy import extract, func, select
@@ -53,13 +52,13 @@ class DividendService:
 
         if holding:
             # total_dividend に配当の純額（税・手数料控除後）を加算
-            net_dividend = Decimal(dividend.total_amount)
+            net_dividend = float(dividend.total_amount)
             if dividend.tax is not None:
-                net_dividend -= Decimal(dividend.tax)
+                net_dividend -= float(dividend.tax)
             if dividend.fee is not None:
-                net_dividend -= Decimal(dividend.fee)
+                net_dividend -= float(dividend.fee)
 
-            holding.total_dividend = (holding.total_dividend or Decimal("0")) + net_dividend
+            holding.total_dividend = (holding.total_dividend or 0.0) + net_dividend
             # 注: unrealized_pl等の損益計算はupdate_single_holding_plに一元化
 
         await self.db.commit()

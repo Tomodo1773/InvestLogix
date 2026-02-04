@@ -15,16 +15,16 @@ export interface User {
 
 // Portfolio
 export interface PortfolioSummary {
-  total_cost: string
-  total_market_value: string
-  total_unrealized_pl: string
-  total_unrealized_pl_percentage: string
-  total_realized_pl: string
-  total_dividend: string
-  total_pl: string
-  total_pl_percentage: string
-  holdings_by_market: Record<string, string>
-  holdings_by_currency: Record<string, string>
+  total_cost: number
+  total_market_value: number
+  total_unrealized_pl: number
+  total_unrealized_pl_percentage: number
+  total_realized_pl: number
+  total_dividend: number
+  total_pl: number
+  total_pl_percentage: number
+  holdings_by_market: Record<string, number>
+  holdings_by_currency: Record<string, number>
 }
 
 export interface PortfolioHistoryItem {
@@ -41,17 +41,17 @@ export interface PortfolioHistoryItem {
 
 export interface Holding {
   symbol: string
-  quantity: string
-  average_cost: string
-  total_cost: string
-  current_price: string | null
-  market_value: string | null
-  realized_pl: string | null
-  total_dividend: string | null
-  unrealized_pl: string | null
-  unrealized_pl_percentage: string | null
-  total_pl: string | null
-  total_pl_percentage: string | null
+  quantity: number
+  average_cost: number
+  total_cost: number
+  current_price: number | null
+  market_value: number | null
+  realized_pl: number | null
+  total_dividend: number | null
+  unrealized_pl: number | null
+  unrealized_pl_percentage: number | null
+  total_pl: number | null
+  total_pl_percentage: number | null
   user_id: number
   last_updated: string
   stock_name: string | null
@@ -72,15 +72,15 @@ export type AccountType = "NISA(成長投資枠)" | "NISA(つみたて投資枠)
 export interface Transaction {
   symbol: string
   transaction_type: "buy" | "sell"
-  quantity: string
-  price: string
-  usd_price: string | null
-  adjusted_price: string | null
-  adjusted_quantity: string | null
+  quantity: number
+  price: number
+  usd_price: number | null
+  adjusted_price: number | null
+  adjusted_quantity: number | null
   account_type: AccountType
-  fee: string
-  tax: string
-  realized_pl: string | null
+  fee: number
+  tax: number
+  realized_pl: number | null
   transaction_id: number
   user_id: number
   transaction_date: string
@@ -88,18 +88,18 @@ export interface Transaction {
 }
 
 export interface TransactionWithPL extends Transaction {
-  unrealized_pl: string | null
-  unrealized_pl_percentage: string | null
+  unrealized_pl: number | null
+  unrealized_pl_percentage: number | null
 }
 
 // Dividends
 export interface Dividend {
   symbol: string
   payment_date: string
-  shares_owned: string
-  total_amount: string
-  tax: string | null
-  fee: string | null
+  shares_owned: number
+  total_amount: number
+  tax: number | null
+  fee: number | null
   dividend_id: number
   user_id: number
   stock_name: string | null
@@ -148,7 +148,7 @@ export interface StockSplit {
   user_id: number
   symbol: string
   split_date: string
-  split_ratio: string
+  split_ratio: number
   created_at: string
   stock_name: string | null
 }
@@ -158,12 +158,12 @@ export interface CsvTransactionPreview {
   symbol: string
   name: string
   transaction_type: "buy" | "sell"
-  quantity: string
-  price: string
-  usd_price: string | null
+  quantity: number
+  price: number
+  usd_price: number | null
   account_type: AccountType
-  fee: string
-  tax: string
+  fee: number
+  tax: number
   transaction_date: string
 }
 
@@ -179,12 +179,12 @@ export interface ImportConfirmRequest {
   transactions: {
     symbol: string
     transaction_type: "buy" | "sell"
-    quantity: string
-    price: string
-    usd_price: string | null
+    quantity: number
+    price: number
+    usd_price: number | null
     account_type: AccountType
-    fee: string
-    tax: string
+    fee: number
+    tax: number
     transaction_date: string
   }[]
 }

@@ -1,7 +1,6 @@
 """CSVインポート機能のテスト"""
 
 from datetime import datetime
-from decimal import Decimal
 
 import pytest
 
@@ -26,12 +25,12 @@ class TestParseCsvContent:
         assert tx.symbol == "1234"
         assert tx.name == "テスト株式"
         assert tx.transaction_type == "買付"
-        assert tx.quantity == Decimal("100")
-        assert tx.price == Decimal("1000")
+        assert tx.quantity == 100.0
+        assert tx.price == 1000.0
         assert tx.usd_price is None
         assert tx.account_type == "NISA(成長投資枠)"
-        assert tx.fee == Decimal("0")
-        assert tx.tax == Decimal("0")
+        assert tx.fee == 0.0
+        assert tx.tax == 0.0
 
     def test_parse_foreign_csv(self):
         """外貨建てCSVのパーステスト"""
@@ -46,8 +45,8 @@ class TestParseCsvContent:
         tx = transactions[0]
         assert tx.symbol == "TEST"
         assert tx.transaction_type == "買付"
-        assert tx.quantity == Decimal("10")
-        assert tx.usd_price == Decimal("100")
+        assert tx.quantity == 10.0
+        assert tx.usd_price == 100.0
         assert tx.account_type == "NISA(成長投資枠)"
 
     def test_parse_investment_trust(self):
@@ -60,7 +59,7 @@ class TestParseCsvContent:
         assert len(transactions) == 1
         tx = transactions[0]
         assert tx.symbol == "JP90C000H1T1"
-        assert tx.quantity == Decimal("5")  # 50000万口 / 10000 = 5口
+        assert tx.quantity == 5.0  # 50000万口 / 10000 = 5口
 
     def test_skip_invalid_transaction(self):
         """形式外の取引をスキップするテスト"""
@@ -101,24 +100,24 @@ class TestDetectNewTransactions:
                 symbol="1234",
                 name="テスト株式",
                 transaction_type="買付",
-                quantity=Decimal("100"),
-                price=Decimal("1000"),
+                quantity=100.0,
+                price=1000.0,
                 usd_price=None,
                 account_type="NISA(成長投資枠)",
-                fee=Decimal("0"),
-                tax=Decimal("0"),
+                fee=0.0,
+                tax=0.0,
                 transaction_date=datetime(2024, 1, 30),
             ),
             ParsedTransaction(
                 symbol="5678",
                 name="テスト株式2",
                 transaction_type="買付",
-                quantity=Decimal("50"),
-                price=Decimal("2000"),
+                quantity=50.0,
+                price=2000.0,
                 usd_price=None,
                 account_type="特定",
-                fee=Decimal("100"),
-                tax=Decimal("10"),
+                fee=100.0,
+                tax=10.0,
                 transaction_date=datetime(2024, 2, 1),
             ),
         ]
@@ -149,11 +148,11 @@ class TestDetectNewTransactions:
             MockTransaction(
                 symbol="1234",
                 transaction_type="buy",
-                quantity=Decimal("100"),
-                price=Decimal("1000"),
+                quantity=100.0,
+                price=1000.0,
                 account_type="NISA(成長投資枠)",
-                fee=Decimal("0"),
-                tax=Decimal("0"),
+                fee=0.0,
+                tax=0.0,
                 transaction_date=datetime(2024, 1, 30),
             )
         ]

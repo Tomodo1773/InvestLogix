@@ -5,7 +5,6 @@
 
 import asyncio
 from datetime import datetime, timedelta
-from decimal import Decimal
 from typing import List, Optional, Tuple
 
 import pandas_datareader.data as web
@@ -19,7 +18,7 @@ from ..schemas import SecurityType, StockWeeklyPerformance
 from .jquants_service import get_jquants_client
 
 
-async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Decimal]]:
+async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
     """
     日本株の最新株価と5営業日前の株価を取得します。
 
@@ -27,7 +26,7 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
         symbol (str): 証券コード
 
     Returns:
-        Optional[Tuple[Decimal, Decimal]]: (最新株価, 5営業日前株価)。取得できない場合はNone
+        Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
     """
     try:
         # 日本時間で2週間分のデータ期間を設定（営業日を確実に取得するため余裕を持つ）
@@ -43,8 +42,8 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
 
         # 6件以上のデータが必要（最新と5営業日前）
         if prices and len(prices) >= 6:
-            latest_price = Decimal(str(prices[-1].get("C", "0")))
-            old_price = Decimal(str(prices[-6].get("C", "0")))
+            latest_price = float(prices[-1].get("C", "0"))
+            old_price = float(prices[-6].get("C", "0"))
             return (latest_price, old_price)
         return None
 
@@ -57,7 +56,7 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, 
         return None
 
 
-async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Decimal]]:
+async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
     """
     米国株の最新株価と5営業日前の株価を取得します。
     ※ 騰落率計算のため、円換算は行わず米ドル建てで返します。
@@ -66,7 +65,7 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Dec
         symbol (str): ティッカーシンボル
 
     Returns:
-        Optional[Tuple[Decimal, Decimal]]: (最新株価, 5営業日前株価)。取得できない場合はNone
+        Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
     """
     try:
         # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
@@ -79,8 +78,8 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[Decimal, Dec
 
         # stooqは新しい順でデータが返るため、最初が最新、6番目が5営業日前
         if not df.empty and "Close" in df.columns and len(df["Close"]) >= 6:
-            latest_price = Decimal(str(df["Close"].iloc[0]))
-            old_price = Decimal(str(df["Close"].iloc[5]))
+            latest_price = float(df["Close"].iloc[0])
+            old_price = float(df["Close"].iloc[5])
             return (latest_price, old_price)
 
         return None
@@ -153,7 +152,7 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
                     name=stock.name,
                     latest_price=latest_price,
                     old_price=old_price,
-                    change_rate=change_rate.quantize(Decimal("0.01")),
+                    change_rate=round(change_rate, 2),
                 )
             )
 

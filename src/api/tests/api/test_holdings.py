@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select, update
@@ -34,7 +32,7 @@ async def test_recalculate_holding_pl_japanese_stock(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "8058"
-    assert Decimal(data["quantity"]) == Decimal("100.0")
+    assert float(data["quantity"]) == 100.0
     assert data["market_value"] is not None
     assert data["unrealized_pl"] is not None
     assert data["unrealized_pl_percentage"] is not None
@@ -69,7 +67,7 @@ async def test_recalculate_holding_pl_us_stock(
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "AAPL"
-    assert Decimal(data["quantity"]) == Decimal("10.0")
+    assert float(data["quantity"]) == 10.0
     assert data["market_value"] is not None
     assert data["unrealized_pl"] is not None
     assert data["unrealized_pl_percentage"] is not None
@@ -146,22 +144,23 @@ async def test_recalculate_all_holdings_pl(
     # 日本株（8058）の検証
     assert "8058" in holdings
     jp_holding = holdings["8058"]
-    assert (
-        Decimal(jp_holding["current_price"]) == MOCK_JAPAN_STOCK_PRICE_UPDATED
+    assert float(jp_holding["current_price"]) == float(
+        MOCK_JAPAN_STOCK_PRICE_UPDATED
     )  # 更新後の価格であることを確認
-    assert Decimal(jp_holding["market_value"]) == MOCK_JAPAN_STOCK_PRICE_UPDATED * Decimal("100.0")
+    assert float(jp_holding["market_value"]) == float(MOCK_JAPAN_STOCK_PRICE_UPDATED) * 100.0
     assert jp_holding["unrealized_pl"] is not None
     assert jp_holding["unrealized_pl_percentage"] is not None
 
     # 米国株（AAPL）の検証
     assert "AAPL" in holdings
     us_holding = holdings["AAPL"]
-    assert (
-        Decimal(us_holding["current_price"]) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE
+    assert float(us_holding["current_price"]) == float(MOCK_US_STOCK_PRICE_UPDATED) * float(
+        MOCK_USD_JPY_RATE_RESPONSE
     )  # 更新後の価格であることを確認
-    assert Decimal(
-        us_holding["market_value"]
-    ) == MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE * Decimal("10.0")
+    assert (
+        float(us_holding["market_value"])
+        == float(MOCK_US_STOCK_PRICE_UPDATED) * float(MOCK_USD_JPY_RATE_RESPONSE) * 10.0
+    )
     assert us_holding["unrealized_pl"] is not None
     assert us_holding["unrealized_pl_percentage"] is not None
 
@@ -207,7 +206,7 @@ async def test_recalculate_holding_pl_updates_realized_pl(
     await db_session.execute(
         update(Holding)
         .where(Holding.user_id == holding.user_id, Holding.symbol == holding.symbol)
-        .values(realized_pl=Decimal("0"))
+        .values(realized_pl=0.0)
     )
     await db_session.commit()
 
@@ -217,7 +216,7 @@ async def test_recalculate_holding_pl_updates_realized_pl(
     )
     assert response.status_code == 200
     data = response.json()
-    assert Decimal(data["realized_pl"]) == Decimal("2500.0")
+    assert float(data["realized_pl"]) == 2500.0
 
 
 @pytest.mark.asyncio
@@ -246,7 +245,7 @@ async def test_recalculate_holding_pl_delisted_stock(
         mocker: モックフィクスチャ
     """
     # 株価取得関数を上場廃止状態（価格=0）にモック
-    mocker.patch("stock.services.holding_service.get_japan_stock_price", return_value=Decimal("0"))
+    mocker.patch("stock.services.holding_service.get_japan_stock_price", return_value=0.0)
 
     # 取引を登録（10株購入、3000円/株）
     await create_transaction(
@@ -298,22 +297,22 @@ async def test_recalculate_holding_pl_delisted_stock(
     data = response.json()
 
     # 保有数量: 5株
-    assert Decimal(data["quantity"]) == Decimal("5.0")
+    assert float(data["quantity"]) == 5.0
 
     # 現在価格: 0（上場廃止）
-    assert Decimal(data["current_price"]) == Decimal("0")
+    assert float(data["current_price"]) == 0.0
 
     # 時価評価額: 0
-    assert Decimal(data["market_value"]) == Decimal("0")
+    assert float(data["market_value"]) == 0.0
 
     # 実現損益: +2500円
-    assert Decimal(data["realized_pl"]) == Decimal("2500.0")
+    assert float(data["realized_pl"]) == 2500.0
 
     # 配当総額: 800円（1000 - 200 税）
-    assert Decimal(data["total_dividend"]) == Decimal("800.0")
+    assert float(data["total_dividend"]) == 800.0
 
     # 取得価格合計: 5株 × 3000円 = 15000円
-    assert Decimal(data["total_cost"]) == Decimal("15000.0")
+    assert float(data["total_cost"]) == 15000.0
 
     # unrealized_pl が null ではなく計算されていることを確認
     assert data["unrealized_pl"] is not None
@@ -321,8 +320,8 @@ async def test_recalculate_holding_pl_delisted_stock(
     # unrealized_pl = market_value(0) - total_cost(15000)
     #                = 0 - 15000
     #                = -15000
-    expected_unrealized_pl = Decimal("0") - Decimal("15000")
-    assert Decimal(data["unrealized_pl"]) == expected_unrealized_pl
+    expected_unrealized_pl = 0.0 - 15000.0
+    assert float(data["unrealized_pl"]) == expected_unrealized_pl
 
     # total_pl が null ではなく計算されていることを確認
     assert data["total_pl"] is not None
@@ -330,5 +329,5 @@ async def test_recalculate_holding_pl_delisted_stock(
     # total_pl = unrealized_pl(-15000) + realized_pl(2500) + total_dividend(800)
     #          = -15000 + 2500 + 800
     #          = -11700
-    expected_total_pl = Decimal("-15000") + Decimal("2500") + Decimal("800")
-    assert Decimal(data["total_pl"]) == expected_total_pl
+    expected_total_pl = -15000.0 + 2500.0 + 800.0
+    assert float(data["total_pl"]) == expected_total_pl

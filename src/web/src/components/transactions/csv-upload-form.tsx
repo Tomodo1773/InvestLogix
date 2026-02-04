@@ -34,7 +34,7 @@ export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
         <Input
           id="csv-file"
           type="file"
-          accept=".csv"
+          accept=".csv,text/csv,text/plain,application/vnd.ms-excel"
           onChange={handleFileChange}
           disabled={isLoading}
           className="cursor-pointer"

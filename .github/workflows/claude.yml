@@ -81,9 +81,5 @@ jobs:
                   "Bash(pnpm test:*)",
                   "Bash(npx shadcn@latest add:*)"
                 ]
-              },
-              "env": {
-                "JQUANTS_MAIL_ADDRESS": "${{ secrets.JQUANTS_MAIL_ADDRESS }}",
-                "JQUANTS_PASSWORD": "${{ secrets.JQUANTS_PASSWORD }}"
               }
             }

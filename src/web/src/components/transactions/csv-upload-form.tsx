@@ -13,9 +13,17 @@ interface CsvUploadFormProps {
 export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
+  const [fileError, setFileError] = useState<string | null>(null)
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        setFileError("CSVファイルを選択してください")
+        setSelectedFile(null)
+        return
+      }
+      setFileError(null)
       setSelectedFile(file)
     }
   }
@@ -34,11 +42,12 @@ export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
         <Input
           id="csv-file"
           type="file"
-          accept=".csv"
+          accept=".csv,text/csv,text/comma-separated-values,text/plain,application/csv,application/vnd.ms-excel"
           onChange={handleFileChange}
           disabled={isLoading}
           className="cursor-pointer"
         />
+        {fileError && <p className="text-sm text-destructive">{fileError}</p>}
         <p className="text-sm text-muted-foreground">
           SBI証券からエクスポートした取引履歴CSVをアップロードしてください（最大1MB）
         </p>

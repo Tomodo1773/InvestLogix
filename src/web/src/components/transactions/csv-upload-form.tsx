@@ -34,7 +34,7 @@ export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
         <Input
           id="csv-file"
           type="file"
-          accept=".csv"
+          accept=".csv,text/csv,text/comma-separated-values,application/csv"
           onChange={handleFileChange}
           disabled={isLoading}
           className="cursor-pointer"

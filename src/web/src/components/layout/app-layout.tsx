@@ -26,7 +26,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <div className="flex items-center gap-3">
               <MobileNav />
               <div className="flex items-center gap-3 md:hidden">
-                <img src="/favicon-32x32.png" alt="InvestLogix" className="h-10 w-10 rounded-lg" />
+                <img src="/apple-touch-icon.png" alt="InvestLogix" className="h-10 w-10 rounded-lg" />
                 <div>
                   <h1 className="text-lg font-bold text-foreground">InvestLogix</h1>
                   <p className="text-xs text-muted-foreground">Portfolio Manager</p>

@@ -23,7 +23,6 @@ dependencies = [
     "aiohttp>=3.11.12",
     "httpx>=0.28.1",
     "beautifulsoup4>=4.13.3",
-    "pandas-datareader>=0.10.0",
     "pandas>=2.2.3",
     "psycopg2-binary>=2.9.10",
     "psycopg>=3.2.4",

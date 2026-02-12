@@ -1,13 +1,12 @@
 """
 株価時系列データ取得サービス
-日本株はJ-Quants API、米国株はpandas_datareaderのStooqを使用
+日本株はJ-Quants API、米国株はStooqを使用
 """
 
 from datetime import datetime, timedelta
 from typing import List
 
 import pandas as pd
-from pandas_datareader import data as pdr
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +14,7 @@ from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval
 from ..utils.cache import timed_cache
 from .jquants_service import get_jquants_client
+from .stooq_service import fetch_us_daily_prices_from_stooq
 
 
 class PriceHistoryService:
@@ -165,25 +165,7 @@ class PriceHistoryService:
             株価データのリスト
         """
         try:
-            # Stooqのティッカーシンボル形式: [symbol].US
-            stooq_symbol = f"{symbol}.US"
-            df = pdr.DataReader(stooq_symbol, "stooq", start_date, end_date)
-
-            # インデックスを日付に変換してソート（古い順）
-            df = df.sort_index()
-
-            result = []
-            for date, row in df.iterrows():
-                result.append(
-                    {
-                        "date": date.strftime("%Y-%m-%d"),
-                        "open": float(row["Open"]),
-                        "high": float(row["High"]),
-                        "low": float(row["Low"]),
-                        "close": float(row["Close"]),
-                        "volume": int(row["Volume"]),
-                    }
-                )
+            result = fetch_us_daily_prices_from_stooq(symbol, start_date, end_date)
             logger.info(
                 "米国株株価を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
                 symbol,

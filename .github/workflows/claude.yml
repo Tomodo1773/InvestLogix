@@ -38,7 +38,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           version: "0.9.21"
-          python-version: "3.11"
+          python-version: "3.13"
           ignore-nothing-to-cache: true
 
       - name: Setup pnpm

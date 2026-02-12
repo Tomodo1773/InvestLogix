@@ -19,7 +19,7 @@ module api '../core/appservice.bicep' = {
     appServicePlanId: appServicePlanId
     appSettings: appSettings
     runtimeName: 'python'
-    runtimeVersion: '3.11'
+    runtimeVersion: '3.13'
     scmDoBuildDuringDeployment: true
     alwaysOn: alwaysOn
   }

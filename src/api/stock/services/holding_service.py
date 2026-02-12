@@ -2,8 +2,6 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import List
 
-import pandas as pd
-import pandas_datareader.data as web
 import pytz
 from loguru import logger
 from sqlalchemy import func, select
@@ -14,6 +12,7 @@ from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
 from .jquants_service import get_jquants_client
+from .stooq_service import fetch_us_daily_prices_from_stooq
 
 
 async def get_japan_stock_price(symbol: str) -> float:
@@ -72,18 +71,19 @@ async def get_us_stock_price(symbol: str) -> float:
         end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
         start = end - timedelta(days=7)
 
-        # stooqから株価データを取得（非同期処理のためにループで実行）
-        loop = asyncio.get_event_loop()
-        df = await loop.run_in_executor(None, web.DataReader, symbol, "stooq", start, end)
+        # Stooqから株価データを取得（同期I/Oをスレッド実行）
+        prices = await asyncio.to_thread(
+            fetch_us_daily_prices_from_stooq,
+            symbol,
+            start.strftime("%Y-%m-%d"),
+            end.strftime("%Y-%m-%d"),
+        )
 
-        # 最新の終値を取得（データは新しい順）
-        if not df.empty and "Close" in df.columns and len(df["Close"]) > 0:
-            latest_close = df["Close"].iloc[0]
-            if not pd.isna(latest_close):  # NaN値のチェック
-                # 円換算して返す
-                price = float(latest_close) * float(usdjpy_rate)
-                logger.info("米国株株価を取得しました symbol={} price={}", symbol, price)
-                return price
+        if prices:
+            latest_close = prices[-1]["close"]
+            price = float(latest_close) * float(usdjpy_rate)
+            logger.info("米国株株価を取得しました symbol={} price={}", symbol, price)
+            return price
 
         logger.info("米国株株価を取得できませんでした symbol={}", symbol)
         return 0.0

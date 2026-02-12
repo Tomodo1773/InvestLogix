@@ -21,10 +21,25 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Zip artifact for deployment
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: "0.9.21"
+
+      - name: Build deployment package
         run: |
           cd src/api
-          zip -r release.zip .
+          uv export --frozen --no-dev --format requirements-txt -o requirements.deploy.txt
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir --target ./site-packages -r requirements.deploy.txt
+          zip -r release.zip . \
+            -x "tests/*" ".pytest_cache/*" "__pycache__/*" "*.pyc" ".venv/*"
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v6
         with:
@@ -47,9 +62,6 @@ jobs:
         with:
           name: python-app
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -63,3 +75,4 @@ jobs:
         with:
           app-name: ${{ secrets.AZUREAPPSERVICE_NAME }}
           slot-name: "Production"
+          package: release.zip

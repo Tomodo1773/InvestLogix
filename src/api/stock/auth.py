@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
 from .database import get_db, settings
-from .utils.cache import timed_cache
 
 # パスワードハッシュ化のための設定
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -45,15 +44,12 @@ def get_password_hash(password: str) -> str:
     return pwd_context.hash(password)
 
 
-@timed_cache(seconds=300)  # 5分間キャッシュする
 async def get_user(db: AsyncSession, username: str):
     """
-    ユーザー名からユーザーを取得する（キャッシュ機能付き）
+    ユーザー名からユーザーを取得する
     - db: データベースセッション
     - username: 検索対象のユーザー名
     - 戻り値: 該当ユーザーが存在する場合はUserモデル、存在しない場合はNone
-
-    注：キャッシュは5分間有効です。このため、ユーザー情報の変更は最大5分後に反映されます。
     """
     query = select(models.User).where(models.User.username == username)
     result = await db.execute(query)

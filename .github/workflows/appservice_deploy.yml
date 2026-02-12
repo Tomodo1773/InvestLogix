@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Create requirements.txt from uv.lock
         run: |

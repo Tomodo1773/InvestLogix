@@ -1,5 +1,5 @@
-# python3.11のイメージをダウンロード
-FROM python:3.11-buster
+# python3.13のイメージをダウンロード
+FROM python:3.13-bookworm
 
 # pythonの出力表示をDocker用に調整
 ENV PYTHONUNBUFFERED=1

@@ -3,7 +3,7 @@ name = "stock"
 version = "0.1.0"
 description = "Investment Management API"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.100.0",
     "sqlalchemy>=2.0.0",
@@ -31,6 +31,7 @@ dependencies = [
     "psycopg>=3.2.4",
     "pytest-xdist>=3.8.0",
     "loguru>=0.7.3",
+    "setuptools>=82.0.0",
 ]
 
 [tool.uv]

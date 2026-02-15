@@ -72,8 +72,6 @@ jobs:
                   "WebFetch",
                   "Skill(add-npm-package)",
                   "Skill(add-python-package)",
-                  "Skill(api-test-creator)",
-                  "Skill(web-test-creator)",
                   "Bash(pnpm add:*)",
                   "Bash(pnpm install)",
                   "Bash(pnpm check:*)",
@@ -81,12 +79,7 @@ jobs:
                   "Bash(pnpm test:*)",
                   "Bash(npx shadcn@latest add:*)",
                   "Bash(git:*)",
-                  "Bash(gh issue create:*)",
-                  "Bash(gh issue comment:*)",
+                  "Bash(gh issue:*)"
                 ]
-              },
-              "env": {
-                "JQUANTS_MAIL_ADDRESS": "${{ secrets.JQUANTS_MAIL_ADDRESS }}",
-                "JQUANTS_PASSWORD": "${{ secrets.JQUANTS_PASSWORD }}"
               }
             }

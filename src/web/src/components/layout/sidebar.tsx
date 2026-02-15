@@ -1,62 +1,9 @@
-import {
-  CircleDollarSign,
-  Database,
-  FileUp,
-  History,
-  LayoutDashboard,
-  PanelLeft,
-  PanelLeftClose,
-  Receipt,
-  Scissors,
-  TrendingUp,
-} from "lucide-react"
+import { PanelLeft, PanelLeftClose } from "lucide-react"
 import { NavLink } from "react-router"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { navItems } from "@/constants/nav"
 import { useSidebarStore } from "@/lib/stores/sidebar-store"
-
-const navItems = [
-  {
-    to: "/",
-    label: "ダッシュボード",
-    icon: LayoutDashboard,
-  },
-  {
-    to: "/holdings",
-    label: "保有状況",
-    icon: TrendingUp,
-  },
-  {
-    to: "/portfolio-history",
-    label: "資産推移",
-    icon: History,
-  },
-  {
-    to: "/transactions",
-    label: "取引履歴",
-    icon: Receipt,
-  },
-  {
-    to: "/transactions/import",
-    label: "CSVインポート",
-    icon: FileUp,
-  },
-  {
-    to: "/dividends",
-    label: "配当金履歴",
-    icon: CircleDollarSign,
-  },
-  {
-    to: "/stock-splits",
-    label: "株式分割履歴",
-    icon: Scissors,
-  },
-  {
-    to: "/stocks",
-    label: "銘柄マスター",
-    icon: Database,
-  },
-]
 
 export function Sidebar() {
   const { isCollapsed, toggle } = useSidebarStore()

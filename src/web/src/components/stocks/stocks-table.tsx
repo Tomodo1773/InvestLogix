@@ -1,7 +1,6 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/use-table-sort"
 import type { Stock } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
@@ -12,7 +11,6 @@ interface StocksTableProps {
 }
 
 type SortKey = "symbol" | "name" | "market" | "security_type" | "currency" | "last_updated"
-type SortDirection = "asc" | "desc"
 
 const ITEMS_PER_PAGE = 20
 
@@ -24,28 +22,10 @@ const securityTypeLabel: Record<string, string> = {
 }
 
 export function StocksTable({ stocks, isLoading }: StocksTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("symbol")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc")
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortKey(key)
-      setSortDirection("asc")
-    }
-  }
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-1 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-1 h-4 w-4" />
-    )
-  }
+  const { sortKey, sortDirection, handleSort, getSortIcon } = useTableSort<SortKey>({
+    defaultSortKey: "symbol",
+    defaultSortDirection: "asc",
+  })
 
   const sortedStocks = stocks?.slice().sort((a, b) => {
     let aValue: string | number = ""

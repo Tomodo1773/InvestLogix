@@ -1,5 +1,3 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Pagination,
@@ -11,6 +9,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/use-table-sort"
 import type { PortfolioHistoryItem } from "@/lib/api/types"
 import { formatCurrency } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
@@ -21,34 +20,19 @@ interface PortfolioHistoryTableProps {
 }
 
 type SortKey = "date" | "total_cost" | "total_market_value" | "total_unrealized_pl" | "total_pl"
-type SortDirection = "asc" | "desc"
 
 const PAGE_SIZE = 20
 
 export function PortfolioHistoryTable({ history, isLoading }: PortfolioHistoryTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("date")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortKey(key)
-      setSortDirection("desc")
-    }
-    handlePageChange(1)
-  }
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-1 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-1 h-4 w-4" />
-    )
-  }
+  const {
+    sortKey,
+    sortDirection,
+    handleSort: baseSortHandler,
+    getSortIcon,
+  } = useTableSort<SortKey>({
+    defaultSortKey: "date",
+    defaultSortDirection: "desc",
+  })
 
   const sortedHistory = history?.sort((a, b) => {
     let aValue: number = 0
@@ -82,6 +66,11 @@ export function PortfolioHistoryTable({ history, isLoading }: PortfolioHistoryTa
 
   const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
     usePagination(sortedHistory, PAGE_SIZE)
+
+  const handleSort = (key: SortKey) => {
+    baseSortHandler(key)
+    handlePageChange(1)
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)

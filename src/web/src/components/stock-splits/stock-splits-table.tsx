@@ -1,5 +1,3 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Pagination,
@@ -11,6 +9,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/use-table-sort"
 import type { StockSplit } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
@@ -21,34 +20,19 @@ interface StockSplitsTableProps {
 }
 
 type SortKey = "symbol" | "stock_name" | "split_date" | "split_ratio"
-type SortDirection = "asc" | "desc"
 
 const PAGE_SIZE = 20
 
 export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("split_date")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortKey(key)
-      setSortDirection("desc")
-    }
-    handlePageChange(1)
-  }
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-1 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-1 h-4 w-4" />
-    )
-  }
+  const {
+    sortKey,
+    sortDirection,
+    handleSort: baseSortHandler,
+    getSortIcon,
+  } = useTableSort<SortKey>({
+    defaultSortKey: "split_date",
+    defaultSortDirection: "desc",
+  })
 
   const sortedStockSplits = stockSplits?.sort((a, b) => {
     let aValue: number | string = 0
@@ -84,6 +68,11 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
 
   const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
     usePagination(sortedStockSplits, PAGE_SIZE)
+
+  const handleSort = (key: SortKey) => {
+    baseSortHandler(key)
+    handlePageChange(1)
+  }
 
   const formatSplitRatio = (ratio: number) => {
     if (Number.isNaN(ratio)) return String(ratio)

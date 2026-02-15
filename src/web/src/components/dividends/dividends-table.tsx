@@ -1,14 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TablePagination } from "@/components/ui/table-pagination"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Dividend } from "@/lib/api/types"
 import { formatCurrency } from "@/lib/format"
@@ -160,53 +152,13 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                 )}
               </TableBody>
             </Table>
-            {totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      // 最初、最後、現在ページの前後1ページのみ表示
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => handlePageChange(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      }
-                      // 省略記号
-                      if (page === currentPage - 2 || page === currentPage + 2) {
-                        return <PaginationEllipsis key={page} />
-                      }
-                      return null
-                    })}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </CardContent>

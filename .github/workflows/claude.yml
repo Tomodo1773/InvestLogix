@@ -79,7 +79,10 @@ jobs:
                   "Bash(pnpm check:*)",
                   "Bash(pnpm build)",
                   "Bash(pnpm test:*)",
-                  "Bash(npx shadcn@latest add:*)"
+                  "Bash(npx shadcn@latest add:*)",
+                  "Bash(git:*)",
+                  "Bash(gh issue create:*)",
+                  "Bash(gh issue comment:*)",
                 ]
               },
               "env": {

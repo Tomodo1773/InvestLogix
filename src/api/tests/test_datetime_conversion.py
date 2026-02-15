@@ -7,7 +7,7 @@
 from datetime import datetime
 
 from stock.schemas import Dividend, DividendBase, Transaction, TransactionCreate
-from stock.utils.datetime import JST, UTC, from_jst_input, to_jst
+from stock.utils.datetime import JST, UTC, from_jst_input, get_date_range_for_api, now_jst, to_jst
 
 
 class TestDatetimeUtils:
@@ -188,3 +188,66 @@ class TestJSTBoundaryEdgeCases:
         assert back_to_jst.year == 2024
         assert back_to_jst.month == 1
         assert back_to_jst.day == 1
+
+
+class TestNowJst:
+    """now_jst関数のテスト"""
+
+    def test_now_jst_returns_jst_datetime(self):
+        """now_jst()がJSTタイムゾーン付きのdatetimeを返すこと"""
+        now = now_jst()
+
+        assert now.tzinfo == JST
+        # 現在時刻であることを確認（秒単位での比較は避ける）
+        assert isinstance(now, datetime)
+
+    def test_now_jst_returns_current_time(self):
+        """now_jst()が現在時刻を返すこと"""
+        now1 = now_jst()
+        now2 = now_jst()
+
+        # 2回の呼び出しの時刻差が1秒以内であること
+        diff = abs((now2 - now1).total_seconds())
+        assert diff < 1.0
+
+
+class TestGetDateRangeForApi:
+    """get_date_range_for_api関数のテスト"""
+
+    def test_get_date_range_default_7_days(self):
+        """デフォルトで7日間の日付範囲を返すこと"""
+        start_date, end_date = get_date_range_for_api()
+
+        # 日付形式が正しいことを確認
+        assert len(start_date) == 10  # YYYY-MM-DD
+        assert len(end_date) == 10
+        assert start_date[4] == "-"
+        assert start_date[7] == "-"
+        assert end_date[4] == "-"
+        assert end_date[7] == "-"
+
+        # start_dateがend_dateより前であることを確認
+        start_dt = datetime.fromisoformat(start_date)
+        end_dt = datetime.fromisoformat(end_date)
+        diff = (end_dt - start_dt).days
+        assert diff == 7
+
+    def test_get_date_range_custom_days(self):
+        """指定した日数の日付範囲を返すこと"""
+        start_date, end_date = get_date_range_for_api(days_back=14)
+
+        start_dt = datetime.fromisoformat(start_date)
+        end_dt = datetime.fromisoformat(end_date)
+        diff = (end_dt - start_dt).days
+        assert diff == 14
+
+    def test_get_date_range_format(self):
+        """YYYY-MM-DD形式で日付を返すこと"""
+        start_date, end_date = get_date_range_for_api(days_back=1)
+
+        # 正規表現で形式をチェック
+        import re
+
+        date_pattern = r"^\d{4}-\d{2}-\d{2}$"
+        assert re.match(date_pattern, start_date)
+        assert re.match(date_pattern, end_date)

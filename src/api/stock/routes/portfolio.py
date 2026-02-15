@@ -1,7 +1,5 @@
-from datetime import datetime
 from typing import Annotated, Dict, List
 
-import pytz
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +9,7 @@ from ..schemas import PortfolioHistoryResponse, PortfolioSummary, User, WeeklyPe
 from ..services.notification_service import send_weekly_performance_notification
 from ..services.portfolio_service import PortfolioService
 from ..services.weekly_performance_service import calculate_weekly_performance, get_top_bottom_performers
+from ..utils.datetime import now_jst
 
 router = APIRouter()
 
@@ -117,8 +116,7 @@ async def notify_weekly_performance(
     )
 
     # 日本時間でタイムスタンプを生成
-    jst = pytz.timezone("Asia/Tokyo")
-    timestamp = datetime.now(jst).isoformat()
+    timestamp = now_jst().isoformat()
 
     return WeeklyPerformanceNotifyResponse(
         top_performers=top_performers,

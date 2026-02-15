@@ -1,8 +1,6 @@
 import asyncio
-from datetime import datetime, timedelta
 from typing import List
 
-import pytz
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +9,7 @@ from .. import models
 from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
+from ..utils.datetime import get_date_range_for_api
 from .jquants_service import get_jquants_client
 from .stooq_service import fetch_us_daily_prices_from_stooq
 
@@ -27,10 +26,7 @@ async def get_japan_stock_price(symbol: str) -> float:
     """
     try:
         # 日本時間で1週間分のデータ期間を設定
-        jst = pytz.timezone("Asia/Tokyo")
-        now = datetime.now(jst)
-        end_date = now.strftime("%Y-%m-%d")
-        start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
+        start_date, end_date = get_date_range_for_api(days_back=7)
 
         # 非同期でJ-Quants APIを呼び出し
         prices = await get_jquants_client().get_prices(
@@ -68,15 +64,14 @@ async def get_us_stock_price(symbol: str) -> float:
             return 0.0
 
         # 1週間前の日付を取得（日本時間）
-        end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
-        start = end - timedelta(days=7)
+        start_date, end_date = get_date_range_for_api(days_back=7)
 
         # Stooqから株価データを取得（同期I/Oをスレッド実行）
         prices = await asyncio.to_thread(
             fetch_us_daily_prices_from_stooq,
             symbol,
-            start.strftime("%Y-%m-%d"),
-            end.strftime("%Y-%m-%d"),
+            start_date,
+            end_date,
         )
 
         if prices:

@@ -1,13 +1,12 @@
 import { RefreshCw } from "lucide-react"
 import useSWR from "swr"
-import { AuthProvider } from "@/components/AuthProvider"
-import { AppLayout } from "@/components/layout/app-layout"
+import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { StocksTable } from "@/components/stocks/stocks-table"
 import { Button } from "@/components/ui/button"
 import { getStocks } from "@/lib/api/client"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
-function StocksContent() {
+export default function Stocks() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const {
@@ -20,12 +19,8 @@ function StocksContent() {
     mutate()
   }
 
-  if (!isAuthenticated) {
-    return null
-  }
-
   return (
-    <AppLayout>
+    <AuthenticatedLayout>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">銘柄マスター</h2>
@@ -36,14 +31,6 @@ function StocksContent() {
         </div>
         <StocksTable stocks={stocks} isLoading={isLoading} />
       </div>
-    </AppLayout>
-  )
-}
-
-export default function Stocks() {
-  return (
-    <AuthProvider>
-      <StocksContent />
-    </AuthProvider>
+    </AuthenticatedLayout>
   )
 }

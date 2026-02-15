@@ -1,15 +1,14 @@
 import { RefreshCw } from "lucide-react"
 import useSWR from "swr"
-import { AuthProvider } from "@/components/AuthProvider"
 import { HoldingAllocationChart } from "@/components/dashboard/holding-allocation-chart"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
-import { AppLayout } from "@/components/layout/app-layout"
+import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Button } from "@/components/ui/button"
 import { getHoldings } from "@/lib/api/client"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
-function HoldingsContent() {
+export default function Holdings() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
 
   const {
@@ -22,12 +21,8 @@ function HoldingsContent() {
     mutate()
   }
 
-  if (!isAuthenticated) {
-    return null
-  }
-
   return (
-    <AppLayout>
+    <AuthenticatedLayout>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">保有状況</h2>
@@ -40,14 +35,6 @@ function HoldingsContent() {
         <HoldingAllocationChart data={holdings} isLoading={isLoading} />
         <HoldingsTable holdings={holdings} isLoading={isLoading} />
       </div>
-    </AppLayout>
-  )
-}
-
-export default function Holdings() {
-  return (
-    <AuthProvider>
-      <HoldingsContent />
-    </AuthProvider>
+    </AuthenticatedLayout>
   )
 }

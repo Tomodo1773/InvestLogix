@@ -1,15 +1,14 @@
 import logging
 import os
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 import httpx
-import pytz
 from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..utils.datetime import now_jst
 
 # 環境変数のロード
 load_dotenv()
@@ -51,7 +50,7 @@ class NotificationService:
                 return False
 
             # 日本時間の現在時刻
-            current_time = datetime.now(pytz.timezone("Asia/Tokyo"))
+            current_time = now_jst()
             today = current_time.strftime("%Y/%m/%d")
 
             # ポートフォリオデータのフォーマット
@@ -392,7 +391,7 @@ def _build_weekly_performance_flex_message(top_performers: list, bottom_performe
         dict: LINE Flex Message形式の辞書
     """
     # 日本時間の現在時刻
-    current_time = datetime.now(pytz.timezone("Asia/Tokyo"))
+    current_time = now_jst()
     today = current_time.strftime("%Y/%m/%d")
 
     # 上昇トップ5のコンテンツ

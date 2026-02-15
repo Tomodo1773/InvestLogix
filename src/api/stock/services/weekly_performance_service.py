@@ -4,16 +4,15 @@
 """
 
 import asyncio
-from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
-import pytz
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..schemas import SecurityType, StockWeeklyPerformance
+from ..utils.datetime import get_date_range_for_api
 from .jquants_service import get_jquants_client
 from .stooq_service import fetch_us_daily_prices_from_stooq
 
@@ -30,10 +29,7 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, fl
     """
     try:
         # 日本時間で2週間分のデータ期間を設定（営業日を確実に取得するため余裕を持つ）
-        jst = pytz.timezone("Asia/Tokyo")
-        now = datetime.now(jst)
-        end_date = now.strftime("%Y-%m-%d")
-        start_date = (now - timedelta(days=14)).strftime("%Y-%m-%d")
+        start_date, end_date = get_date_range_for_api(days_back=14)
 
         # J-Quants APIを呼び出し
         prices = await get_jquants_client().get_prices(
@@ -69,15 +65,14 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float
     """
     try:
         # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
-        end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
-        start = end - timedelta(days=14)
+        start_date, end_date = get_date_range_for_api(days_back=14)
 
         # Stooqから株価データを取得（同期I/Oをスレッド実行）
         prices = await asyncio.to_thread(
             fetch_us_daily_prices_from_stooq,
             symbol,
-            start.strftime("%Y-%m-%d"),
-            end.strftime("%Y-%m-%d"),
+            start_date,
+            end_date,
         )
 
         # 返却は古い順なので末尾が最新、6件目後ろが5営業日前

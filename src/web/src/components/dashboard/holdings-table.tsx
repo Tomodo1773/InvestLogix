@@ -1,8 +1,7 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
-import { useState } from "react"
 import { Link } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
 import { formatCurrency, formatPercent } from "@/lib/format"
 
@@ -12,31 +11,12 @@ interface HoldingsTableProps {
 }
 
 type SortKey = "symbol" | "quantity" | "current_price" | "market_value" | "total_pl" | "total_pl_percentage"
-type SortDirection = "asc" | "desc"
 
 export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("total_pl_percentage")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortKey(key)
-      setSortDirection("desc")
-    }
-  }
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-1 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-1 h-4 w-4" />
-    )
-  }
+  const { sortKey, sortDirection, handleSort, getSortIcon } = useTableSort<SortKey>({
+    defaultSortKey: "total_pl_percentage",
+    defaultSortDirection: "desc",
+  })
 
   const sortedHoldings = holdings
     ?.filter((holding) => holding.quantity > 0)

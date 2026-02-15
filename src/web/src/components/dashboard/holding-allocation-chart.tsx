@@ -49,7 +49,7 @@ const FILTER_OPTIONS: { value: SecurityTypeFilter; label: string }[] = [
   { value: "REIT", label: "REIT" },
 ]
 
-export interface ChartDataItem {
+interface ChartDataItem {
   name: string
   symbol: string
   value: number

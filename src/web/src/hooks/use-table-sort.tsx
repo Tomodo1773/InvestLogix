@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import { useState } from "react"
 
-export type SortDirection = "asc" | "desc"
+type SortDirection = "asc" | "desc"
 
 interface UseTableSortOptions<T extends string> {
   defaultSortKey: T

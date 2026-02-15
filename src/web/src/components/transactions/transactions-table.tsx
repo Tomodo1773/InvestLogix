@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { TablePagination } from "@/components/ui/table-pagination"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Transaction } from "@/lib/api/types"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
 
 interface TransactionsTableProps {
@@ -68,15 +68,6 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
   const handleSort = (key: SortKey) => {
     baseSortHandler(key)
     handlePageChange(1)
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
   }
 
   const getAccountTypeLabel = (accountType: string) => {

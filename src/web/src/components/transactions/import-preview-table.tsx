@@ -2,6 +2,7 @@ import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { CsvTransactionPreview } from "@/lib/api/types"
+import { formatDate } from "@/lib/format"
 
 interface ImportPreviewTableProps {
   transactions: CsvTransactionPreview[]
@@ -10,15 +11,6 @@ interface ImportPreviewTableProps {
 }
 
 export function ImportPreviewTable({ transactions, onConfirm, isLoading }: ImportPreviewTableProps) {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-  }
-
   const formatNumber = (num: number | null) => {
     if (num === null) return "-"
     return num.toLocaleString("ja-JP")

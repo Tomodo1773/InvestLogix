@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { Holding } from "@/lib/api/client"
+import type { Holding } from "@/lib/api/types"
 import { formatCurrency, formatPercent } from "@/lib/format"
 
 interface HoldingSummarySectionProps {

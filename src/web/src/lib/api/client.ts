@@ -18,27 +18,6 @@ import type {
   User,
 } from "./types"
 
-// Re-export types
-export type {
-  Dividend,
-  Holding,
-  ImportConfirmRequest,
-  ImportConfirmResponse,
-  ImportPreviewResponse,
-  MonthlyDividendItem,
-  MonthlySummaryItem,
-  PortfolioHistoryItem,
-  PortfolioSummary,
-  PriceHistoryInterval,
-  PriceHistoryResponse,
-  Stock,
-  StockSplit,
-  TokenResponse,
-  Transaction,
-  TransactionWithPL,
-  User,
-}
-
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
 
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

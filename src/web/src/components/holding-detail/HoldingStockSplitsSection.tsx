@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { StockSplit } from "@/lib/api/client"
+import type { StockSplit } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 
 interface HoldingStockSplitsSectionProps {

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { Dividend } from "@/lib/api/client"
+import type { Dividend } from "@/lib/api/types"
 import { formatCurrency, formatDate } from "@/lib/format"
 
 interface HoldingDividendsSectionProps {

@@ -34,7 +34,7 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
     defaultSortDirection: "desc",
   })
 
-  const sortedStockSplits = stockSplits?.sort((a, b) => {
+  const sortedStockSplits = stockSplits?.slice().sort((a, b) => {
     let aValue: number | string = 0
     let bValue: number | string = 0
 

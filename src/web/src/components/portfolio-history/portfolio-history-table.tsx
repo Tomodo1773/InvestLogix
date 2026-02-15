@@ -34,7 +34,7 @@ export function PortfolioHistoryTable({ history, isLoading }: PortfolioHistoryTa
     defaultSortDirection: "desc",
   })
 
-  const sortedHistory = history?.sort((a, b) => {
+  const sortedHistory = history?.slice().sort((a, b) => {
     let aValue: number = 0
     let bValue: number = 0
 

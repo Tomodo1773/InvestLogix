@@ -34,7 +34,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
     defaultSortDirection: "desc",
   })
 
-  const sortedTransactions = transactions?.sort((a, b) => {
+  const sortedTransactions = transactions?.slice().sort((a, b) => {
     let aValue: number | string = 0
     let bValue: number | string = 0
 

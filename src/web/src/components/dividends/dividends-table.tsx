@@ -34,7 +34,7 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
     defaultSortDirection: "desc",
   })
 
-  const sortedDividends = dividends?.sort((a, b) => {
+  const sortedDividends = dividends?.slice().sort((a, b) => {
     let aValue: number | string = 0
     let bValue: number | string = 0
 

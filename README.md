@@ -64,7 +64,7 @@ pnpm dev
 
 ### Backend（`src/api`）
 
-前提: Python（3.11+）、`uv`、DB（Docker or 別途用意）
+前提: Python（3.13+）、`uv`、DB（Docker or 別途用意）
 
 ```bash
 cd src/api

@@ -1,61 +1,8 @@
-import {
-  CircleDollarSign,
-  Database,
-  FileUp,
-  History,
-  LayoutDashboard,
-  Menu,
-  Receipt,
-  Scissors,
-  TrendingUp,
-  X,
-} from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { useState } from "react"
 import { NavLink } from "react-router"
 import { Button } from "@/components/ui/button"
-
-const navItems = [
-  {
-    to: "/",
-    label: "ダッシュボード",
-    icon: LayoutDashboard,
-  },
-  {
-    to: "/holdings",
-    label: "保有状況",
-    icon: TrendingUp,
-  },
-  {
-    to: "/portfolio-history",
-    label: "資産推移",
-    icon: History,
-  },
-  {
-    to: "/transactions",
-    label: "取引履歴",
-    icon: Receipt,
-  },
-  {
-    to: "/transactions/import",
-    label: "CSVインポート",
-    icon: FileUp,
-  },
-  {
-    to: "/dividends",
-    label: "配当金履歴",
-    icon: CircleDollarSign,
-  },
-  {
-    to: "/stock-splits",
-    label: "株式分割履歴",
-    icon: Scissors,
-  },
-  {
-    to: "/stocks",
-    label: "銘柄マスター",
-    icon: Database,
-  },
-]
+import { navItems } from "@/constants/nav"
 
 export function MobileNav() {
   const [open, setOpen] = useState(false)

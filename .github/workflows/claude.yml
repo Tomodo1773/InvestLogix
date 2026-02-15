@@ -38,7 +38,7 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           version: "0.9.21"
-          python-version: "3.11"
+          python-version: "3.13"
           ignore-nothing-to-cache: true
 
       - name: Setup pnpm
@@ -72,18 +72,14 @@ jobs:
                   "WebFetch",
                   "Skill(add-npm-package)",
                   "Skill(add-python-package)",
-                  "Skill(api-test-creator)",
-                  "Skill(web-test-creator)",
                   "Bash(pnpm add:*)",
                   "Bash(pnpm install)",
                   "Bash(pnpm check:*)",
                   "Bash(pnpm build)",
                   "Bash(pnpm test:*)",
-                  "Bash(npx shadcn@latest add:*)"
+                  "Bash(npx shadcn@latest add:*)",
+                  "Bash(git:*)",
+                  "Bash(gh issue:*)"
                 ]
-              },
-              "env": {
-                "JQUANTS_MAIL_ADDRESS": "${{ secrets.JQUANTS_MAIL_ADDRESS }}",
-                "JQUANTS_PASSWORD": "${{ secrets.JQUANTS_PASSWORD }}"
               }
             }

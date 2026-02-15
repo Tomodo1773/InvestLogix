@@ -25,7 +25,7 @@ services:
   api:
     build:
       context: ./api
-      dockerfile: Dockerfile
+      dockerfile: dockerfile.dev
     image: investlogix-api
     container_name: investlogix-api
     env_file:

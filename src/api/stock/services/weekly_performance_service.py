@@ -7,7 +7,6 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import List, Optional, Tuple
 
-import pandas_datareader.data as web
 import pytz
 from loguru import logger
 from sqlalchemy import select
@@ -16,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models
 from ..schemas import SecurityType, StockWeeklyPerformance
 from .jquants_service import get_jquants_client
+from .stooq_service import fetch_us_daily_prices_from_stooq
 
 
 async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
@@ -72,14 +72,18 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float
         end = datetime.now(pytz.utc).astimezone(pytz.timezone("Asia/Tokyo"))
         start = end - timedelta(days=14)
 
-        # stooqから株価データを取得（非同期処理のためにループで実行）
-        loop = asyncio.get_event_loop()
-        df = await loop.run_in_executor(None, web.DataReader, symbol, "stooq", start, end)
+        # Stooqから株価データを取得（同期I/Oをスレッド実行）
+        prices = await asyncio.to_thread(
+            fetch_us_daily_prices_from_stooq,
+            symbol,
+            start.strftime("%Y-%m-%d"),
+            end.strftime("%Y-%m-%d"),
+        )
 
-        # stooqは新しい順でデータが返るため、最初が最新、6番目が5営業日前
-        if not df.empty and "Close" in df.columns and len(df["Close"]) >= 6:
-            latest_price = float(df["Close"].iloc[0])
-            old_price = float(df["Close"].iloc[5])
+        # 返却は古い順なので末尾が最新、6件目後ろが5営業日前
+        if len(prices) >= 6:
+            latest_price = float(prices[-1]["close"])
+            old_price = float(prices[-6]["close"])
             return (latest_price, old_price)
 
         return None

@@ -1,18 +1,9 @@
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
-import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { TablePagination } from "@/components/ui/table-pagination"
+import { useTableSort } from "@/hooks/use-table-sort"
 import type { Transaction } from "@/lib/api/types"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
 
 interface TransactionsTableProps {
@@ -21,36 +12,21 @@ interface TransactionsTableProps {
 }
 
 type SortKey = "symbol" | "transaction_date" | "quantity" | "price" | "total_amount"
-type SortDirection = "asc" | "desc"
 
 const PAGE_SIZE = 20
 
 export function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("transaction_date")
-  const [sortDirection, setSortDirection] = useState<SortDirection>("desc")
+  const {
+    sortKey,
+    sortDirection,
+    handleSort: baseSortHandler,
+    getSortIcon,
+  } = useTableSort<SortKey>({
+    defaultSortKey: "transaction_date",
+    defaultSortDirection: "desc",
+  })
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-    } else {
-      setSortKey(key)
-      setSortDirection("desc")
-    }
-    handlePageChange(1)
-  }
-
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) {
-      return <ArrowUpDown className="ml-1 h-4 w-4" />
-    }
-    return sortDirection === "asc" ? (
-      <ArrowUp className="ml-1 h-4 w-4" />
-    ) : (
-      <ArrowDown className="ml-1 h-4 w-4" />
-    )
-  }
-
-  const sortedTransactions = transactions?.sort((a, b) => {
+  const sortedTransactions = transactions?.slice().sort((a, b) => {
     let aValue: number | string = 0
     let bValue: number | string = 0
 
@@ -89,13 +65,9 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
   const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
     usePagination(sortedTransactions, PAGE_SIZE)
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("ja-JP", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
+  const handleSort = (key: SortKey) => {
+    baseSortHandler(key)
+    handlePageChange(1)
   }
 
   const getAccountTypeLabel = (accountType: string) => {
@@ -209,53 +181,13 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                 )}
               </TableBody>
             </Table>
-            {totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        className={!hasPreviousPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                      // 最初、最後、現在ページの前後1ページのみ表示
-                      if (
-                        page === 1 ||
-                        page === totalPages ||
-                        (page >= currentPage - 1 && page <= currentPage + 1)
-                      ) {
-                        return (
-                          <PaginationItem key={page}>
-                            <PaginationLink
-                              onClick={() => handlePageChange(page)}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          </PaginationItem>
-                        )
-                      }
-                      // 省略記号
-                      if (page === currentPage - 2 || page === currentPage + 2) {
-                        return <PaginationEllipsis key={page} />
-                      }
-                      return null
-                    })}
-
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        className={!hasNextPage ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              onPageChange={handlePageChange}
+            />
           </div>
         )}
       </CardContent>

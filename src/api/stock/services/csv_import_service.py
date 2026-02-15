@@ -234,11 +234,13 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
     # 取引種別の正規化
     df_raw["取引"] = df_raw["取引"].apply(
-        lambda x: "買付"
-        if x in ["株式現物買", "投信金額買付", "買付"]
-        else "売却"
-        if x in ["株式現物売", "投信金額解約", "投信口数解約", "売却"]
-        else "形式外"
+        lambda x: (
+            "買付"
+            if x in ["株式現物買", "投信金額買付", "買付"]
+            else "売却"
+            if x in ["株式現物売", "投信金額解約", "投信口数解約", "売却"]
+            else "形式外"
+        )
     )
 
     # 日付の変換

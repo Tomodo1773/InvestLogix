@@ -1,4 +1,3 @@
-import asyncio
 from typing import List
 
 from loguru import logger
@@ -9,9 +8,12 @@ from .. import models
 from ..models import Holding, Stock
 from ..schemas import SecurityType
 from ..services import alphavantage_service, investment_trust_service
-from ..utils.datetime import get_date_range_for_api
-from .jquants_service import get_jquants_client
-from .stooq_service import fetch_us_daily_prices_from_stooq
+from .stock_price_fetcher import (
+    fetch_japan_stock_prices,
+    fetch_us_stock_prices,
+    get_latest_japan_price,
+    get_latest_us_price,
+)
 
 
 async def get_japan_stock_price(symbol: str) -> float:
@@ -24,26 +26,13 @@ async def get_japan_stock_price(symbol: str) -> float:
     Returns:
         float: 最新株価。取得できない場合は0
     """
-    try:
-        # 日本時間で1週間分のデータ期間を設定
-        start_date, end_date = get_date_range_for_api(days_back=7)
-
-        # 非同期でJ-Quants APIを呼び出し
-        prices = await get_jquants_client().get_prices(
-            symbol=symbol, start_date=start_date, end_date=end_date
-        )
-
-        # 最新の株価を返す
-        if prices and len(prices) > 0:
-            price = float(prices[-1].get("C", 0))
-            logger.info("日本株株価を取得しました symbol={} price={}", symbol, price)
-            return price
-        logger.info("日本株株価を取得できませんでした symbol={}", symbol)
-        return 0.0
-
-    except Exception as e:
-        logger.error("日本株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
-        return 0.0
+    prices = await fetch_japan_stock_prices(symbol, days_back=7)
+    price = get_latest_japan_price(prices)
+    if price is not None:
+        logger.info("日本株株価を取得しました symbol={} price={}", symbol, price)
+        return price
+    logger.info("日本株株価を取得できませんでした symbol={}", symbol)
+    return 0.0
 
 
 async def get_us_stock_price(symbol: str) -> float:
@@ -57,35 +46,24 @@ async def get_us_stock_price(symbol: str) -> float:
         float: 最新株価（円換算後）。取得できない場合は0
     """
     try:
-        # まず為替レートを取得
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
-        if not usdjpy_rate:
-            logger.info("為替レートが取得できませんでした symbol={}", symbol)
-            return 0.0
-
-        # 1週間前の日付を取得（日本時間）
-        start_date, end_date = get_date_range_for_api(days_back=7)
-
-        # Stooqから株価データを取得（同期I/Oをスレッド実行）
-        prices = await asyncio.to_thread(
-            fetch_us_daily_prices_from_stooq,
-            symbol,
-            start_date,
-            end_date,
-        )
-
-        if prices:
-            latest_close = prices[-1]["close"]
-            price = float(latest_close) * float(usdjpy_rate)
-            logger.info("米国株株価を取得しました symbol={} price={}", symbol, price)
-            return price
-
-        logger.info("米国株株価を取得できませんでした symbol={}", symbol)
-        return 0.0
-
     except Exception as e:
-        logger.error("米国株株価の取得に失敗しました symbol={} error={}", symbol, str(e))
+        logger.warning("為替レート取得でエラーが発生しました symbol={} error={}", symbol, str(e))
         return 0.0
+
+    if not usdjpy_rate:
+        logger.info("為替レートが取得できませんでした symbol={}", symbol)
+        return 0.0
+
+    prices = await fetch_us_stock_prices(symbol, days_back=7)
+    price = get_latest_us_price(prices)
+    if price is not None:
+        price_jpy = price * float(usdjpy_rate)
+        logger.info("米国株株価を取得しました symbol={} price={}", symbol, price_jpy)
+        return price_jpy
+
+    logger.info("米国株株価を取得できませんでした symbol={}", symbol)
+    return 0.0
 
 
 async def get_current_price(stock: Stock) -> float:

@@ -394,11 +394,8 @@ async def mock_external_apis(mocker):
 
     # 各サービスファイルでインポートされたget_jquants_clientをモック化
     mocker.patch("stock.services.stock_service.get_jquants_client", return_value=mock_jquants_client)
-    mocker.patch("stock.services.holding_service.get_jquants_client", return_value=mock_jquants_client)
+    mocker.patch("stock.services.stock_price_fetcher.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
-    mocker.patch(
-        "stock.services.weekly_performance_service.get_jquants_client", return_value=mock_jquants_client
-    )
 
     return {
         "overview": mock_overview,

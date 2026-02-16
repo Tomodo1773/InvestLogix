@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label"
 interface CsvUploadFormProps {
   onFileSelect: (file: File) => void
   isLoading: boolean
+  inputId?: string
 }
 
-export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
+export function CsvUploadForm({ onFileSelect, isLoading, inputId = "csv-file" }: CsvUploadFormProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -30,9 +31,9 @@ export function CsvUploadForm({ onFileSelect, isLoading }: CsvUploadFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="csv-file">CSVファイル</Label>
+        <Label htmlFor={inputId}>CSVファイル</Label>
         <Input
-          id="csv-file"
+          id={inputId}
           type="file"
           accept=".csv"
           onChange={handleFileChange}

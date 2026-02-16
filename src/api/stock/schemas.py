@@ -520,3 +520,43 @@ class ImportConfirmResponse(BaseModel):
     created_count: int
     failed_count: int
     errors: List[str]
+
+
+# 配当金CSVインポート用のスキーマ
+class CsvDividendPreview(BaseModel):
+    """CSVから解析された配当金データ（プレビュー用）"""
+
+    symbol: str
+    name: str
+    payment_date: datetime
+    shares_owned: float
+    total_amount: float
+
+    @field_serializer("payment_date")
+    def serialize_payment_date(self, v: datetime) -> str:
+        """レスポンス時: JSTに変換してISO形式で返す"""
+        return to_jst(v).isoformat() if v else None
+
+
+class DividendImportPreviewResponse(BaseModel):
+    """配当金インポートプレビューレスポンス"""
+
+    new_dividends: List[CsvDividendPreview]
+    existing_count: int
+    csv_total_count: int
+    skipped_count: int
+    errors: List[str]
+
+
+class DividendImportConfirmRequest(BaseModel):
+    """配当金インポート確認リクエスト"""
+
+    dividends: List[DividendCreate]
+
+
+class DividendImportConfirmResponse(BaseModel):
+    """配当金インポート確認レスポンス"""
+
+    created_count: int
+    failed_count: int
+    errors: List[str]

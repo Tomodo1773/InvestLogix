@@ -1,5 +1,8 @@
 import type {
   Dividend,
+  DividendImportConfirmRequest,
+  DividendImportConfirmResponse,
+  DividendImportPreviewResponse,
   Holding,
   ImportConfirmRequest,
   ImportConfirmResponse,
@@ -154,6 +157,29 @@ export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResp
 
 export async function confirmImport(request: ImportConfirmRequest): Promise<ImportConfirmResponse> {
   return fetchWithAuth<ImportConfirmResponse>("/api/v1/transactions/import/confirm", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(request),
+  })
+}
+
+// Dividend CSV Import APIs
+export async function uploadDividendCsvForPreview(file: File): Promise<DividendImportPreviewResponse> {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  return fetchWithAuth<DividendImportPreviewResponse>("/api/v1/dividends/import/preview", {
+    method: "POST",
+    body: formData,
+  })
+}
+
+export async function confirmDividendImport(
+  request: DividendImportConfirmRequest
+): Promise<DividendImportConfirmResponse> {
+  return fetchWithAuth<DividendImportConfirmResponse>("/api/v1/dividends/import/confirm", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

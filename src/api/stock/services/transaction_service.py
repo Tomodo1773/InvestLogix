@@ -1,10 +1,11 @@
 from typing import Dict, List, Optional, Union
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from .. import models, schemas
+from ..utils import get_jst_extract_columns
 from .holding_service import (
     calculate_holding_from_transactions,
     calculate_realized_pl_from_transactions,
@@ -234,9 +235,7 @@ class TransactionService:
         """
         # 購入取引（transaction_type='buy'）のみを対象に集計
         # transaction_date を JST に変換して月ごとに集計するクエリ
-        transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")
-        year = extract("year", transaction_date_jst).label("year")
-        month = extract("month", transaction_date_jst).label("month")
+        year, month = get_jst_extract_columns(models.Transaction.transaction_date)
 
         query = (
             select(
@@ -298,8 +297,7 @@ class TransactionService:
         """
         # 購入取引（transaction_type='buy'）のみを対象に集計
         # transaction_date を JST に変換して年ごとに集計するクエリ
-        transaction_date_jst = models.Transaction.transaction_date.op("AT TIME ZONE")("Asia/Tokyo")
-        year = extract("year", transaction_date_jst).label("year")
+        year, _ = get_jst_extract_columns(models.Transaction.transaction_date)
 
         query = (
             select(

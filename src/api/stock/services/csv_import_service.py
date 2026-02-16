@@ -6,14 +6,13 @@ SBI証券からエクスポートした約定履歴CSVをパースし、
 
 import io
 import re
-import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 
 import pandas as pd
 from loguru import logger
 
-from ..utils.datetime import to_jst
+from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, to_number
 
 
 @dataclass
@@ -33,7 +32,7 @@ class ParsedTransaction:
 
     def __key(self):
         """差分検出用のハッシュキー"""
-        trade_date = self._date_key(self.transaction_date)
+        trade_date = date_key(self.transaction_date)
         return (
             self.symbol,
             self.transaction_type,
@@ -43,13 +42,6 @@ class ParsedTransaction:
             round(float(self.price), 2),
         )
 
-    @staticmethod
-    def _date_key(dt: datetime) -> str:
-        if dt.tzinfo is None:
-            # CSVはJST日付として扱う（時刻なし）
-            return dt.strftime("%Y-%m-%d")
-        return to_jst(dt).strftime("%Y-%m-%d")
-
     def __hash__(self):
         return hash(self.__key())
 
@@ -57,48 +49,6 @@ class ParsedTransaction:
         if not isinstance(other, ParsedTransaction):
             return NotImplemented
         return self.__key() == other.__key()
-
-
-def is_empty(val) -> bool:
-    """値が空かどうかを判定"""
-    return pd.isna(val) or str(val).strip() in ["", "--", "nan", "None"]
-
-
-def to_number(val, default=0.0) -> float:
-    """文字列を数値に変換"""
-    if is_empty(val):
-        return default
-    return float(str(val).replace(",", ""))
-
-
-def parse_date(val) -> str | None:
-    """日付文字列をYYYY/MM/DD形式に変換"""
-    if is_empty(val):
-        return None
-    val_str = str(val).strip()
-    if "年" in val_str:
-        return pd.to_datetime(val_str, format="%Y年%m月%d日").strftime("%Y/%m/%d")
-    if re.match(r"^\d{2}/\d{2}/\d{2}$", val_str):
-        return pd.to_datetime(val_str, format="%y/%m/%d").strftime("%Y/%m/%d")
-    return pd.to_datetime(val_str, format="%Y/%m/%d").strftime("%Y/%m/%d")
-
-
-def get_fund_symbol(fund_name: str) -> str | None:
-    """ファンド名からシンボルを取得"""
-    fund_dict = {
-        "eMAXIS Slim 全世界株式(オール・カントリー)": "JP90C000H1T1",
-        "eMAXIS Slim 新興国株式インデックス": "JP90C000F7H5",
-        "SBI・iシェアーズ・インド株式インデックス・ファンド": "JP90C000PZX1",
-        "SBI・V・S&P500インデックス・ファンド": "JP90C000J569",
-        "EXE-i グローバルサウス株式ファンド": "JP90C000Q3K5",
-        "eMAXIS Slim 国内株式(TOPIX)": "JP90C000ENA9",
-        "SBI・S・米国高配当株式ファンド(年4回決算型)": "JP90C000REE2",
-        "ＳＢＩ・Ｓ・米国高配当株式ファンド(年４回決算型)": "JP90C000REE2",
-        "eMAXIS Neo 自動運転": "JP90C000HR52",
-    }
-    normalized_map = {unicodedata.normalize("NFKC", k): v for k, v in fund_dict.items()}
-    key = unicodedata.normalize("NFKC", fund_name) if fund_name else ""
-    return normalized_map.get(key)
 
 
 def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str]]:
@@ -115,17 +65,8 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
     """
     errors = []
 
-    # エンコーディング自動検出
-    for enc in ("utf-8", "cp932"):
-        try:
-            text = content.decode(enc)
-            lines = text.splitlines(keepends=True)
-            break
-        except UnicodeDecodeError:
-            continue
-    else:
-        logger.error("CSVデコードエラー action=parse_csv error=unsupported_encoding")
-        raise ValueError("CSVの文字コードがutf-8でもcp932でもありません")
+    # エンコーディング自動検出してデコード
+    lines = decode_csv_content(content)
 
     # ヘッダー行を検索
     header_index = next(
@@ -243,8 +184,8 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         )
     )
 
-    # 日付の変換
-    df_raw["約定日"] = df_raw["約定日"].apply(parse_date)
+    # 日付の変換（YYYY/MM/DD形式のみサポート）
+    df_raw["約定日"] = pd.to_datetime(df_raw["約定日"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
 
     # 必要なカラムのみ抽出
     sbi_data = df_raw[

@@ -204,28 +204,32 @@ def detect_new_dividends(
         list[ParsedDividend]: 新規配当金のリスト
     """
     # ParsedDividendをDataFrameに変換
-    parsed_df = pd.DataFrame([
-        {
-            "symbol": d.symbol,
-            "name": d.name,
-            "payment_date": d._date_key(d.payment_date),
-            "shares_owned": round(float(d.shares_owned), 4),
-            "total_amount": round(float(d.total_amount), 2),
-        }
-        for d in parsed_dividends
-    ])
+    parsed_df = pd.DataFrame(
+        [
+            {
+                "symbol": d.symbol,
+                "name": d.name,
+                "payment_date": d._date_key(d.payment_date),
+                "shares_owned": round(float(d.shares_owned), 4),
+                "total_amount": round(float(d.total_amount), 2),
+            }
+            for d in parsed_dividends
+        ]
+    )
 
     # 既存配当金をDataFrameに変換
-    existing_df = pd.DataFrame([
-        {
-            "symbol": div.symbol,
-            "name": "",
-            "payment_date": ParsedDividend._date_key(div.payment_date),
-            "shares_owned": round(float(div.shares_owned), 4),
-            "total_amount": round(float(div.total_amount), 2),
-        }
-        for div in existing_dividends
-    ])
+    existing_df = pd.DataFrame(
+        [
+            {
+                "symbol": div.symbol,
+                "name": "",
+                "payment_date": ParsedDividend._date_key(div.payment_date),
+                "shares_owned": round(float(div.shares_owned), 4),
+                "total_amount": round(float(div.total_amount), 2),
+            }
+            for div in existing_dividends
+        ]
+    )
 
     # 比較用キー列
     key_cols = ["symbol", "payment_date", "shares_owned", "total_amount"]

@@ -1,10 +1,11 @@
 from typing import List, Optional
 
-from sqlalchemy import extract, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from loguru import logger
 
 from .. import models, schemas
+from ..utils import get_jst_extract_columns
 from .holding_service import update_single_holding_pl
 from .stock_service import StockService
 
@@ -115,9 +116,7 @@ class DividendService:
         """
         # payment_date を JST に変換して月ごとに配当金を集計するクエリ
         # ※ payment_date は DB では UTC で保存されているため、JST への変換が必要
-        payment_date_jst = models.Dividend.payment_date.op("AT TIME ZONE")("Asia/Tokyo")
-        year = extract("year", payment_date_jst).label("year")
-        month = extract("month", payment_date_jst).label("month")
+        year, month = get_jst_extract_columns(models.Dividend.payment_date)
 
         query = (
             select(

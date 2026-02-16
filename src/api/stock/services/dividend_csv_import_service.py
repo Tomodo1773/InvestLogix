@@ -12,29 +12,7 @@ from datetime import datetime
 import pandas as pd
 from loguru import logger
 
-from ..utils.datetime import to_jst
-
-# 投資信託名からシンボルへのマッピング
-FUND_SYMBOL_MAP = {
-    "eMAXIS Slim 全世界株式(オール・カントリー)": "JP90C000H1T1",
-    "eMAXIS Slim 新興国株式インデックス": "JP90C000F7H5",
-    "SBI・iシェアーズ・インド株式インデックス・ファンド": "JP90C000PZX1",
-    "SBI・V・S&P500インデックス・ファンド": "JP90C000J569",
-    "EXE-i グローバルサウス株式ファンド": "JP90C000Q3K5",
-    "eMAXIS Slim 国内株式(TOPIX)": "JP90C000ENA9",
-    "SBI・S・米国高配当株式ファンド(年4回決算型)": "JP90C000REE2",
-    "ＳＢＩ・Ｓ・米国高配当株式ファンド（年４回決算型）": "JP90C000REE2",
-    "eMAXIS Neo 自動運転": "JP90C000HR52",
-}
-
-# Unicode正規化済みのマッピング
-NORMALIZED_FUND_MAP = {unicodedata.normalize("NFKC", k): v for k, v in FUND_SYMBOL_MAP.items()}
-
-
-def get_fund_symbol(fund_name: str) -> str | None:
-    """ファンド名からシンボルを取得"""
-    key = unicodedata.normalize("NFKC", fund_name) if fund_name else ""
-    return NORMALIZED_FUND_MAP.get(key)
+from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, to_number
 
 
 @dataclass
@@ -49,19 +27,13 @@ class ParsedDividend:
 
     def __key(self):
         """差分検出用のハッシュキー"""
-        payment_date_str = self._date_key(self.payment_date)
+        payment_date_str = date_key(self.payment_date)
         return (
             self.symbol,
             payment_date_str,
             round(float(self.shares_owned), 4),
             round(float(self.total_amount), 2),
         )
-
-    @staticmethod
-    def _date_key(dt: datetime) -> str:
-        if dt.tzinfo is None:
-            return dt.strftime("%Y-%m-%d")
-        return to_jst(dt).strftime("%Y-%m-%d")
 
     def __hash__(self):
         return hash(self.__key())
@@ -70,18 +42,6 @@ class ParsedDividend:
         if not isinstance(other, ParsedDividend):
             return NotImplemented
         return self.__key() == other.__key()
-
-
-def is_empty(val) -> bool:
-    """値が空かどうかを判定"""
-    return pd.isna(val) or str(val).strip() in ["", "--", "nan", "None"]
-
-
-def to_number(val, default=0.0) -> float:
-    """文字列を数値に変換"""
-    if is_empty(val):
-        return default
-    return float(str(val).replace(",", ""))
 
 
 def parse_dividend_csv_content(content: bytes) -> tuple[list[ParsedDividend], list[str]]:
@@ -98,17 +58,8 @@ def parse_dividend_csv_content(content: bytes) -> tuple[list[ParsedDividend], li
     """
     errors = []
 
-    # エンコーディング自動検出
-    for enc in ("utf-8", "cp932"):
-        try:
-            text = content.decode(enc)
-            lines = text.splitlines(keepends=True)
-            break
-        except UnicodeDecodeError:
-            continue
-    else:
-        logger.error("CSVデコードエラー action=parse_dividend_csv error=unsupported_encoding")
-        raise ValueError("CSVの文字コードがutf-8でもcp932でもありません")
+    # エンコーディング自動検出してデコード
+    lines = decode_csv_content(content)
 
     # ヘッダー行を検索（配当金CSV特有のヘッダー）
     header_index = next(
@@ -192,10 +143,6 @@ def detect_new_dividends(
 ) -> list[ParsedDividend]:
     """パース済み配当金と既存配当金を比較して新規配当金を抽出
 
-    元スクリプトの挙動を再現:
-    - CSV内の重複行(同じキーを持つ行)は全て除外される
-    - drop_duplicates(..., keep=False)と同じ挙動
-
     Args:
         parsed_dividends: CSVからパースした配当金リスト
         existing_dividends: DBから取得した既存配当金リスト（Dividend型）
@@ -203,73 +150,26 @@ def detect_new_dividends(
     Returns:
         list[ParsedDividend]: 新規配当金のリスト
     """
-    # ParsedDividendをDataFrameに変換
-    parsed_df = pd.DataFrame(
-        [
-            {
-                "symbol": d.symbol,
-                "name": d.name,
-                "payment_date": d._date_key(d.payment_date),
-                "shares_owned": round(float(d.shares_owned), 4),
-                "total_amount": round(float(d.total_amount), 2),
-            }
-            for d in parsed_dividends
-        ]
-    )
-
-    # 既存配当金をDataFrameに変換
-    existing_df = pd.DataFrame(
-        [
-            {
-                "symbol": div.symbol,
-                "name": "",
-                "payment_date": ParsedDividend._date_key(div.payment_date),
-                "shares_owned": round(float(div.shares_owned), 4),
-                "total_amount": round(float(div.total_amount), 2),
-            }
-            for div in existing_dividends
-        ]
-    )
-
-    # 比較用キー列
-    key_cols = ["symbol", "payment_date", "shares_owned", "total_amount"]
-
-    # 両方のDataFrameを結合
-    concatenated = pd.concat([parsed_df, existing_df], ignore_index=True)
-
-    # 重複を除外(keep=Falseで重複行を全削除)
-    # これにより、CSV内の重複も既存DBとの重複も全て除外される
-    filtered = concatenated.drop_duplicates(subset=key_cols, keep=False)
-
-    # 空のDataFrameの場合は早期リターン
-    if filtered.empty:
-        logger.info(
-            "配当金差分検出が完了しました action=detect_new_dividends new_count=0 existing_count={} parsed_count={}",
-            len(existing_dividends),
-            len(parsed_dividends),
+    # 既存配当金をParsedDividendに変換してセット化
+    existing_set = set()
+    for div in existing_dividends:
+        existing_set.add(
+            ParsedDividend(
+                symbol=div.symbol,
+                name="",  # 名前は比較に使わない
+                payment_date=div.payment_date,
+                shares_owned=div.shares_owned,
+                total_amount=div.total_amount,
+            )
         )
-        return []
 
-    # 元がParsedDividendだったもののみを抽出
-    new_dividends_df = filtered[filtered["name"] != ""]
-
-    # DataFrameからParsedDividendに変換
-    new_dividends = []
-    for _, row in new_dividends_df.iterrows():
-        # 元のparsed_dividendsから対応するオブジェクトを検索
-        for d in parsed_dividends:
-            if (
-                d.symbol == row["symbol"]
-                and d._date_key(d.payment_date) == row["payment_date"]
-                and round(float(d.shares_owned), 4) == row["shares_owned"]
-                and round(float(d.total_amount), 2) == row["total_amount"]
-            ):
-                new_dividends.append(d)
-                break
+    # 差分を計算
+    parsed_set = set(parsed_dividends)
+    diff_set = parsed_set - existing_set
 
     # UI側でのプレビュー順が毎回変わらないよう、日付等で順序を安定化
     new_dividends = sorted(
-        new_dividends,
+        diff_set,
         key=lambda d: (d.payment_date, d.symbol),
     )
 

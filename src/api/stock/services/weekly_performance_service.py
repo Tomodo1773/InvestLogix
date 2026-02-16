@@ -3,7 +3,6 @@
 保有銘柄の週間騰落率を計算し、上位・下位5位を抽出する
 """
 
-import asyncio
 from typing import List, Optional, Tuple
 
 from loguru import logger
@@ -12,9 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..schemas import SecurityType, StockWeeklyPerformance
-from ..utils.datetime import get_date_range_for_api
-from .jquants_service import get_jquants_client
-from .stooq_service import fetch_us_daily_prices_from_stooq
+from .stock_price_fetcher import fetch_japan_stock_prices, fetch_us_stock_prices
 
 
 async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
@@ -27,29 +24,15 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, fl
     Returns:
         Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
     """
-    try:
-        # 日本時間で2週間分のデータ期間を設定（営業日を確実に取得するため余裕を持つ）
-        start_date, end_date = get_date_range_for_api(days_back=14)
+    # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
+    prices = await fetch_japan_stock_prices(symbol, days_back=14)
 
-        # J-Quants APIを呼び出し
-        prices = await get_jquants_client().get_prices(
-            symbol=symbol, start_date=start_date, end_date=end_date
-        )
-
-        # 6件以上のデータが必要（最新と5営業日前）
-        if prices and len(prices) >= 6:
-            latest_price = float(prices[-1].get("C", "0"))
-            old_price = float(prices[-6].get("C", "0"))
-            return (latest_price, old_price)
-        return None
-
-    except Exception as e:
-        logger.error(
-            "日本株の週間株価取得に失敗しました action=external_io symbol={} error={}",
-            symbol,
-            str(e),
-        )
-        return None
+    # 6件以上のデータが必要（最新と5営業日前）
+    if prices and len(prices) >= 6:
+        latest_price = float(prices[-1].get("C", "0"))
+        old_price = float(prices[-6].get("C", "0"))
+        return (latest_price, old_price)
+    return None
 
 
 async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
@@ -63,33 +46,16 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float
     Returns:
         Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
     """
-    try:
-        # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
-        start_date, end_date = get_date_range_for_api(days_back=14)
+    # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
+    prices = await fetch_us_stock_prices(symbol, days_back=14)
 
-        # Stooqから株価データを取得（同期I/Oをスレッド実行）
-        prices = await asyncio.to_thread(
-            fetch_us_daily_prices_from_stooq,
-            symbol,
-            start_date,
-            end_date,
-        )
+    # 返却は古い順なので末尾が最新、6件目後ろが5営業日前
+    if len(prices) >= 6:
+        latest_price = float(prices[-1]["close"])
+        old_price = float(prices[-6]["close"])
+        return (latest_price, old_price)
 
-        # 返却は古い順なので末尾が最新、6件目後ろが5営業日前
-        if len(prices) >= 6:
-            latest_price = float(prices[-1]["close"])
-            old_price = float(prices[-6]["close"])
-            return (latest_price, old_price)
-
-        return None
-
-    except Exception as e:
-        logger.error(
-            "米国株の週間株価取得に失敗しました action=external_io symbol={} error={}",
-            symbol,
-            str(e),
-        )
-        return None
+    return None
 
 
 async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[StockWeeklyPerformance]:

@@ -45,7 +45,12 @@ async def get_us_stock_price(symbol: str) -> float:
     Returns:
         float: 最新株価（円換算後）。取得できない場合は0
     """
-    usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
+    try:
+        usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
+    except Exception as e:
+        logger.warning("為替レート取得でエラーが発生しました symbol={} error={}", symbol, str(e))
+        return 0.0
+
     if not usdjpy_rate:
         logger.info("為替レートが取得できませんでした symbol={}", symbol)
         return 0.0

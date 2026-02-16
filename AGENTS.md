@@ -184,6 +184,12 @@ uv run alembic downgrade -1
 | ユーザー端末からの直接API呼び出し | Authorization ヘッダー | スクリプトや CLI からのアクセス |
 | Swagger UI (/docs) | OAuth2形式 | API テスト・開発 |
 
+### パスワードハッシュ
+
+- **アルゴリズム**: Argon2id（OWASP推奨）
+- **ライブラリ**: `pwdlib[argon2]`
+- **実装ファイル**: `src/api/stock/auth.py`
+
 ### コーディングスタイル
 
 - **Python 3.13 以上**: 型ヒントを義務付け

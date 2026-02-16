@@ -5,15 +5,15 @@ from fastapi import Cookie, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from loguru import logger
-from passlib.context import CryptContext
+from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
 from .database import get_db, settings
 
-# パスワードハッシュ化のための設定
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# パスワードハッシュ化のための設定（Argon2id）
+password_hash = PasswordHash.recommended()
 
 # JWT設定
 SECRET_KEY = settings.JWT_SECRET_KEY
@@ -32,7 +32,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     - hashed_password: ハッシュ化されたパスワード
     - 戻り値: パスワードが一致する場合True、それ以外はFalse
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return password_hash.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
@@ -41,7 +41,7 @@ def get_password_hash(password: str) -> str:
     - password: ハッシュ化する平文パスワード
     - 戻り値: ハッシュ化されたパスワード
     """
-    return pwd_context.hash(password)
+    return password_hash.hash(password)
 
 
 async def get_user(db: AsyncSession, username: str):

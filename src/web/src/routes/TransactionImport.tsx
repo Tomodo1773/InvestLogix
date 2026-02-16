@@ -2,51 +2,74 @@ import { AlertCircle, CheckCircle2, Upload } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router"
 import { AuthProvider } from "@/components/AuthProvider"
+import { DividendImportPreviewTable } from "@/components/dividends/dividend-import-preview-table"
 import { AppLayout } from "@/components/layout/app-layout"
 import { CsvUploadForm } from "@/components/transactions/csv-upload-form"
 import { ImportPreviewTable } from "@/components/transactions/import-preview-table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { confirmImport, uploadCsvForPreview } from "@/lib/api/client"
-import type { CsvTransactionPreview, ImportPreviewResponse } from "@/lib/api/types"
+import {
+  confirmDividendImport,
+  confirmImport,
+  uploadCsvForPreview,
+  uploadDividendCsvForPreview,
+} from "@/lib/api/client"
+import type {
+  CsvDividendPreview,
+  CsvTransactionPreview,
+  DividendImportPreviewResponse,
+  ImportPreviewResponse,
+} from "@/lib/api/types"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 type Step = "upload" | "preview" | "complete"
 
 function TransactionImportContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const [step, setStep] = useState<Step>("upload")
-  const [isLoading, setIsLoading] = useState(false)
-  const [previewData, setPreviewData] = useState<ImportPreviewResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<{ created: number; failed: number; errors: string[] } | null>(null)
 
-  const handleFileSelect = async (file: File) => {
-    setIsLoading(true)
-    setError(null)
+  // 取引履歴インポート用ステート
+  const [txStep, setTxStep] = useState<Step>("upload")
+  const [txIsLoading, setTxIsLoading] = useState(false)
+  const [txPreviewData, setTxPreviewData] = useState<ImportPreviewResponse | null>(null)
+  const [txError, setTxError] = useState<string | null>(null)
+  const [txResult, setTxResult] = useState<{ created: number; failed: number; errors: string[] } | null>(null)
+
+  // 配当金インポート用ステート
+  const [divStep, setDivStep] = useState<Step>("upload")
+  const [divIsLoading, setDivIsLoading] = useState(false)
+  const [divPreviewData, setDivPreviewData] = useState<DividendImportPreviewResponse | null>(null)
+  const [divError, setDivError] = useState<string | null>(null)
+  const [divResult, setDivResult] = useState<{ created: number; failed: number; errors: string[] } | null>(
+    null
+  )
+
+  // 取引履歴インポートハンドラー
+  const handleTxFileSelect = async (file: File) => {
+    setTxIsLoading(true)
+    setTxError(null)
 
     try {
       const response = await uploadCsvForPreview(file)
-      setPreviewData(response)
-      setStep("preview")
+      setTxPreviewData(response)
+      setTxStep("preview")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "アップロードに失敗しました")
+      setTxError(err instanceof Error ? err.message : "アップロードに失敗しました")
     } finally {
-      setIsLoading(false)
+      setTxIsLoading(false)
     }
   }
 
-  const handleConfirm = async () => {
-    if (!previewData || previewData.new_transactions.length === 0) {
+  const handleTxConfirm = async () => {
+    if (!txPreviewData || txPreviewData.new_transactions.length === 0) {
       return
     }
 
-    setIsLoading(true)
-    setError(null)
+    setTxIsLoading(true)
+    setTxError(null)
 
     try {
-      const transactions = previewData.new_transactions.map((tx: CsvTransactionPreview) => ({
+      const transactions = txPreviewData.new_transactions.map((tx: CsvTransactionPreview) => ({
         symbol: tx.symbol,
         transaction_type: tx.transaction_type,
         quantity: tx.quantity,
@@ -59,24 +82,79 @@ function TransactionImportContent() {
       }))
 
       const response = await confirmImport({ transactions })
-      setResult({
+      setTxResult({
         created: response.created_count,
         failed: response.failed_count,
         errors: response.errors,
       })
-      setStep("complete")
+      setTxStep("complete")
     } catch (err) {
-      setError(err instanceof Error ? err.message : "登録に失敗しました")
+      setTxError(err instanceof Error ? err.message : "登録に失敗しました")
     } finally {
-      setIsLoading(false)
+      setTxIsLoading(false)
     }
   }
 
-  const handleReset = () => {
-    setStep("upload")
-    setPreviewData(null)
-    setError(null)
-    setResult(null)
+  const handleTxReset = () => {
+    setTxStep("upload")
+    setTxPreviewData(null)
+    setTxError(null)
+    setTxResult(null)
+  }
+
+  // 配当金インポートハンドラー
+  const handleDivFileSelect = async (file: File) => {
+    setDivIsLoading(true)
+    setDivError(null)
+
+    try {
+      const response = await uploadDividendCsvForPreview(file)
+      setDivPreviewData(response)
+      setDivStep("preview")
+    } catch (err) {
+      setDivError(err instanceof Error ? err.message : "アップロードに失敗しました")
+    } finally {
+      setDivIsLoading(false)
+    }
+  }
+
+  const handleDivConfirm = async () => {
+    if (!divPreviewData || divPreviewData.new_dividends.length === 0) {
+      return
+    }
+
+    setDivIsLoading(true)
+    setDivError(null)
+
+    try {
+      const dividends = divPreviewData.new_dividends.map((div: CsvDividendPreview) => ({
+        symbol: div.symbol,
+        payment_date: div.payment_date,
+        shares_owned: div.shares_owned,
+        total_amount: div.total_amount,
+        tax: 0, // 提供スクリプトと同様に0として登録
+        fee: 0,
+      }))
+
+      const response = await confirmDividendImport({ dividends })
+      setDivResult({
+        created: response.created_count,
+        failed: response.failed_count,
+        errors: response.errors,
+      })
+      setDivStep("complete")
+    } catch (err) {
+      setDivError(err instanceof Error ? err.message : "登録に失敗しました")
+    } finally {
+      setDivIsLoading(false)
+    }
+  }
+
+  const handleDivReset = () => {
+    setDivStep("upload")
+    setDivPreviewData(null)
+    setDivError(null)
+    setDivResult(null)
   }
 
   if (!isAuthenticated) {
@@ -88,140 +166,294 @@ function TransactionImportContent() {
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">CSVインポート</h1>
-          <p className="text-muted-foreground mt-2">SBI証券の取引履歴CSVから取引を一括登録します</p>
+          <p className="text-muted-foreground mt-2">SBI証券のCSVから取引履歴・配当金を一括登録します</p>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>エラー</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        {/* 取引履歴インポートセクション */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-semibold">取引履歴のインポート</h2>
 
-        {step === "upload" && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Upload className="h-5 w-5" />
-                ステップ 1: ファイル選択
-              </CardTitle>
-              <CardDescription>
-                SBI証券からエクスポートした取引履歴CSVをアップロードしてください
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CsvUploadForm onFileSelect={handleFileSelect} isLoading={isLoading} />
-            </CardContent>
-          </Card>
-        )}
+          {txError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>エラー</AlertTitle>
+              <AlertDescription>{txError}</AlertDescription>
+            </Alert>
+          )}
 
-        {step === "preview" && previewData && (
-          <div className="space-y-6">
-            <Card>
+          {txStep === "upload" && (
+            <Card className="max-w-2xl">
               <CardHeader>
-                <CardTitle>ステップ 2: プレビュー確認</CardTitle>
-                <CardDescription>以下の取引が登録されます。内容を確認してください。</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  ステップ 1: ファイル選択
+                </CardTitle>
+                <CardDescription>
+                  SBI証券からエクスポートした取引履歴CSVをアップロードしてください
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CsvUploadForm onFileSelect={handleTxFileSelect} isLoading={txIsLoading} />
+              </CardContent>
+            </Card>
+          )}
+
+          {txStep === "preview" && txPreviewData && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>ステップ 2: プレビュー確認</CardTitle>
+                  <CardDescription>以下の取引が登録されます。内容を確認してください。</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">CSVの総取引数</p>
+                      <p className="text-2xl font-bold">{txPreviewData.csv_total_count}件</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">既存の取引数</p>
+                      <p className="text-2xl font-bold">{txPreviewData.existing_count}件</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">新規登録数</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {txPreviewData.new_transactions.length}件
+                      </p>
+                    </div>
+                  </div>
+
+                  {txPreviewData.errors.length > 0 && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>スキップした取引: {txPreviewData.skipped_count}件</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          {txPreviewData.errors.slice(0, 5).map((err, i) => (
+                            <li key={`preview-error-${i}-${err.substring(0, 20)}`} className="text-sm">
+                              {err}
+                            </li>
+                          ))}
+                          {txPreviewData.errors.length > 5 && (
+                            <li className="text-sm text-muted-foreground">
+                              ... 他 {txPreviewData.errors.length - 5}件
+                            </li>
+                          )}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <ImportPreviewTable
+                    transactions={txPreviewData.new_transactions}
+                    onConfirm={handleTxConfirm}
+                    isLoading={txIsLoading}
+                  />
+
+                  <Button variant="outline" onClick={handleTxReset} disabled={txIsLoading} className="w-full">
+                    キャンセル
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {txStep === "complete" && txResult && (
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ステップ 3: 完了
+                </CardTitle>
+                <CardDescription>取引の登録が完了しました</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
                   <div>
-                    <p className="text-sm text-muted-foreground">CSVの総取引数</p>
-                    <p className="text-2xl font-bold">{previewData.csv_total_count}件</p>
+                    <p className="text-sm text-muted-foreground">登録成功</p>
+                    <p className="text-2xl font-bold text-green-600">{txResult.created}件</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">既存の取引数</p>
-                    <p className="text-2xl font-bold">{previewData.existing_count}件</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">新規登録数</p>
-                    <p className="text-2xl font-bold text-primary">{previewData.new_transactions.length}件</p>
+                    <p className="text-sm text-muted-foreground">登録失敗</p>
+                    <p className="text-2xl font-bold text-red-600">{txResult.failed}件</p>
                   </div>
                 </div>
 
-                {previewData.errors.length > 0 && (
-                  <Alert>
+                {txResult.errors.length > 0 && (
+                  <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>スキップした取引: {previewData.skipped_count}件</AlertTitle>
+                    <AlertTitle>登録に失敗した取引</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc list-inside space-y-1 mt-2">
-                        {previewData.errors.slice(0, 5).map((err, i) => (
-                          <li key={`preview-error-${i}-${err.substring(0, 20)}`} className="text-sm">
+                        {txResult.errors.map((err, i) => (
+                          <li key={`result-error-${i}-${err.substring(0, 20)}`} className="text-sm">
                             {err}
                           </li>
                         ))}
-                        {previewData.errors.length > 5 && (
-                          <li className="text-sm text-muted-foreground">
-                            ... 他 {previewData.errors.length - 5}件
-                          </li>
-                        )}
                       </ul>
                     </AlertDescription>
                   </Alert>
                 )}
 
-                <ImportPreviewTable
-                  transactions={previewData.new_transactions}
-                  onConfirm={handleConfirm}
-                  isLoading={isLoading}
-                />
-
-                <Button variant="outline" onClick={handleReset} disabled={isLoading} className="w-full">
-                  キャンセル
-                </Button>
+                <div className="flex gap-4">
+                  <Button asChild className="flex-1">
+                    <Link to="/transactions">取引履歴を表示</Link>
+                  </Button>
+                  <Button variant="outline" onClick={handleTxReset} className="flex-1">
+                    続けてインポート
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          </div>
-        )}
+          )}
+        </section>
 
-        {step === "complete" && result && (
-          <Card className="max-w-2xl mx-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                ステップ 3: 完了
-              </CardTitle>
-              <CardDescription>取引の登録が完了しました</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                <div>
-                  <p className="text-sm text-muted-foreground">登録成功</p>
-                  <p className="text-2xl font-bold text-green-600">{result.created}件</p>
+        {/* 区切り線 */}
+        <hr className="my-8" />
+
+        {/* 配当金インポートセクション */}
+        <section className="space-y-6">
+          <h2 className="text-xl font-semibold">配当金のインポート</h2>
+
+          {divError && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>エラー</AlertTitle>
+              <AlertDescription>{divError}</AlertDescription>
+            </Alert>
+          )}
+
+          {divStep === "upload" && (
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="h-5 w-5" />
+                  ステップ 1: ファイル選択
+                </CardTitle>
+                <CardDescription>
+                  SBI証券からエクスポートした配当金・分配金CSVをアップロードしてください
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CsvUploadForm onFileSelect={handleDivFileSelect} isLoading={divIsLoading} />
+              </CardContent>
+            </Card>
+          )}
+
+          {divStep === "preview" && divPreviewData && (
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>ステップ 2: プレビュー確認</CardTitle>
+                  <CardDescription>以下の配当金が登録されます。内容を確認してください。</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted rounded-lg">
+                    <div>
+                      <p className="text-sm text-muted-foreground">CSVの総配当数</p>
+                      <p className="text-2xl font-bold">{divPreviewData.csv_total_count}件</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">既存の配当数</p>
+                      <p className="text-2xl font-bold">{divPreviewData.existing_count}件</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">新規登録数</p>
+                      <p className="text-2xl font-bold text-primary">
+                        {divPreviewData.new_dividends.length}件
+                      </p>
+                    </div>
+                  </div>
+
+                  {divPreviewData.errors.length > 0 && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>スキップした配当: {divPreviewData.skipped_count}件</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside space-y-1 mt-2">
+                          {divPreviewData.errors.slice(0, 5).map((err, i) => (
+                            <li key={`div-preview-error-${i}-${err.substring(0, 20)}`} className="text-sm">
+                              {err}
+                            </li>
+                          ))}
+                          {divPreviewData.errors.length > 5 && (
+                            <li className="text-sm text-muted-foreground">
+                              ... 他 {divPreviewData.errors.length - 5}件
+                            </li>
+                          )}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <DividendImportPreviewTable
+                    dividends={divPreviewData.new_dividends}
+                    onConfirm={handleDivConfirm}
+                    isLoading={divIsLoading}
+                  />
+
+                  <Button
+                    variant="outline"
+                    onClick={handleDivReset}
+                    disabled={divIsLoading}
+                    className="w-full"
+                  >
+                    キャンセル
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {divStep === "complete" && divResult && (
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  ステップ 3: 完了
+                </CardTitle>
+                <CardDescription>配当金の登録が完了しました</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                  <div>
+                    <p className="text-sm text-muted-foreground">登録成功</p>
+                    <p className="text-2xl font-bold text-green-600">{divResult.created}件</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">登録失敗</p>
+                    <p className="text-2xl font-bold text-red-600">{divResult.failed}件</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">登録失敗</p>
-                  <p className="text-2xl font-bold text-red-600">{result.failed}件</p>
+
+                {divResult.errors.length > 0 && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>登録に失敗した配当</AlertTitle>
+                    <AlertDescription>
+                      <ul className="list-disc list-inside space-y-1 mt-2">
+                        {divResult.errors.map((err, i) => (
+                          <li key={`div-result-error-${i}-${err.substring(0, 20)}`} className="text-sm">
+                            {err}
+                          </li>
+                        ))}
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="flex gap-4">
+                  <Button asChild className="flex-1">
+                    <Link to="/dividends">配当金を表示</Link>
+                  </Button>
+                  <Button variant="outline" onClick={handleDivReset} className="flex-1">
+                    続けてインポート
+                  </Button>
                 </div>
-              </div>
-
-              {result.errors.length > 0 && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>登録に失敗した取引</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc list-inside space-y-1 mt-2">
-                      {result.errors.map((err, i) => (
-                        <li key={`result-error-${i}-${err.substring(0, 20)}`} className="text-sm">
-                          {err}
-                        </li>
-                      ))}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <div className="flex gap-4">
-                <Button asChild className="flex-1">
-                  <Link to="/transactions">取引履歴を表示</Link>
-                </Button>
-                <Button variant="outline" onClick={handleReset} className="flex-1">
-                  続けてインポート
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )}
+        </section>
       </div>
     </AppLayout>
   )

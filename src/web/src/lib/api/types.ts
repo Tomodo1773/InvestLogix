@@ -194,3 +194,37 @@ export interface ImportConfirmResponse {
   failed_count: number
   errors: string[]
 }
+
+// Dividend CSV Import
+export interface CsvDividendPreview {
+  symbol: string
+  name: string
+  payment_date: string
+  shares_owned: number
+  total_amount: number
+}
+
+export interface DividendImportPreviewResponse {
+  new_dividends: CsvDividendPreview[]
+  existing_count: number
+  csv_total_count: number
+  skipped_count: number
+  errors: string[]
+}
+
+export interface DividendImportConfirmRequest {
+  dividends: {
+    symbol: string
+    payment_date: string
+    shares_owned: number
+    total_amount: number
+    tax: number
+    fee: number
+  }[]
+}
+
+export interface DividendImportConfirmResponse {
+  created_count: number
+  failed_count: number
+  errors: string[]
+}

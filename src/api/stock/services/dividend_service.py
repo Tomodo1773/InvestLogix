@@ -19,19 +19,7 @@ class DividendService:
         self, dividend: schemas.DividendCreate, user_id: int
     ) -> Optional[models.Dividend]:
         # 株式の存在確認または登録
-        stock_query = select(models.Stock).where(models.Stock.symbol == dividend.symbol)
-        stock_result = await self.db.execute(stock_query)
-        stock = stock_result.scalar_one_or_none()
-        logger.info(
-            "Stockを取得しました action=select user_id={} symbol={} found={}",
-            user_id,
-            dividend.symbol,
-            bool(stock),
-        )
-
-        if not stock:
-            stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=dividend.symbol))
-            logger.info("Stockに登録しました action=create user_id={} symbol={}", user_id, dividend.symbol)
+        await self.stock_service.get_or_create_stock(dividend.symbol, user_id)
 
         # 配当情報の登録
         db_dividend = models.Dividend(**dividend.model_dump(), user_id=user_id)

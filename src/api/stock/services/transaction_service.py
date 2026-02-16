@@ -24,19 +24,7 @@ class TransactionService:
         self, transaction: schemas.TransactionCreate, user_id: int
     ) -> Optional[models.Transaction]:
         # 株式の存在確認または登録
-        stock_query = select(models.Stock).where(models.Stock.symbol == transaction.symbol)
-        stock_result = await self.db.execute(stock_query)
-        stock = stock_result.scalar_one_or_none()
-        logger.info(
-            "Stockを取得しました action=select user_id={} symbol={} found={}",
-            user_id,
-            transaction.symbol,
-            bool(stock),
-        )
-
-        if not stock:
-            stock = await self.stock_service.create_stock(schemas.StockCreate(symbol=transaction.symbol))
-            logger.info("Stockに登録しました action=create user_id={} symbol={}", user_id, transaction.symbol)
+        await self.stock_service.get_or_create_stock(transaction.symbol, user_id)
 
         # 保有情報の取得
         holding_query = select(models.Holding).where(

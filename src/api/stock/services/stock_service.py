@@ -21,6 +21,30 @@ class StockService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def get_or_create_stock(self, symbol: str, user_id: Optional[int] = None) -> models.Stock:
+        """
+        Stockを取得または作成する
+        - 既存の場合: 登録済みのStockを返す
+        - 未登録の場合: 新規作成して返す
+        """
+        query = select(models.Stock).where(models.Stock.symbol == symbol)
+        result = await self.db.execute(query)
+        stock = result.scalar_one_or_none()
+
+        user_info = f"user_id={user_id} " if user_id is not None else ""
+        logger.info(
+            "Stockを取得しました action=select {}symbol={} found={}",
+            user_info,
+            symbol,
+            bool(stock),
+        )
+
+        if not stock:
+            stock = await self.create_stock(schemas.StockCreate(symbol=symbol))
+            logger.info("Stockに登録しました action=create {}symbol={}", user_info, symbol)
+
+        return stock
+
     async def create_stock(self, stock: schemas.StockCreate) -> models.Stock:
         """
         新規銘柄を登録する

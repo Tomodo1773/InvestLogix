@@ -193,7 +193,11 @@ function TransactionImportContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CsvUploadForm onFileSelect={handleTxFileSelect} isLoading={txIsLoading} />
+                <CsvUploadForm
+                  onFileSelect={handleTxFileSelect}
+                  isLoading={txIsLoading}
+                  inputId="transaction-csv-file"
+                />
               </CardContent>
             </Card>
           )}
@@ -335,7 +339,11 @@ function TransactionImportContent() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <CsvUploadForm onFileSelect={handleDivFileSelect} isLoading={divIsLoading} />
+                <CsvUploadForm
+                  onFileSelect={handleDivFileSelect}
+                  isLoading={divIsLoading}
+                  inputId="dividend-csv-file"
+                />
               </CardContent>
             </Card>
           )}

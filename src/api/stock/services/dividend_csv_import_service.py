@@ -192,6 +192,10 @@ def detect_new_dividends(
 ) -> list[ParsedDividend]:
     """パース済み配当金と既存配当金を比較して新規配当金を抽出
 
+    元スクリプトの挙動を再現:
+    - CSV内の重複行(同じキーを持つ行)は全て除外される
+    - drop_duplicates(..., keep=False)と同じ挙動
+
     Args:
         parsed_dividends: CSVからパースした配当金リスト
         existing_dividends: DBから取得した既存配当金リスト（Dividend型）
@@ -199,26 +203,69 @@ def detect_new_dividends(
     Returns:
         list[ParsedDividend]: 新規配当金のリスト
     """
-    # 既存配当金をParsedDividendに変換してセット化
-    existing_set = set()
-    for div in existing_dividends:
-        existing_set.add(
-            ParsedDividend(
-                symbol=div.symbol,
-                name="",  # 名前は比較に使わない
-                payment_date=div.payment_date,
-                shares_owned=div.shares_owned,
-                total_amount=div.total_amount,
-            )
-        )
+    # ParsedDividendをDataFrameに変換
+    parsed_df = pd.DataFrame([
+        {
+            "symbol": d.symbol,
+            "name": d.name,
+            "payment_date": d._date_key(d.payment_date),
+            "shares_owned": round(float(d.shares_owned), 4),
+            "total_amount": round(float(d.total_amount), 2),
+        }
+        for d in parsed_dividends
+    ])
 
-    # 差分を計算
-    parsed_set = set(parsed_dividends)
-    diff_set = parsed_set - existing_set
+    # 既存配当金をDataFrameに変換
+    existing_df = pd.DataFrame([
+        {
+            "symbol": div.symbol,
+            "name": "",
+            "payment_date": ParsedDividend._date_key(div.payment_date),
+            "shares_owned": round(float(div.shares_owned), 4),
+            "total_amount": round(float(div.total_amount), 2),
+        }
+        for div in existing_dividends
+    ])
+
+    # 比較用キー列
+    key_cols = ["symbol", "payment_date", "shares_owned", "total_amount"]
+
+    # 両方のDataFrameを結合
+    concatenated = pd.concat([parsed_df, existing_df], ignore_index=True)
+
+    # 重複を除外(keep=Falseで重複行を全削除)
+    # これにより、CSV内の重複も既存DBとの重複も全て除外される
+    filtered = concatenated.drop_duplicates(subset=key_cols, keep=False)
+
+    # 空のDataFrameの場合は早期リターン
+    if filtered.empty:
+        logger.info(
+            "配当金差分検出が完了しました action=detect_new_dividends new_count=0 existing_count={} parsed_count={}",
+            len(existing_dividends),
+            len(parsed_dividends),
+        )
+        return []
+
+    # 元がParsedDividendだったもののみを抽出
+    new_dividends_df = filtered[filtered["name"] != ""]
+
+    # DataFrameからParsedDividendに変換
+    new_dividends = []
+    for _, row in new_dividends_df.iterrows():
+        # 元のparsed_dividendsから対応するオブジェクトを検索
+        for d in parsed_dividends:
+            if (
+                d.symbol == row["symbol"]
+                and d._date_key(d.payment_date) == row["payment_date"]
+                and round(float(d.shares_owned), 4) == row["shares_owned"]
+                and round(float(d.total_amount), 2) == row["total_amount"]
+            ):
+                new_dividends.append(d)
+                break
 
     # UI側でのプレビュー順が毎回変わらないよう、日付等で順序を安定化
     new_dividends = sorted(
-        diff_set,
+        new_dividends,
         key=lambda d: (d.payment_date, d.symbol),
     )
 

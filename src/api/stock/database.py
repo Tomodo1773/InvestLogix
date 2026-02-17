@@ -147,7 +147,14 @@ async def set_rls_user_id(session: AsyncSession, user_id: int) -> None:
     RLS用のuser_idをPostgreSQLセッション変数に設定する
     - session: データベースセッション
     - user_id: 設定するユーザーID
+
+    NOTE:
+    - asyncpgではSET文へのバインドパラメータ展開（`SET ... = $1`）が構文エラーになる。
+    - `set_config` を使うと安全にバインド値を渡せる。
     """
     from sqlalchemy import text
 
-    await session.execute(text("SET LOCAL app.current_user_id = :uid"), {"uid": user_id})
+    await session.execute(
+        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        {"uid": str(user_id)},
+    )

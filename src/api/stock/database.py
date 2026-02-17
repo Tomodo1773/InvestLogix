@@ -155,6 +155,6 @@ async def set_rls_user_id(session: AsyncSession, user_id: int) -> None:
     from sqlalchemy import text
 
     await session.execute(
-        text("SELECT set_config('app.current_user_id', :uid, true)"),
+        text("SELECT set_config('app.current_user_id', :uid, false)"),
         {"uid": str(user_id)},
     )

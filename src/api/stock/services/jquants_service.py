@@ -51,7 +51,7 @@ class JQuantsClient:
         if end_date:
             params["to"] = end_date
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url, headers=headers, params=params)
             if response.status_code != 200:
                 logger.error(

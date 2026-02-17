@@ -50,7 +50,7 @@ async def get_fund_price(symbol: str) -> float:
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url)
             html = response.text
 

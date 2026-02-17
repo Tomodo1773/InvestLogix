@@ -3,8 +3,7 @@ from typing import Annotated, Dict, List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user
-from ..database import get_db
+from ..auth import get_current_user, get_db_for_user
 from ..schemas import PortfolioHistoryResponse, PortfolioSummary, User, WeeklyPerformanceNotifyResponse
 from ..services.notification_service import send_weekly_performance_notification
 from ..services.portfolio_service import PortfolioService
@@ -16,7 +15,7 @@ router = APIRouter()
 
 @router.get("/summary", response_model=PortfolioSummary)
 async def get_portfolio_summary(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     ポートフォリオのサマリー情報を取得する
@@ -35,7 +34,7 @@ async def get_portfolio_summary(
 
 @router.post("/summary", response_model=PortfolioSummary)
 async def update_portfolio_summary(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     ポートフォリオのサマリー情報を更新する
@@ -49,7 +48,7 @@ async def update_portfolio_summary(
 
 @router.get("/history", response_model=List[PortfolioHistoryResponse])
 async def get_portfolio_history(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     ポートフォリオの過去の履歴をすべて取得する
@@ -68,7 +67,7 @@ async def get_portfolio_history(
 
 @router.post("/update-and-notify", response_model=Dict)
 async def update_portfolio_and_notify(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     ポートフォリオの更新とLINE通知を実行する
@@ -87,7 +86,7 @@ async def update_portfolio_and_notify(
 
 @router.post("/weekly-performance-notify", response_model=WeeklyPerformanceNotifyResponse)
 async def notify_weekly_performance(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     週間騰落率を計算してLINE通知を送信する

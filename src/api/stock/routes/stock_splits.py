@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import schemas
-from ..auth import get_current_user
-from ..database import get_db
+from ..auth import get_current_user, get_db_for_user
 from ..services.stock_split_service import StockSplitService
 
 router = APIRouter()
@@ -15,7 +14,7 @@ router = APIRouter()
 async def create_stock_split(
     split: schemas.StockSplitCreate,
     current_user: schemas.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     株式分割を登録する（登録時に過去取引の調整値を自動再計算）
@@ -44,7 +43,7 @@ async def create_stock_split(
 async def list_stock_splits(
     symbol: Optional[str] = Query(None, description="銘柄コード（未指定の場合は全銘柄）"),
     current_user: schemas.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     株式分割履歴を取得する
@@ -65,7 +64,7 @@ async def list_stock_splits(
 async def delete_stock_split(
     split_id: int,
     current_user: schemas.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     株式分割を削除する（削除時に調整値を再計算）
@@ -91,7 +90,7 @@ async def delete_stock_split(
 async def recalculate_adjusted_values(
     symbol: str,
     current_user: schemas.User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     指定銘柄の調整値を手動で再計算する

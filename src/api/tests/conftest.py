@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from testcontainers.postgres import PostgresContainer
 
 from stock.app import app
+from stock.auth import get_db_for_user
 from stock.database import get_db
 from stock.models import Base
 from stock.schemas import UserCreate
@@ -243,8 +244,9 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
             finally:
                 await session.close()
 
-    # get_db依存性をオーバーライド
+    # get_db / get_db_for_user 依存性をオーバーライド
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_for_user] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -276,6 +278,7 @@ def sync_client(setup_database) -> Generator[TestClient, None, None]:
         return _override_get_db()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_for_user] = override_get_db
     with TestClient(app=app) as client:
         yield client
     app.dependency_overrides.clear()

@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user
-from ..database import get_db
+from ..auth import get_current_user, get_db_for_user
 from ..schemas import (
     AccountType,
     CsvTransactionPreview,
@@ -31,7 +30,7 @@ router = APIRouter()
 async def create_transaction(
     transaction: TransactionCreate,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     新規取引を登録する
@@ -55,7 +54,7 @@ async def list_transactions(
     current_user: Annotated[User, Depends(get_current_user)],
     symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
     include_unrealized_pl: bool = Query(False, description="買付に未実現損益を含める（symbolと併用）"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     ユーザーの取引履歴を取得する
@@ -70,7 +69,7 @@ async def list_transactions(
 
 @router.get("/monthly-summary", response_model=List[MonthlySummary])
 async def get_monthly_transaction_summary(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     月ごとのトランザクション集計を取得する
@@ -84,7 +83,7 @@ async def get_monthly_transaction_summary(
 
 @router.get("/yearly-summary", response_model=List[YearlySummary])
 async def get_yearly_transaction_summary(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     年ごとのトランザクション集計を取得する
@@ -100,7 +99,7 @@ async def get_yearly_transaction_summary(
 async def preview_csv_import(
     file: UploadFile,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     CSVをアップロードして差分プレビューを取得
@@ -182,7 +181,7 @@ async def preview_csv_import(
 async def confirm_csv_import(
     request: ImportConfirmRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     プレビューで確認した取引を一括登録

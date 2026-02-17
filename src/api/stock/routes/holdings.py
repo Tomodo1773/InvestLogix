@@ -3,8 +3,7 @@ from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user
-from ..database import get_db
+from ..auth import get_current_user, get_db_for_user
 from ..models import User
 from ..schemas import Holding
 from ..services import holding_service
@@ -14,7 +13,7 @@ router = APIRouter()
 
 @router.post("/{symbol}/recalculate", response_model=Holding)
 async def recalculate_holding_pl(
-    symbol: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
+    symbol: str, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     保有株の損益を再計算します。
@@ -36,7 +35,7 @@ async def recalculate_holding_pl(
 @router.get("/", response_model=List[Holding])
 async def list_holdings(
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
     symbol: Optional[str] = Query(None, description="フィルタリングする銘柄コード"),
 ):
     """
@@ -49,7 +48,7 @@ async def list_holdings(
 
 @router.post("/recalculate-all", response_model=List[Holding])
 async def recalculate_all_holdings_pl(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     保有する全銘柄の損益を一括で再計算します。

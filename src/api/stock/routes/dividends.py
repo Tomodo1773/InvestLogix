@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..auth import get_current_user
-from ..database import get_db
+from ..auth import get_current_user, get_db_for_user
 from ..schemas import (
     CsvDividendPreview,
     Dividend,
@@ -27,7 +26,7 @@ router = APIRouter()
 async def create_dividend(
     dividend: DividendCreate,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     配当情報を登録する
@@ -47,7 +46,7 @@ async def create_dividend(
 async def list_dividends(
     current_user: Annotated[User, Depends(get_current_user)],
     symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     ユーザーの配当履歴を取得する
@@ -60,7 +59,7 @@ async def list_dividends(
 
 @router.get("/monthly", response_model=List[MonthlyDividend])
 async def get_monthly_dividends(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db)
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
     月次の配当金集計を取得する
@@ -74,7 +73,7 @@ async def get_monthly_dividends(
 async def preview_dividend_csv_import(
     file: UploadFile,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     配当金CSVをアップロードして差分プレビューを取得
@@ -155,7 +154,7 @@ async def preview_dividend_csv_import(
 async def confirm_dividend_csv_import(
     request: DividendImportConfirmRequest,
     current_user: Annotated[User, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     プレビューで確認した配当金を一括登録

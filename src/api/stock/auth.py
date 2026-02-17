@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Annotated
+from typing import Annotated, AsyncGenerator
 
 from fastapi import Cookie, Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
-from .database import get_db, settings
+from .database import get_db, set_rls_user_id, settings
 
 # パスワードハッシュ化のための設定（Argon2id）
 password_hash = PasswordHash.recommended()
@@ -170,3 +170,16 @@ async def get_admin_user(
             detail="You don't have permission to perform this action",
         )
     return current_user
+
+
+async def get_db_for_user(
+    current_user: schemas.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> AsyncGenerator[AsyncSession, None]:
+    """
+    RLS用のuser_idを設定したデータベースセッションを返す依存性注入
+    - 認証済みユーザーのuser_idをPostgreSQLセッション変数に設定する
+    - 使用例: db: AsyncSession = Depends(get_db_for_user)
+    """
+    await set_rls_user_id(db, current_user.user_id)
+    yield db

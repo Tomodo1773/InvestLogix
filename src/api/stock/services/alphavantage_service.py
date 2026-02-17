@@ -1,6 +1,4 @@
-import json
-
-import requests
+import httpx
 from loguru import logger
 
 from ..database import settings
@@ -23,8 +21,9 @@ def _is_rate_limit_error(data: dict) -> bool:
 async def fetch_us_stock_overview(symbol: str) -> dict:
     api_key = settings.ALPHAVANTAGE_API_KEY
     url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={api_key}"
-    response = requests.get(url)
-    data = json.loads(response.text)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+    data = response.json()
     if _is_rate_limit_error(data):
         raise Exception("Alpha Vantage API rate limit exceeded")
     return data
@@ -33,8 +32,9 @@ async def fetch_us_stock_overview(symbol: str) -> dict:
 async def fetch_us_stock_search(symbol: str) -> dict:
     api_key = settings.ALPHAVANTAGE_API_KEY
     url = f"https://www.alphavantage.co/query?function=SYMBOL_SEARCH&keywords={symbol}&apikey={api_key}"
-    response = requests.get(url)
-    data = json.loads(response.text)
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+    data = response.json()
     if _is_rate_limit_error(data):
         raise Exception("Alpha Vantage API rate limit exceeded")
     return data
@@ -55,12 +55,13 @@ async def fetch_usdjpy_rate() -> float | None:
     api_key = settings.ALPHAVANTAGE_API_KEY
     url = f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=USD&to_currency=JPY&apikey={api_key}"
     try:
-        response = requests.get(url)
-        data = json.loads(response.text)
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+        data = response.json()
         if _is_rate_limit_error(data):
             raise Exception("Alpha Vantage API rate limit exceeded")
         return float(data["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
-    except (KeyError, ValueError, requests.RequestException):
+    except (KeyError, ValueError, httpx.HTTPError):
         return None
 
 

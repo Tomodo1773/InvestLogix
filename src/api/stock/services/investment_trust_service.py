@@ -1,4 +1,4 @@
-import aiohttp
+import httpx
 from bs4 import BeautifulSoup
 from loguru import logger
 
@@ -14,9 +14,9 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
         dict: 投資信託の詳細情報
     """
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            html = await response.text()
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        html = response.text
 
     soup = BeautifulSoup(html, "html.parser")
 
@@ -50,9 +50,9 @@ async def get_fund_price(symbol: str) -> float:
     url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
 
     try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                html = await response.text()
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url)
+            html = response.text
 
         soup = BeautifulSoup(html, "html.parser")
         price_div = soup.find("span", class_="h3 font-weight-bold")
@@ -64,7 +64,7 @@ async def get_fund_price(symbol: str) -> float:
 
         return 0.0
 
-    except (aiohttp.ClientError, ValueError) as e:
+    except (httpx.HTTPError, ValueError) as e:
         logger.error(
             "投資信託の基準価額取得に失敗しました action=external_io symbol={} error={}",
             symbol,

@@ -13,7 +13,7 @@ import asyncio
 import os
 from typing import Dict, List, Optional
 
-import aiohttp
+import httpx
 from dotenv import load_dotenv
 from jquantsapi import ClientV2
 from loguru import logger
@@ -51,20 +51,19 @@ class JQuantsClient:
         if end_date:
             params["to"] = end_date
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers, params=params) as response:
-                if response.status != 200:
-                    error_body = await response.text()
-                    logger.error(
-                        "J-Quants API error action=external_io status={} params={} error_body={}",
-                        response.status,
-                        params,
-                        error_body,
-                    )
-                    raise Exception(f"API request failed: {response.status}")
-                data = await response.json()
-                # V2形式をそのまま返す
-                return data.get("data", [])
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, params=params)
+            if response.status_code != 200:
+                logger.error(
+                    "J-Quants API error action=external_io status={} params={} error_body={}",
+                    response.status_code,
+                    params,
+                    response.text,
+                )
+                raise Exception(f"API request failed: {response.status_code}")
+            data = response.json()
+            # V2形式をそのまま返す
+            return data.get("data", [])
 
     def get_company_info(self, symbol: str) -> Optional[Dict]:
         """

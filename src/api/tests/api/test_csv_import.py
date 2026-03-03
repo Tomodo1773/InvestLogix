@@ -33,9 +33,9 @@ class TestParseCsvContent:
         assert tx.tax == 0.0
 
     def test_parse_foreign_csv(self):
-        """外貨建てCSVのパーステスト"""
+        """外貨建てCSVのパーステスト（実際のSBI証券フォーマット: YYYY年MM月DD日形式）"""
         csv_content = """国内約定日,通貨,銘柄名,取引,預り区分,約定数量,約定単価,国内受渡日,受渡金額
-2024/01/30,日本円,テスト株式 TEST / NASDAQ,買付,NISA,10,100,2024/02/01,15000"""
+"2024年01月30日",日本円,テスト株式 TEST / NASDAQ,買付,NISA,10,100,24/02/01,15000"""
 
         transactions, errors = parse_csv_content(csv_content.encode("utf-8"))
 

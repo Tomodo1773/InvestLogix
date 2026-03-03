@@ -33,13 +33,18 @@ class ParsedTransaction:
     def __key(self):
         """差分検出用のハッシュキー"""
         trade_date = date_key(self.transaction_date)
+        # 外貨建て（usd_priceあり）の場合はUSD単価で比較する。
+        # 円建てpriceは受渡金額/数量で計算されるためエクスポート時の為替レートに依存し変動する。
+        price_key = (
+            round(float(self.usd_price), 4) if self.usd_price is not None else round(float(self.price), 2)
+        )
         return (
             self.symbol,
             self.transaction_type,
             trade_date,
             self.account_type,
             round(float(self.quantity), 4),
-            round(float(self.price), 2),
+            price_key,
         )
 
     def __hash__(self):
@@ -302,6 +307,7 @@ def detect_new_transactions(
     # 差分を計算
     parsed_set = set(parsed_transactions)
     diff_set = parsed_set - existing_set
+
     # UI側でのプレビュー順が毎回変わらないよう、日付等で順序を安定化
     new_transactions = sorted(
         diff_set,

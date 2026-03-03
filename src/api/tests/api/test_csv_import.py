@@ -54,7 +54,7 @@ class TestParseCsvContent:
         csv_content = """約定日,銘柄,銘柄コード,市場,取引,預り,課税,約定数量,約定単価,手数料/諸経費等,税額,受渡日,受渡金額/決済損益
 2024/01/30,eMAXIS Slim 全世界株式(オール・カントリー),--,--,投信金額買付,NISA(つ),--,50000,20000,0,0,2024/02/01,100000000"""
 
-        transactions, errors = parse_csv_content(csv_content.encode("utf-8"))
+        transactions, _ = parse_csv_content(csv_content.encode("utf-8"))
 
         assert len(transactions) == 1
         tx = transactions[0]
@@ -137,7 +137,7 @@ class TestDetectNewTransactions:
                 self.tax = tax
                 self.transaction_date = transaction_date
 
-            def _create_enum(self, enum_class, value):
+            def _create_enum(self, _enum_class, value):
                 class EnumValue:
                     def __init__(self, v):
                         self.value = v
@@ -171,4 +171,69 @@ class TestDetectNewTransactions:
 
         new_transactions = detect_new_transactions(parsed, existing)
 
+        assert len(new_transactions) == 0
+
+    def test_foreign_price_change_not_detected_as_new(self):
+        """外貨建て取引で円建てpriceが変わっても登録済みと判断されるテスト
+
+        外貨建てCSVの円建てprice（受渡金額/数量）はエクスポートごとに変わるため、
+        usd_priceが同じなら同一取引として判断する必要がある。
+        """
+        # 最初のエクスポートでインポートした取引（円建てprice=73063.0）
+        parsed = [
+            ParsedTransaction(
+                symbol="MSFT",
+                name="マイクロソフト",
+                transaction_type="買付",
+                quantity=1.0,
+                price=73063.0,  # 新しいエクスポートでは為替が変わり別の値になる
+                usd_price=477.535,
+                account_type="NISA(成長投資枠)",
+                fee=0.0,
+                tax=0.0,
+                transaction_date=datetime(2026, 1, 28),
+            ),
+        ]
+
+        class MockTransaction:
+            def __init__(
+                self,
+                symbol,
+                transaction_type,
+                quantity,
+                price,
+                usd_price,
+                account_type,
+                fee,
+                tax,
+                transaction_date,
+            ):
+                self.symbol = symbol
+                self.transaction_type = transaction_type  # 文字列で渡す（DBの実際の返り値を模倣）
+                self.quantity = quantity
+                self.price = price
+                self.usd_price = usd_price
+                self.account_type = account_type
+                self.fee = fee
+                self.tax = tax
+                self.transaction_date = transaction_date
+
+        # DBには以前の為替レートで計算されたprice（72000.0）で保存済み
+        existing = [
+            MockTransaction(
+                symbol="MSFT",
+                transaction_type="buy",
+                quantity=1.0,
+                price=72000.0,  # 以前のエクスポートで登録された価格（為替レートが違う）
+                usd_price=477.535,  # USD単価は変わらない
+                account_type="NISA(成長投資枠)",
+                fee=0.0,
+                tax=0.0,
+                transaction_date=datetime(2026, 1, 28),
+            )
+        ]
+
+        new_transactions = detect_new_transactions(parsed, existing)
+
+        # USD単価が同じなので登録済みと判断され、差分なし
         assert len(new_transactions) == 0

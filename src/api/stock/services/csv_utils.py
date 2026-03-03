@@ -51,6 +51,21 @@ def get_fund_symbol(fund_name: str) -> str | None:
     return NORMALIZED_FUND_MAP.get(key)
 
 
+def parse_date(val) -> str | None:
+    """日付文字列をYYYY/MM/DD形式に変換
+
+    SBI証券CSVの複数日付形式に対応する。
+    - YYYY年MM月DD日 形式（外貨建てCSV）
+    - YYYY/MM/DD 形式（円建てCSV）
+    """
+    if is_empty(val):
+        return None
+    val_str = str(val).strip()
+    if "年" in val_str:
+        return pd.to_datetime(val_str, format="%Y年%m月%d日").strftime("%Y/%m/%d")
+    return pd.to_datetime(val_str, format="%Y/%m/%d").strftime("%Y/%m/%d")
+
+
 def decode_csv_content(content: bytes) -> list[str]:
     """CSVバイト列をデコードして行リストを返す
 

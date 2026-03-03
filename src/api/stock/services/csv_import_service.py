@@ -12,7 +12,7 @@ from datetime import datetime
 import pandas as pd
 from loguru import logger
 
-from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, to_number
+from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, parse_date, to_number
 
 
 @dataclass
@@ -184,8 +184,8 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         )
     )
 
-    # 日付の変換（YYYY/MM/DD形式のみサポート）
-    df_raw["約定日"] = pd.to_datetime(df_raw["約定日"], format="%Y/%m/%d").dt.strftime("%Y/%m/%d")
+    # 日付の変換
+    df_raw["約定日"] = df_raw["約定日"].apply(parse_date)
 
     # 必要なカラムのみ抽出
     sbi_data = df_raw[

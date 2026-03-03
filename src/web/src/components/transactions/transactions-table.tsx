@@ -93,6 +93,15 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => handleSort("transaction_date")}
+                  >
+                    <div className="flex items-center">
+                      日付
+                      {getSortIcon("transaction_date")}
+                    </div>
+                  </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort("symbol")}>
                     <div className="flex items-center">
                       銘柄名/コード
@@ -128,15 +137,6 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                       {getSortIcon("total_amount")}
                     </div>
                   </TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none text-right"
-                    onClick={() => handleSort("transaction_date")}
-                  >
-                    <div className="flex items-center justify-end">
-                      日付
-                      {getSortIcon("transaction_date")}
-                    </div>
-                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -147,6 +147,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
 
                     return (
                       <TableRow key={transaction.transaction_id}>
+                        <TableCell>{formatDate(transaction.transaction_date)}</TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">{transaction.stock_name || transaction.symbol}</div>
@@ -166,9 +167,6 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                         <TableCell className="text-right">{transaction.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right">{formatCurrency(transaction.price)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
-                        <TableCell className="text-right">
-                          {formatDate(transaction.transaction_date)}
-                        </TableCell>
                       </TableRow>
                     )
                   })

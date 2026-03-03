@@ -89,19 +89,19 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => handleSort("payment_date")}
+                  >
+                    <div className="flex items-center">
+                      支払日
+                      {getSortIcon("payment_date")}
+                    </div>
+                  </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort("symbol")}>
                     <div className="flex items-center">
                       銘柄名/コード
                       {getSortIcon("symbol")}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none text-right"
-                    onClick={() => handleSort("payment_date")}
-                  >
-                    <div className="flex items-center justify-end">
-                      支払日
-                      {getSortIcon("payment_date")}
                     </div>
                   </TableHead>
                   <TableHead className="text-right">株数</TableHead>
@@ -123,13 +123,13 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                   paginatedData.map((dividend) => {
                     return (
                       <TableRow key={dividend.dividend_id}>
+                        <TableCell>{formatDate(dividend.payment_date)}</TableCell>
                         <TableCell>
                           <div>
                             <div className="font-medium">{dividend.stock_name || dividend.symbol}</div>
                             <div className="text-sm text-muted-foreground">{dividend.symbol}</div>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right">{formatDate(dividend.payment_date)}</TableCell>
                         <TableCell className="text-right">{dividend.shares_owned.toLocaleString()}</TableCell>
                         <TableCell className="text-right font-medium text-[#4CAF50]">
                           {formatCurrency(dividend.total_amount)}

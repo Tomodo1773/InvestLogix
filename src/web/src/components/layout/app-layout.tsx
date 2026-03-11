@@ -20,7 +20,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <div className="flex h-screen">
       <Sidebar />
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="border-b bg-card">
           <div className="flex h-16 items-center justify-between px-4">
             <div className="flex items-center gap-3">

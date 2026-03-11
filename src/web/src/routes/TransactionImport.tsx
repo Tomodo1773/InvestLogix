@@ -163,7 +163,7 @@ function TransactionImportContent() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">CSVインポート</h1>
           <p className="text-muted-foreground mt-2">SBI証券のCSVから取引履歴・配当金を一括登録します</p>

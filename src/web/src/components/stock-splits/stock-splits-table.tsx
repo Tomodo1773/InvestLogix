@@ -89,6 +89,12 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort("split_date")}>
+                    <div className="flex items-center">
+                      分割日
+                      {getSortIcon("split_date")}
+                    </div>
+                  </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort("symbol")}>
                     <div className="flex items-center">
                       銘柄コード
@@ -99,15 +105,6 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
                     <div className="flex items-center">
                       銘柄名
                       {getSortIcon("stock_name")}
-                    </div>
-                  </TableHead>
-                  <TableHead
-                    className="cursor-pointer select-none text-right"
-                    onClick={() => handleSort("split_date")}
-                  >
-                    <div className="flex items-center justify-end">
-                      分割日
-                      {getSortIcon("split_date")}
                     </div>
                   </TableHead>
                   <TableHead
@@ -127,13 +124,13 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
                   paginatedData.map((stockSplit) => {
                     return (
                       <TableRow key={stockSplit.split_id}>
+                        <TableCell>{formatDate(stockSplit.split_date)}</TableCell>
                         <TableCell>
                           <div className="font-medium">{stockSplit.symbol}</div>
                         </TableCell>
                         <TableCell>
                           <div className="text-sm text-muted-foreground">{stockSplit.stock_name || "-"}</div>
                         </TableCell>
-                        <TableCell className="text-right">{formatDate(stockSplit.split_date)}</TableCell>
                         <TableCell className="text-right font-medium">
                           {formatSplitRatio(stockSplit.split_ratio)}
                         </TableCell>

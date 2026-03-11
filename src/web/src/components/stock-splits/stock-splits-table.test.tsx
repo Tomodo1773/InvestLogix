@@ -64,7 +64,8 @@ describe("StockSplitsTable", () => {
     // 初期状態は分割日の降順（2024/06/10が最初）
     const rows = screen.getAllByRole("row").slice(1) // ヘッダーを除外
     const cells = rows[0].querySelectorAll("td")
-    expect(cells[0]).toHaveTextContent("AAPL")
+    expect(cells[0]).toHaveTextContent("2024/06/10")
+    expect(cells[1]).toHaveTextContent("AAPL")
 
     // ソートヘッダーがクリック可能であることを確認
     const symbolHeader = screen.getByText("銘柄コード").closest("th")

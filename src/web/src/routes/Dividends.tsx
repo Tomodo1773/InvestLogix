@@ -21,7 +21,7 @@ export default function Dividends() {
 
   return (
     <AuthenticatedLayout>
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">配当金履歴</h2>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>

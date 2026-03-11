@@ -14,7 +14,7 @@ type SortKey = "symbol" | "quantity" | "current_price" | "market_value" | "total
 
 export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
   const { sortKey, sortDirection, handleSort, getSortIcon } = useTableSort<SortKey>({
-    defaultSortKey: "total_pl_percentage",
+    defaultSortKey: "market_value",
     defaultSortDirection: "desc",
   })
 

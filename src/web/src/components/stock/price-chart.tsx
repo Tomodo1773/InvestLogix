@@ -213,7 +213,7 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
                   const date = new Date(value)
                   return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`
                 }}
-                formatter={(value: number | undefined) => [value?.toLocaleString() ?? "0", "終値"]}
+                formatter={(value) => [typeof value === "number" ? value.toLocaleString() : "0", "終値"]}
               />
               <Line type="monotone" dataKey="close" stroke="var(--primary)" strokeWidth={2} dot={false} />
               {buyDatesMs.map((dateMs) => (

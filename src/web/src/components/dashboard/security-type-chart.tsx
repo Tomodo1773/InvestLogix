@@ -102,7 +102,7 @@ export function SecurityTypeChart({ data, isLoading }: SecurityTypeChartProps) {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number | undefined) => formatCurrency(value ?? 0)}
+                formatter={(value) => formatCurrency(typeof value === "number" ? value : 0)}
                 labelFormatter={(label) => `${label}`}
               />
               <Legend />

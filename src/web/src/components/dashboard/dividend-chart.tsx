@@ -58,8 +58,8 @@ export function DividendChart({ data, isLoading }: DividendChartProps) {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
               <Tooltip
-                formatter={(value: number | undefined) => {
-                  if (value === undefined) return "-"
+                formatter={(value) => {
+                  if (typeof value !== "number") return "-"
                   return formatCurrency(value)
                 }}
               />

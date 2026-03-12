@@ -87,8 +87,8 @@ export function TradeChart({ data, isLoading }: TradeChartProps) {
               <XAxis dataKey="month" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 10000).toFixed(0)}万`} />
               <Tooltip
-                formatter={(value: number | undefined) => {
-                  if (value === undefined) return "-"
+                formatter={(value) => {
+                  if (typeof value !== "number") return "-"
                   return formatCurrency(value)
                 }}
               />

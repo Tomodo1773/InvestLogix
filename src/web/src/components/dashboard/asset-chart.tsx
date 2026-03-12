@@ -127,12 +127,14 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
                 tickFormatter={(v) => `${v}%`}
               />
               <Tooltip
-                formatter={(value: number | undefined, name: string | undefined) => {
-                  if (value === undefined) return ["-", name ?? ""]
-                  if (name === "total_pl_percentage") {
-                    return [formatPercent(value), "Total P/L %"]
+                formatter={(value, name) => {
+                  const numValue = typeof value === "number" ? value : undefined
+                  const strName = typeof name === "string" ? name : undefined
+                  if (numValue === undefined) return ["-", strName ?? ""]
+                  if (strName === "total_pl_percentage") {
+                    return [formatPercent(numValue), "Total P/L %"]
                   }
-                  return [formatCurrency(value), name === "total_cost" ? "Total Cost" : "Market Value"]
+                  return [formatCurrency(numValue), strName === "total_cost" ? "Total Cost" : "Market Value"]
                 }}
               />
               <Line
@@ -178,8 +180,8 @@ export function AssetChart({ history, isLoading }: AssetChartProps) {
               />
               <YAxis yAxisId="right" orientation="right" width={50} tick={false} axisLine={false} />
               <Tooltip
-                formatter={(value: number | undefined) => {
-                  if (value === undefined) return ["-", "Total P/L"]
+                formatter={(value) => {
+                  if (typeof value !== "number") return ["-", "Total P/L"]
                   return [formatCurrency(value), "Total P/L"]
                 }}
               />

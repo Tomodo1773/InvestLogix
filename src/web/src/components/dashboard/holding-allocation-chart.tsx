@@ -186,10 +186,11 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number | undefined, _name: string | undefined, props: unknown) => {
-                    const percent = ((value ?? 0) / total) * 100
+                  formatter={(value, _name, props) => {
+                    const numValue = typeof value === "number" ? value : 0
+                    const percent = (numValue / total) * 100
                     const payload = props as { payload: { name: string } }
-                    return [`${formatCurrency(value ?? 0)} (${percent.toFixed(2)}%)`, payload.payload.name]
+                    return [`${formatCurrency(numValue)} (${percent.toFixed(2)}%)`, payload.payload.name]
                   }}
                   labelFormatter={(label, payload) => {
                     if (payload && payload.length > 0) {

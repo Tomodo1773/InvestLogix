@@ -67,13 +67,13 @@ export function NisaLimitGauge({ data, isLoading }: NisaLimitGaugeProps) {
       </CardHeader>
       <CardContent className="space-y-6">
         <Progress
-          value={yearlyTotals.NISAGrowth}
+          value={Math.round(yearlyTotals.NISAGrowth)}
           max={NISA_LIMITS.NISAGrowth}
           label={ACCOUNT_LABELS.NISAGrowth}
           colorClass="bg-green-600"
         />
         <Progress
-          value={yearlyTotals.NISAAccumulation}
+          value={Math.round(yearlyTotals.NISAAccumulation)}
           max={NISA_LIMITS.NISAAccumulation}
           label={ACCOUNT_LABELS.NISAAccumulation}
           colorClass="bg-teal-600"

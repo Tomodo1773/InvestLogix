@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Dict, List
 
 from loguru import logger
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models, schemas
 from ..services.holding_service import update_all_holdings_pl
 from ..services.notification_service import NotificationService
+from ..utils.datetime import now_jst
 
 
 class PortfolioService:
@@ -101,7 +102,7 @@ class PortfolioService:
 
         portfolio_history = models.PortfolioHistory(
             user_id=user_id,
-            date=datetime.now(),
+            date=now_jst(),
             **{k: v for k, v in summary.items() if k not in ["holdings_by_market", "holdings_by_currency"]},
         )
 
@@ -156,7 +157,7 @@ class PortfolioService:
         portfolio_history = await self.create_portfolio_history(user_id)
 
         # 前週のデータを取得して差額を計算
-        week_ago = datetime.now() - timedelta(days=7)
+        week_ago = now_jst() - timedelta(days=7)
         prev_query = (
             select(models.PortfolioHistory)
             .where(
@@ -197,5 +198,5 @@ class PortfolioService:
         return {
             "summary": summary,
             "notification_sent": notification_sent,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_jst().isoformat(),
         }

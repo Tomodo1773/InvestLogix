@@ -61,6 +61,30 @@ class NotificationService:
             total_realized_pl = _format_currency(portfolio_data["total_realized_pl"])
             total_dividend = _format_currency(portfolio_data["total_dividend"])
 
+            # 前週比の行（データがある場合のみ）
+            weekly_change = portfolio_data.get("weekly_change")
+            weekly_change_rows = []
+            if weekly_change is not None:
+                formatted_change = _format_currency(abs(weekly_change))
+                sign = "+" if weekly_change >= 0 else "-"
+                color = _get_profit_loss_color(weekly_change)
+                weekly_change_rows.append(
+                    {
+                        "type": "box",
+                        "layout": "horizontal",
+                        "contents": [
+                            {"type": "text", "text": "前週比", "size": "sm", "color": "#555555"},
+                            {
+                                "type": "text",
+                                "text": f"{sign}{formatted_change}円",
+                                "size": "sm",
+                                "color": color,
+                                "align": "end",
+                            },
+                        ],
+                    }
+                )
+
             # 損益に応じたコメント
             comment = _generate_comment(portfolio_data["total_pl_percentage"])
 
@@ -140,6 +164,7 @@ class NotificationService:
                                         },
                                     ],
                                 },
+                                *weekly_change_rows,
                                 {
                                     "type": "box",
                                     "layout": "horizontal",
@@ -230,31 +255,6 @@ class NotificationService:
                 },
                 "styles": {"footer": {"separator": True}},
             }
-
-            # 前週比がある場合、資産情報セクションに行を追加
-            weekly_change = portfolio_data.get("weekly_change")
-            if weekly_change is not None:
-                formatted_change = _format_currency(abs(weekly_change))
-                sign = "+" if weekly_change >= 0 else "-"
-                color = _get_profit_loss_color(weekly_change)
-                asset_contents = flex_contents["body"]["contents"][4]["contents"]
-                asset_contents.insert(
-                    3,
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {"type": "text", "text": "前週比", "size": "sm", "color": "#555555"},
-                            {
-                                "type": "text",
-                                "text": f"{sign}{formatted_change}円",
-                                "size": "sm",
-                                "color": color,
-                                "align": "end",
-                            },
-                        ],
-                    },
-                )
 
             flex_message = {
                 "type": "flex",

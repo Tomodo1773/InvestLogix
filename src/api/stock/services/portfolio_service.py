@@ -157,7 +157,7 @@ class PortfolioService:
         portfolio_history = await self.create_portfolio_history(user_id)
 
         # 前週のデータを取得して差額を計算
-        week_ago = now_jst() - timedelta(days=7)
+        week_ago = now_jst() - timedelta(days=6)
         prev_query = (
             select(models.PortfolioHistory)
             .where(

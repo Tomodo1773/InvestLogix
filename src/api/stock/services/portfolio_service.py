@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import timedelta
 from typing import Dict, List
 
 from loguru import logger
@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models, schemas
 from ..services.holding_service import update_all_holdings_pl
 from ..services.notification_service import NotificationService
+from ..utils.datetime import now_jst
 
 
 class PortfolioService:
@@ -101,7 +102,7 @@ class PortfolioService:
 
         portfolio_history = models.PortfolioHistory(
             user_id=user_id,
-            date=datetime.now(),
+            date=now_jst(),
             **{k: v for k, v in summary.items() if k not in ["holdings_by_market", "holdings_by_currency"]},
         )
 
@@ -155,6 +156,21 @@ class PortfolioService:
         # ポートフォリオの状態を履歴に保存
         portfolio_history = await self.create_portfolio_history(user_id)
 
+        # 前週のデータを取得して差額を計算
+        week_ago = now_jst() - timedelta(days=6)
+        prev_query = (
+            select(models.PortfolioHistory)
+            .where(
+                models.PortfolioHistory.user_id == user_id,
+                models.PortfolioHistory.date <= week_ago,
+            )
+            .order_by(models.PortfolioHistory.date.desc())
+            .limit(1)
+        )
+        prev_result = await self.db.execute(prev_query)
+        prev_history = prev_result.scalar_one_or_none()
+        weekly_change = portfolio_history.total_pl - prev_history.total_pl if prev_history else None
+
         # SQLAlchemy modelをPythonの辞書に変換
         portfolio_data = {
             "total_cost": portfolio_history.total_cost,
@@ -163,6 +179,7 @@ class PortfolioService:
             "total_pl_percentage": portfolio_history.total_pl_percentage,
             "total_realized_pl": portfolio_history.total_realized_pl,
             "total_dividend": portfolio_history.total_dividend,
+            "weekly_change": weekly_change,
         }
 
         # LINE通知を送信（DBセッションも渡す）
@@ -179,5 +196,5 @@ class PortfolioService:
         return {
             "summary": summary,
             "notification_sent": notification_sent,
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": now_jst().isoformat(),
         }

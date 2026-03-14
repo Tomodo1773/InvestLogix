@@ -169,9 +169,7 @@ class PortfolioService:
         )
         prev_result = await self.db.execute(prev_query)
         prev_history = prev_result.scalar_one_or_none()
-        weekly_change = (
-            portfolio_history.total_market_value - prev_history.total_market_value if prev_history else None
-        )
+        weekly_change = portfolio_history.total_pl - prev_history.total_pl if prev_history else None
 
         # SQLAlchemy modelをPythonの辞書に変換
         portfolio_data = {

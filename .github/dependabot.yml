@@ -30,6 +30,8 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    ignore:
+      - dependency-name: "@biomejs/biome"
     groups:
       web-version:
         applies-to: version-updates

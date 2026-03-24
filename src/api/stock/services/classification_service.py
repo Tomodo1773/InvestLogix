@@ -3,6 +3,7 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from ..database import settings
+from ..utils.cache import timed_cache
 
 SYSTEM_PROMPT = (
     "投資信託のファンド名から、主要な投資対象の通貨エクスポージャーを判定してください。"
@@ -11,6 +12,15 @@ SYSTEM_PROMPT = (
     "全世界株式など特定通貨に偏らない場合はUSDとしてください。"
 )
 
+_openai_client: AsyncOpenAI | None = None
+
+
+def get_openai_client() -> AsyncOpenAI:
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    return _openai_client
+
 
 class CurrencyClassification(BaseModel):
     """AI分類の構造化出力スキーマ"""
@@ -18,6 +28,7 @@ class CurrencyClassification(BaseModel):
     currency: str
 
 
+@timed_cache(seconds=86400)
 async def classify_fund_currency(fund_name: str) -> str:
     """投資信託のファンド名から通貨エクスポージャーを分類する。
 
@@ -29,11 +40,13 @@ async def classify_fund_currency(fund_name: str) -> str:
         API未設定・エラー時は "JPY" を返す。
     """
     if not settings.OPENAI_API_KEY:
-        logger.warning("OPENAI_API_KEYが未設定のため通貨分類をスキップします fund_name={}", fund_name)
+        logger.warning(
+            "OPENAI_API_KEYが未設定のため通貨分類をスキップします action=external_io fund_name={}", fund_name
+        )
         return "JPY"
 
     try:
-        client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+        client = get_openai_client()
         response = await client.responses.parse(
             model="gpt-5.4-mini",
             instructions=SYSTEM_PROMPT,
@@ -41,8 +54,8 @@ async def classify_fund_currency(fund_name: str) -> str:
             text_format=CurrencyClassification,
         )
         result = response.output_parsed
-        logger.info("通貨分類完了 fund_name={} currency={}", fund_name, result.currency)
+        logger.info("通貨分類完了 action=external_io fund_name={} currency={}", fund_name, result.currency)
         return result.currency
     except Exception:
-        logger.exception("通貨分類失敗、JPYにフォールバック fund_name={}", fund_name)
+        logger.exception("通貨分類失敗、JPYにフォールバック action=external_io fund_name={}", fund_name)
         return "JPY"

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_current_user
 from ..database import get_db
 from ..schemas import Stock, StockCreate, User
-from ..services.stock_service import StockService
+from ..services.stock_service import StockNotFoundError, StockService
 
 router = APIRouter()
 
@@ -58,6 +58,31 @@ async def list_stocks(
         len(stocks),
     )
     return stocks
+
+
+@router.put("/{symbol}", response_model=Stock)
+async def refresh_stock(
+    symbol: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    既存銘柄の情報を外部APIから再取得して更新する
+    - symbol: 銘柄シンボル
+    - 成功時: 更新された銘柄情報を返却
+    - 銘柄未登録時: 404 Not Found
+    """
+    try:
+        stock_service = StockService(db)
+        db_stock = await stock_service.refresh_stock(symbol)
+        logger.info(
+            "Stockを更新しました action=update user_id={} symbol={}",
+            current_user.user_id,
+            db_stock.symbol,
+        )
+        return db_stock
+    except StockNotFoundError:
+        raise HTTPException(status_code=404, detail="Stock not found")
 
 
 @router.delete("/{symbol}", response_model=bool)

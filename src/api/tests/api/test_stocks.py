@@ -239,3 +239,42 @@ async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, 
             assert stock["market"] == "NASDAQ"
             assert stock["security_type"] == "STOCK"
             assert stock["currency"] == "USD"
+
+
+@pytest.mark.asyncio
+async def test_refresh_us_stock(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+):
+    """米国株の情報更新テスト
+
+    期待する動作:
+    - 登録済み銘柄に対してPUTすると外部APIから再取得して更新される
+    - ステータスコード200で更新後の情報が返却される
+    """
+    # まず銘柄を登録
+    stock_data = StockCreate(symbol="AAPL")
+    await client.post(
+        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
+    )
+
+    # モックの名前を変更して更新を検証
+    mock_external_apis["overview"].return_value = {
+        "Name": "Apple Inc (Updated)",
+        "Exchange": "NASDAQ",
+        "Sector": "Technology",
+    }
+
+    # PUT で更新
+    response = await client.put("/api/v1/stocks/AAPL", headers={"Authorization": f"Bearer {auth_token}"})
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "AAPL"
+    assert data["name"] == "Apple Inc (Updated)"
+
+
+@pytest.mark.asyncio
+async def test_refresh_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+    """未登録銘柄の更新で404が返ること"""
+    response = await client.put("/api/v1/stocks/ZZZZ", headers={"Authorization": f"Bearer {auth_token}"})
+    assert response.status_code == 404

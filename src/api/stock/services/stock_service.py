@@ -88,56 +88,33 @@ class StockService:
         return re.match(r"^[A-Z]{1,5}$", symbol) is not None
 
     async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
-        # 投資信託の詳細情報を取得
-        details = await fetch_investment_trust_details(stock.symbol)
-        name = details["name"]
-
-        # AIによる通貨エクスポージャー分類（失敗時はJPYにフォールバック）
-        currency = await classify_fund_currency(name)
-
         db_stock = models.Stock(
-            symbol=stock.symbol,
-            name=name,
-            name_en="",
-            market="JPX",
-            security_type="FUND",
-            currency=currency,
+            symbol=stock.symbol, name="", name_en="", market="JPX", security_type="FUND", currency="JPY"
         )
         self.db.add(db_stock)
+        await self._fetch_investment_trust_attrs(db_stock)
         await self.db.flush()
         await self.db.refresh(db_stock)
         logger.info("Stockを登録しました action=create symbol={} security_type=FUND", db_stock.symbol)
         return db_stock
 
-    async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
-        company_info = get_jquants_client().get_company_info(stock.symbol)
-        if not company_info:
-            logger.error("企業情報が取得できませんでした action=external_io symbol={}", stock.symbol)
-            raise StockNotFoundError(f"Company information not found for symbol: {stock.symbol}")
+    async def _fetch_investment_trust_attrs(self, db_stock: models.Stock) -> None:
+        """外部APIから投資信託の属性を取得してdb_stockに反映する"""
+        details = await fetch_investment_trust_details(db_stock.symbol)
+        name = details["name"]
+        currency = await classify_fund_currency(name)
+        db_stock.name = name
+        db_stock.name_en = ""
+        db_stock.market = "JPX"
+        db_stock.security_type = "FUND"
+        db_stock.currency = currency
 
+    async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
         db_stock = models.Stock(
-            symbol=stock.symbol,
-            name=company_info.get("CoName"),
-            name_en=company_info.get("CoNameEn"),
-            market="JPX",
-            security_type="STOCK",
-            currency="JPY",
+            symbol=stock.symbol, name="", name_en="", market="JPX", security_type="STOCK", currency="JPY"
         )
         self.db.add(db_stock)
-
-        db_stock_jpx_detail = models.StockJPXDetail(
-            symbol=stock.symbol,
-            sector_17_code=company_info.get("S17"),
-            sector_17_name=company_info.get("S17Nm"),
-            sector_33_code=company_info.get("S33"),
-            sector_33_name=company_info.get("S33Nm"),
-            market_segment=company_info.get("MktNm"),
-            market_code=company_info.get("ScaleCat"),
-            market_name=company_info.get("MktNm"),
-            margin_trading=company_info.get("MarginCode") == "1",
-        )
-        self.db.add(db_stock_jpx_detail)
-
+        await self._fetch_japanese_stock_attrs(db_stock)
         await self.db.flush()
         await self.db.refresh(db_stock)
         logger.info(
@@ -145,54 +122,113 @@ class StockService:
         )
         return db_stock
 
+    async def _fetch_japanese_stock_attrs(self, db_stock: models.Stock) -> None:
+        """外部APIから日本株の属性を取得してdb_stockに反映する"""
+        company_info = get_jquants_client().get_company_info(db_stock.symbol)
+        if not company_info:
+            logger.error("企業情報が取得できませんでした action=external_io symbol={}", db_stock.symbol)
+            raise StockNotFoundError(f"Company information not found for symbol: {db_stock.symbol}")
+
+        db_stock.name = company_info.get("CoName")
+        db_stock.name_en = company_info.get("CoNameEn")
+        db_stock.market = "JPX"
+        db_stock.security_type = "STOCK"
+        db_stock.currency = "JPY"
+
+        # JPX詳細情報の更新または作成
+        jpx_query = select(models.StockJPXDetail).where(models.StockJPXDetail.symbol == db_stock.symbol)
+        result = await self.db.execute(jpx_query)
+        db_detail = result.scalar_one_or_none()
+        if not db_detail:
+            db_detail = models.StockJPXDetail(symbol=db_stock.symbol)
+            self.db.add(db_detail)
+
+        db_detail.sector_17_code = company_info.get("S17")
+        db_detail.sector_17_name = company_info.get("S17Nm")
+        db_detail.sector_33_code = company_info.get("S33")
+        db_detail.sector_33_name = company_info.get("S33Nm")
+        db_detail.market_segment = company_info.get("MktNm")
+        db_detail.market_code = company_info.get("ScaleCat")
+        db_detail.market_name = company_info.get("MktNm")
+        db_detail.margin_trading = company_info.get("MarginCode") == "1"
+
     async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
-        # Alpha Vantage APIを使用して米国株の詳細情報を取得
-        data = await fetch_us_stock_overview(stock.symbol)
-
-        if not data:
-            # ETFの可能性があるため、SYMBOL_SEARCHを使用
-            search_data = await fetch_us_stock_search(stock.symbol)
-            if not search_data.get("bestMatches"):
-                logger.error("Stock情報が見つかりませんでした action=external_io symbol={}", stock.symbol)
-                raise StockNotFoundError(f"Stock information not found for symbol: {stock.symbol}")
-            best_match = search_data.get("bestMatches", [])[0]
-            name = best_match["2. name"].rstrip()  # 末尾のスペースを削除
-            market = best_match["4. region"]
-            security_type = "ETF"
-        else:
-            name = data["Name"]  # 銘柄名を取得
-            market = data["Exchange"]  # 市場を取得
-            industry = data.get("Sector", "")  # 産業を取得（存在しない場合は空文字）
-            security_type = "STOCK"
-
         db_stock = models.Stock(
-            symbol=stock.symbol,
-            name=name,
-            name_en=name,
-            market=market,
-            security_type=security_type,
-            currency="USD",
+            symbol=stock.symbol, name="", name_en="", market="", security_type="STOCK", currency="USD"
         )
         self.db.add(db_stock)
-
-        if security_type == "STOCK":
-            db_stock_us_detail = models.StockUSDetail(
-                symbol=stock.symbol,
-                gics_sector=industry,
-                gics_industry=industry,
-                sp500_component=False,
-                market=market,
-            )
-            self.db.add(db_stock_us_detail)
-
+        await self._fetch_us_stock_attrs(db_stock)
         await self.db.flush()
         await self.db.refresh(db_stock)
         logger.info(
             "Stockを登録しました action=create symbol={} security_type={} market={}",
             stock.symbol,
-            security_type,
-            market,
+            db_stock.security_type,
+            db_stock.market,
         )
+        return db_stock
+
+    async def _fetch_us_stock_attrs(self, db_stock: models.Stock) -> None:
+        """外部APIから米国株の属性を取得してdb_stockに反映する"""
+        data = await fetch_us_stock_overview(db_stock.symbol)
+
+        if not data:
+            search_data = await fetch_us_stock_search(db_stock.symbol)
+            if not search_data.get("bestMatches"):
+                logger.error("Stock情報が見つかりませんでした action=external_io symbol={}", db_stock.symbol)
+                raise StockNotFoundError(f"Stock information not found for symbol: {db_stock.symbol}")
+            best_match = search_data.get("bestMatches", [])[0]
+            name = best_match["2. name"].rstrip()
+            market = best_match["4. region"]
+            security_type = "ETF"
+            industry = ""
+        else:
+            name = data["Name"]
+            market = data["Exchange"]
+            industry = data.get("Sector", "")
+            security_type = "STOCK"
+
+        db_stock.name = name
+        db_stock.name_en = name
+        db_stock.market = market
+        db_stock.security_type = security_type
+        db_stock.currency = "USD"
+
+        # US詳細情報の更新または作成（STOCKの場合のみ）
+        if security_type == "STOCK":
+            us_query = select(models.StockUSDetail).where(models.StockUSDetail.symbol == db_stock.symbol)
+            result = await self.db.execute(us_query)
+            db_detail = result.scalar_one_or_none()
+            if not db_detail:
+                db_detail = models.StockUSDetail(symbol=db_stock.symbol)
+                self.db.add(db_detail)
+
+            db_detail.gics_sector = industry
+            db_detail.gics_industry = industry
+            db_detail.sp500_component = False
+            db_detail.market = market
+
+    async def refresh_stock(self, symbol: str) -> models.Stock:
+        """既存銘柄の情報を外部APIから再取得して更新する"""
+        query = select(models.Stock).where(models.Stock.symbol == symbol)
+        result = await self.db.execute(query)
+        db_stock = result.scalar_one_or_none()
+
+        if not db_stock:
+            raise StockNotFoundError(f"Stock not found: {symbol}")
+
+        if self.is_investment_trust(symbol):
+            await self._fetch_investment_trust_attrs(db_stock)
+        elif self.is_japanese_stock(symbol):
+            await self._fetch_japanese_stock_attrs(db_stock)
+        elif self.is_us_stock(symbol):
+            await self._fetch_us_stock_attrs(db_stock)
+        else:
+            raise StockNotFoundError(f"Invalid stock symbol format: {symbol}")
+
+        await self.db.flush()
+        await self.db.refresh(db_stock)
+        logger.info("Stockを更新しました action=update symbol={}", symbol)
         return db_stock
 
     async def list_stocks(self, market: Optional[str] = None) -> List[models.Stock]:

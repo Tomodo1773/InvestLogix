@@ -3,7 +3,6 @@ from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 from ..database import settings
-from ..utils.cache import timed_cache
 
 SYSTEM_PROMPT = (
     "投資信託のファンド名から、主要な投資対象の通貨エクスポージャーを判定してください。"
@@ -28,7 +27,6 @@ class CurrencyClassification(BaseModel):
     currency: str
 
 
-@timed_cache(seconds=86400)
 async def classify_fund_currency(fund_name: str) -> str:
     """投資信託のファンド名から通貨エクスポージャーを分類する。
 

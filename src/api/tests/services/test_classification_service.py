@@ -3,15 +3,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from stock.services.classification_service import classify_fund_currency
-from stock.utils.cache import invalidate_cache
-
-
-@pytest.fixture(autouse=True)
-def _clear_classification_cache():
-    """各テスト前にキャッシュをクリア"""
-    invalidate_cache(classify_fund_currency)
-    yield
-    invalidate_cache(classify_fund_currency)
 
 
 @pytest.mark.asyncio

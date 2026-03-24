@@ -87,36 +87,36 @@ class StockService:
     def is_us_stock(self, symbol: str) -> bool:
         return re.match(r"^[A-Z]{1,5}$", symbol) is not None
 
-    async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
-        db_stock = models.Stock(
-            symbol=stock.symbol, name="", name_en="", market="JPX", security_type="FUND", currency="JPY"
-        )
+    async def _create_and_persist(self, symbol: str, defaults: dict, fetch_fn) -> models.Stock:
+        """Stock新規作成の共通処理: モデル生成 → 外部API取得 → DB永続化"""
+        db_stock = models.Stock(symbol=symbol, name="", name_en="", **defaults)
         self.db.add(db_stock)
-        await self._fetch_investment_trust_attrs(db_stock)
+        await fetch_fn(db_stock)
         await self.db.flush()
         await self.db.refresh(db_stock)
+        return db_stock
+
+    async def create_investment_trust(self, stock: schemas.StockCreate) -> models.Stock:
+        db_stock = await self._create_and_persist(
+            stock.symbol,
+            {"market": "JPX", "security_type": "FUND", "currency": "JPY"},
+            self._fetch_investment_trust_attrs,
+        )
         logger.info("Stockを登録しました action=create symbol={} security_type=FUND", db_stock.symbol)
         return db_stock
 
     async def _fetch_investment_trust_attrs(self, db_stock: models.Stock) -> None:
         """外部APIから投資信託の属性を取得してdb_stockに反映する"""
         details = await fetch_investment_trust_details(db_stock.symbol)
-        name = details["name"]
-        currency = await classify_fund_currency(name)
-        db_stock.name = name
-        db_stock.name_en = ""
-        db_stock.market = "JPX"
-        db_stock.security_type = "FUND"
-        db_stock.currency = currency
+        db_stock.name = details["name"]
+        db_stock.currency = await classify_fund_currency(db_stock.name)
 
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:
-        db_stock = models.Stock(
-            symbol=stock.symbol, name="", name_en="", market="JPX", security_type="STOCK", currency="JPY"
+        db_stock = await self._create_and_persist(
+            stock.symbol,
+            {"market": "JPX", "security_type": "STOCK", "currency": "JPY"},
+            self._fetch_japanese_stock_attrs,
         )
-        self.db.add(db_stock)
-        await self._fetch_japanese_stock_attrs(db_stock)
-        await self.db.flush()
-        await self.db.refresh(db_stock)
         logger.info(
             "Stockを登録しました action=create symbol={} security_type=STOCK market=JPX", stock.symbol
         )
@@ -131,9 +131,6 @@ class StockService:
 
         db_stock.name = company_info.get("CoName")
         db_stock.name_en = company_info.get("CoNameEn")
-        db_stock.market = "JPX"
-        db_stock.security_type = "STOCK"
-        db_stock.currency = "JPY"
 
         # JPX詳細情報の更新または作成
         jpx_query = select(models.StockJPXDetail).where(models.StockJPXDetail.symbol == db_stock.symbol)
@@ -153,13 +150,11 @@ class StockService:
         db_detail.margin_trading = company_info.get("MarginCode") == "1"
 
     async def create_us_stock(self, stock: schemas.StockCreate) -> models.Stock:
-        db_stock = models.Stock(
-            symbol=stock.symbol, name="", name_en="", market="", security_type="STOCK", currency="USD"
+        db_stock = await self._create_and_persist(
+            stock.symbol,
+            {"market": "", "security_type": "STOCK", "currency": "USD"},
+            self._fetch_us_stock_attrs,
         )
-        self.db.add(db_stock)
-        await self._fetch_us_stock_attrs(db_stock)
-        await self.db.flush()
-        await self.db.refresh(db_stock)
         logger.info(
             "Stockを登録しました action=create symbol={} security_type={} market={}",
             stock.symbol,
@@ -177,7 +172,7 @@ class StockService:
             if not search_data.get("bestMatches"):
                 logger.error("Stock情報が見つかりませんでした action=external_io symbol={}", db_stock.symbol)
                 raise StockNotFoundError(f"Stock information not found for symbol: {db_stock.symbol}")
-            best_match = search_data.get("bestMatches", [])[0]
+            best_match = search_data["bestMatches"][0]
             name = best_match["2. name"].rstrip()
             market = best_match["4. region"]
             security_type = "ETF"
@@ -192,7 +187,6 @@ class StockService:
         db_stock.name_en = name
         db_stock.market = market
         db_stock.security_type = security_type
-        db_stock.currency = "USD"
 
         # US詳細情報の更新または作成（STOCKの場合のみ）
         if security_type == "STOCK":

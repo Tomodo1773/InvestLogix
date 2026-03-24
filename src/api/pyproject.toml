@@ -26,6 +26,7 @@ dependencies = [
     "psycopg>=3.2.4",
     "loguru>=0.7.3",
     "setuptools>=82.0.0",
+    "openai>=2.29.0",
 ]
 
 [tool.uv]

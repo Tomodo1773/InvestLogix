@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from .. import models, schemas
 from .jquants_service import get_jquants_client
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
+from .classification_service import classify_fund_currency
 from .investment_trust_service import fetch_investment_trust_details
 
 
@@ -91,13 +92,16 @@ class StockService:
         details = await fetch_investment_trust_details(stock.symbol)
         name = details["name"]
 
+        # AIによる通貨エクスポージャー分類（失敗時はJPYにフォールバック）
+        currency = await classify_fund_currency(name)
+
         db_stock = models.Stock(
             symbol=stock.symbol,
             name=name,
             name_en="",
             market="JPX",
             security_type="FUND",
-            currency="JPY",
+            currency=currency,
         )
         self.db.add(db_stock)
         await self.db.flush()

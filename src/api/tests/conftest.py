@@ -400,6 +400,13 @@ async def mock_external_apis(mocker):
     mocker.patch("stock.services.stock_price_fetcher.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
 
+    # OpenAI分類サービスのモック化
+    mock_classify = mocker.patch(
+        "stock.services.stock_service.classify_fund_currency",
+        autospec=True,
+    )
+    mock_classify.return_value = "USD"
+
     return {
         "overview": mock_overview,
         "search": mock_search,
@@ -407,6 +414,7 @@ async def mock_external_apis(mocker):
         "us_price": mock_us_price,
         "usdjpy": mock_usdjpy,
         "jquants_client": mock_jquants_client,
+        "classify_currency": mock_classify,
     }
 
 

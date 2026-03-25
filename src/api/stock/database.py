@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # Alpha Vantage API設定
     ALPHAVANTAGE_API_KEY: str = ""
 
+    # OpenAI API設定
+    OPENAI_API_KEY: str = ""
+
     # CORS設定
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 

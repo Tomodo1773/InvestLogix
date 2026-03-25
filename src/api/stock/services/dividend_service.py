@@ -50,7 +50,7 @@ class DividendService:
             holding.total_dividend = (holding.total_dividend or 0.0) + net_dividend
             # 注: unrealized_pl等の損益計算はupdate_single_holding_plに一元化
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_dividend)
 
         # 配当登録後に保有損益を更新

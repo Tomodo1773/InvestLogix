@@ -328,7 +328,7 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     # 損益情報を更新
     updated = await calculate_holding_pl(db, holding)
     if updated:
-        await db.commit()
+        await db.flush()
         await db.refresh(holding)
         logger.info("Holdingsを更新しました action=update user_id={} symbol={}", user_id, symbol)
     else:
@@ -358,8 +358,8 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
         if updated:
             updated_holdings.append(holding)
 
-    # 一括でコミット
-    await db.commit()
+    # 一括でフラッシュ
+    await db.flush()
 
     # 更新後のデータをリフレッシュ
     for holding in updated_holdings:

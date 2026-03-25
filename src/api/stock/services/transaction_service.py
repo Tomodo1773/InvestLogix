@@ -75,7 +75,7 @@ class TransactionService:
                 holding, transaction, db_transaction, average_cost_before_sell
             )
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_transaction)
 
         # 取引登録後に保有損益を更新

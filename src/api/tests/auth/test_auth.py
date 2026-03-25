@@ -116,8 +116,9 @@ async def test_login(client: AsyncClient, db_session: AsyncSession):
         "is_admin": True,
     }
 
-    # ユーザーを作成
+    # ユーザーを作成（サービス層はflush()のみのため、テストでは明示的にcommitが必要）
     await AuthService(db_session).create_user(UserCreate(**user_data))
+    await db_session.commit()
 
     # ログイン（JSON形式でリクエスト）
     login_data = {"username": user_data["username"], "password": user_data["password"]}

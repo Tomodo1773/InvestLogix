@@ -107,7 +107,7 @@ class PortfolioService:
         )
 
         self.db.add(portfolio_history)
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(portfolio_history)
 
         logger.info(

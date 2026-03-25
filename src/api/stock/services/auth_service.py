@@ -40,6 +40,6 @@ class AuthService:
             is_admin=is_admin,
         )
         self.db.add(db_user)
-        await self.db.commit()
+        await self.db.flush()
         logger.info("Userを登録しました action=create user_id={}", db_user.user_id)
         return db_user

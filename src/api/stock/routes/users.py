@@ -42,6 +42,4 @@ async def update_line_user_id(
     if not updated_user:
         raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
 
-    await db.commit()
-
     return updated_user

@@ -39,7 +39,7 @@ class StockSplitService:
         # 調整値を再計算（ユーザーの取引のみ対象）
         await self.recalculate_adjusted_values(split_data.symbol, user_id)
 
-        await self.db.commit()
+        await self.db.flush()
         await self.db.refresh(db_split)
         logger.info(
             "StockSplitを登録しました action=create user_id={} symbol={} split_id={}",
@@ -121,7 +121,7 @@ class StockSplitService:
         # 調整値を再計算（ユーザーの取引のみ対象）
         await self.recalculate_adjusted_values(symbol, user_id)
 
-        await self.db.commit()
+        await self.db.flush()
         logger.info(
             "StockSplitを削除しました action=delete user_id={} symbol={} split_id={}",
             user_id,

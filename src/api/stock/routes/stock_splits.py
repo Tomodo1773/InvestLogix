@@ -102,4 +102,3 @@ async def recalculate_adjusted_values(
     """
     service = StockSplitService(db)
     await service.recalculate_adjusted_values(symbol, current_user.user_id)
-    await db.commit()

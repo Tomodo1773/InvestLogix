@@ -5,17 +5,19 @@ from ..database import settings
 from ..utils.cache import timed_cache
 
 
-def _is_rate_limit_error(data: dict) -> bool:
+def _is_error_response(data: dict) -> bool:
     """
-    Alpha Vantage APIのレート制限エラーを検出します
+    Alpha Vantage APIのエラー応答（レート制限・Note等）を検出します
 
     Args:
         data (dict): APIレスポンス
 
     Returns:
-        bool: レート制限エラーの場合True
+        bool: エラー応答の場合True
     """
-    return isinstance(data, dict) and "Information" in data and "API rate limit" in data["Information"]
+    if not isinstance(data, dict):
+        return False
+    return "Information" in data or "Note" in data
 
 
 async def fetch_us_stock_overview(symbol: str) -> dict:
@@ -24,7 +26,7 @@ async def fetch_us_stock_overview(symbol: str) -> dict:
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(url)
     data = response.json()
-    if _is_rate_limit_error(data):
+    if _is_error_response(data):
         raise Exception("Alpha Vantage API rate limit exceeded")
     return data
 
@@ -35,7 +37,7 @@ async def fetch_us_stock_search(symbol: str) -> dict:
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(url)
     data = response.json()
-    if _is_rate_limit_error(data):
+    if _is_error_response(data):
         raise Exception("Alpha Vantage API rate limit exceeded")
     return data
 
@@ -58,7 +60,7 @@ async def fetch_usdjpy_rate() -> float | None:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(url)
         data = response.json()
-        if _is_rate_limit_error(data):
+        if _is_error_response(data):
             raise Exception("Alpha Vantage API rate limit exceeded")
         return float(data["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
     except (KeyError, ValueError, httpx.HTTPError):

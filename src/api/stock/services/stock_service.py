@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import List, Optional
 
@@ -92,7 +93,7 @@ class StockService:
         db_stock = models.Stock(symbol=symbol, name="", name_en="", **defaults)
         self.db.add(db_stock)
         await fetch_fn(db_stock)
-        await self.db.flush()
+        await self.db.commit()
         await self.db.refresh(db_stock)
         return db_stock
 
@@ -168,6 +169,7 @@ class StockService:
         data = await fetch_us_stock_overview(db_stock.symbol)
 
         if not data:
+            await asyncio.sleep(1.2)  # Alpha Vantage無料枠: 1リクエスト/秒制限の回避
             search_data = await fetch_us_stock_search(db_stock.symbol)
             if not search_data.get("bestMatches"):
                 logger.error("Stock情報が見つかりませんでした action=external_io symbol={}", db_stock.symbol)
@@ -220,7 +222,7 @@ class StockService:
         else:
             raise StockNotFoundError(f"Invalid stock symbol format: {symbol}")
 
-        await self.db.flush()
+        await self.db.commit()
         await self.db.refresh(db_stock)
         logger.info("Stockを更新しました action=update symbol={}", symbol)
         return db_stock
@@ -263,6 +265,6 @@ class StockService:
 
         # 株式情報を削除
         await self.db.delete(db_stock)
-        await self.db.flush()
+        await self.db.commit()
         logger.info("Stockを削除しました action=delete symbol={}", symbol)
         return True

@@ -45,6 +45,7 @@ async def classify_fund_currency(fund_name: str) -> str:
 
     try:
         client = get_openai_client()
+        logger.info("OpenAIに通貨分類リクエストを送信します action=external_io fund_name={}", fund_name)
         response = await client.responses.parse(
             model="gpt-5.4-mini",
             instructions=SYSTEM_PROMPT,

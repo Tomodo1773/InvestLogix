@@ -132,7 +132,8 @@ class DividendService:
             return []
 
         # 最初の月から最後の月まで全月を生成し、データがない月は 0.0 で補完
-        keys = sorted(dividend_map.keys())
+        # クエリが ORDER BY year, month で返すため、dict の挿入順序で先頭/末尾を取得
+        keys = list(dividend_map.keys())
         start_year, start_month = keys[0]
         end_year, end_month = keys[-1]
 

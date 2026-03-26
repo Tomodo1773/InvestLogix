@@ -6,6 +6,11 @@ updates:
     open-pull-requests-limit: 2
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels:
       - "dependencies"
       - "uv"
@@ -27,6 +32,11 @@ updates:
     open-pull-requests-limit: 2
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     labels:
       - "dependencies"
       - "npm"
@@ -50,6 +60,11 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
+      semver-minor-days: 7
+      semver-patch-days: 3
     groups:
       github-actions-version:
         applies-to: version-updates

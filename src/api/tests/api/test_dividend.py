@@ -244,3 +244,42 @@ async def test_get_monthly_dividends_respects_jst_boundary(
     # UTC 基準で集計されている場合に誤って 11 月へ入らないことを検証
     nov_entry = next((item for item in data if item["year"] == 2024 and item["month"] == 11), None)
     assert nov_entry is None
+
+
+@pytest.mark.asyncio
+async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_token: str, create_dividend):
+    """配当がない月も total_dividend: 0 で補完されることを確認する"""
+    # 2024年1月と3月にデータを登録（2月は欠落）
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-01-15T00:00:00+09:00",
+            "shares_owned": "100.0",
+            "total_amount": "1000.0",
+            "tax": "100.0",
+            "fee": "0.0",
+        }
+    )
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-03-15T00:00:00+09:00",
+            "shares_owned": "100.0",
+            "total_amount": "2000.0",
+            "tax": "200.0",
+            "fee": "0.0",
+        }
+    )
+
+    response = await client.get(
+        "/api/v1/dividends/monthly",
+        headers={"Authorization": f"Bearer {auth_token}"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # 1月、2月、3月の3件が返ること
+    assert len(data) == 3
+    assert data[0] == {"year": 2024, "month": 1, "total_dividend": 900.0}
+    assert data[1] == {"year": 2024, "month": 2, "total_dividend": 0.0}
+    assert data[2] == {"year": 2024, "month": 3, "total_dividend": 1800.0}

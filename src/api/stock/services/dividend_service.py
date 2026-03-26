@@ -123,12 +123,34 @@ class DividendService:
 
         result = await self.db.execute(query)
 
-        # 結果をディクショナリのリストとして返す
-        monthly_dividends = []
+        # クエリ結果を (year, month) -> total_dividend のマップに変換
+        dividend_map: dict[tuple[int, int], float] = {}
         for row in result:
+            dividend_map[(int(row.year), int(row.month))] = float(row.total_dividend)
+
+        if not dividend_map:
+            return []
+
+        # 最初の月から最後の月まで全月を生成し、データがない月は 0.0 で補完
+        keys = sorted(dividend_map.keys())
+        start_year, start_month = keys[0]
+        end_year, end_month = keys[-1]
+
+        monthly_dividends: list[dict] = []
+        year, month = start_year, start_month
+        while (year, month) <= (end_year, end_month):
             monthly_dividends.append(
-                {"year": int(row.year), "month": int(row.month), "total_dividend": float(row.total_dividend)}
+                {
+                    "year": year,
+                    "month": month,
+                    "total_dividend": dividend_map.get((year, month), 0.0),
+                }
             )
+            if month == 12:
+                year += 1
+                month = 1
+            else:
+                month += 1
 
         logger.info("月次配当集計を取得しました user_id={} months={}", user_id, len(monthly_dividends))
 

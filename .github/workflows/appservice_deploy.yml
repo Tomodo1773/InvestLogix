@@ -63,7 +63,7 @@ jobs:
           name: python-app
 
       - name: Login to Azure
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_F3526B69D3CA4A51801553039BF7E6EB }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_DA050D47B16D47ABA436C1F2A29A7A69 }}

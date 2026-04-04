@@ -29,8 +29,8 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, fl
 
     # 6件以上のデータが必要（最新と5営業日前）
     if prices and len(prices) >= 6:
-        latest_price = float(prices[-1].get("C", "0"))
-        old_price = float(prices[-6].get("C", "0"))
+        latest_price = float(prices[-1].get("AdjC", "0"))
+        old_price = float(prices[-6].get("AdjC", "0"))
         return (latest_price, old_price)
     return None
 

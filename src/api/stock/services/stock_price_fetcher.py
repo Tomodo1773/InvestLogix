@@ -23,7 +23,7 @@ async def fetch_japan_stock_prices(symbol: str, days_back: int = 7) -> list[dict
 
     Returns:
         株価データのリスト（日付昇順）。取得できない場合は空リスト
-        各要素は {"Date": str, "O": float, "H": float, "L": float, "C": float, ...} 形式
+        各要素は {"Date": str, "O": float, "H": float, "L": float, "C": float, "AdjC": float, ...} 形式
     """
     try:
         start_date, end_date = get_date_range_for_api(days_back=days_back)
@@ -81,7 +81,7 @@ def get_latest_japan_price(prices: list[dict]) -> Optional[float]:
         最新の終値。データがない場合はNone
     """
     if prices and len(prices) > 0:
-        return float(prices[-1].get("C", 0))
+        return float(prices[-1].get("AdjC", 0))
     return None
 
 

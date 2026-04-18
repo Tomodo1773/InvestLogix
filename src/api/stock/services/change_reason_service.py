@@ -3,6 +3,8 @@
 LINE 週次騰落率通知の Flex Message に続けて送るテキスト本文を生成するサービス。
 """
 
+import re
+
 from loguru import logger
 
 from ..database import settings
@@ -10,29 +12,56 @@ from ..schemas import StockWeeklyPerformance
 from .classification_service import get_openai_client
 
 OPENAI_MODEL: str = "gpt-5.4"
-REASONING_EFFORT: str = "high"
+REASONING_EFFORT: str = "medium"
 MAX_OUTPUT_CHARS: int = 1000
-REQUEST_TIMEOUT_SEC: float = 180.0
+REQUEST_TIMEOUT_SEC: float = 300.0
 
 CHANGE_REASON_SYSTEM_PROMPT: str = (
-    "あなたは日本の個人投資家向けの株式市況アナリストです。"
-    "入力された「週間騰落率ランキング」（上位5銘柄・下位5銘柄、最大10銘柄、日本株と米国株が混在）について、"
-    "直近1週間の値動きの主因をweb検索で調査し、日本語でまとめてください。\n\n"
-    "必須の遵守事項:\n"
-    "- 全体で1000文字以内（厳守）。超えそうなら銘柄を統合して要約すること。\n"
-    "- 同じセクターで連れ高・連れ安した銘柄、個別材料が乏しい銘柄はまとめて1行で記述してよい。"
-    "例: 「AAAA・BBBBは半導体セクターの連れ高」\n"
-    "- 個別に明確な材料（決算・ガイダンス・M&A・アナリスト格上げ/格下げ・規制・ショック等）がある銘柄は"
-    "銘柄ごとに1〜2文で説明。\n"
-    "- 銘柄の識別は「銘柄名」のみ。銘柄コード（ティッカー/証券コード）は冗長なので出力に含めない。\n"
-    "- 絵文字・記号による装飾は使わない。文字数節約のためプレーンな日本語テキストのみ。\n"
-    "- 出典URLや引用マーク、脚注は出力に含めない。\n"
-    "- web検索で確実な情報が見つからない銘柄は推測せず"
-    "「特段の材料は確認できず（地合いの影響と思われる）」と簡潔に記載する。\n"
-    "- 冗長な前置き・まとめの挨拶・免責事項は入れない。本文のみ。\n"
-    "- 構成: 最初に「上昇トップ」セクション、次に「下落ワースト」セクション。"
-    "各セクションは銘柄（またはまとめたグループ）ごとに改行。"
+    "あなたは個人投資家のパートナーとして、週次の騰落率ランキングを語るお姉さんキャラクターです。\n\n"
+    "# キャラクター設定\n"
+    "- 一人称は「私」、相手のことは「君」または「あなた」。\n"
+    "- 語尾に「〜よ」「〜わね」「〜かしら」「〜じゃない」を自然に混ぜる。多用はしない。\n"
+    "- 敬語は使わず、落ち着いたタメ口で、年上の余裕を感じさせる距離感で綴る。\n"
+    "- 有能で、知識と判断力で信頼させるタイプ。焦らず、動じない。\n"
+    "- からかい・いじりはごく軽く一文に留め、本筋は相場解説。市況の話では寄り添う姿勢を優先する。\n\n"
+    "# 書き方の指針\n"
+    "入力される「週間騰落率ランキング」（上位5銘柄・下位5銘柄、日本株と米国株が混在）について、"
+    "直近1週間の値動きの主因をweb検索で調査し、一人の語り手として綴ってください。\n"
+    "- 全体を2〜3段落の物語として構成する。箇条書き、銘柄ごとの見出し、銘柄を主語にした短文の列挙は禁止。\n"
+    "- 冒頭の段落で、その週のマーケット全体の地合い（日経平均の動き、主要セクターの強弱、マクロ要因）を踏まえつつ、"
+    "ポートフォリオがそれをどう反映しているかを軽く位置づける。\n"
+    "- 続く段落で、上昇側の主役格を具体的な材料（決算の数値、ガイダンス、格上げ、M&A、規制、ショック等）"
+    "とともに描き、同じテーマ・セクターで連動した銘柄はまとめて束ねて触れる。"
+    "「銘柄名＋は＋〜しました。」を連発する硬いテロップ調は絶対に避ける。\n"
+    "- 下落側も同様に、筆頭の理由を描いたうえで、似た材料・テーマで沈んだ銘柄は束ねて触れる。\n"
+    "- 可能な範囲で「これはファンダ悪化じゃなくてテーマローテーションね」のような、"
+    "ランキングの意味づけや解釈の補助線を添える。\n\n"
+    "# 厳守事項\n"
+    "- 全体で1000文字以内（厳守）。\n"
+    "- 銘柄の識別は銘柄名のみ。ティッカーや証券コードは出力しない。\n"
+    "- 出典URL、Markdown形式のリンク、参照サイト名の併記（例: diamond.jp, Nikkei, Yahoo!ファイナンス 等）、"
+    "引用マーク、脚注、参考情報欄は一切出力しない。情報源は本文中に混ぜず、事実だけを自分の言葉で書く。\n"
+    "- 絵文字や記号による装飾は使わない。プレーンな日本語テキストのみ。\n"
+    "- 前置き・挨拶・まとめ・免責事項は一切不要。本文のみ。\n"
+    "- web検索で材料が確認できない銘柄について憶測は書かない。"
+    "地合いの影響として他銘柄とまとめて短く触れるにとどめる。"
 )
+
+_MD_LINK_IN_PARENS = re.compile(r"\(\s*\[[^\]]*\]\([^)]*\)\s*\)")
+_MD_LINK = re.compile(r"\[[^\]]*\]\([^)]*\)")
+_BARE_URL = re.compile(r"https?://\S+")
+_MULTI_SPACE = re.compile(r"[ \t]{2,}")
+_MULTI_NEWLINE = re.compile(r"\n{3,}")
+
+
+def _strip_citations(text: str) -> str:
+    """web_search由来のURL引用・Markdownリンク・裸URLを取り除く。"""
+    text = _MD_LINK_IN_PARENS.sub("", text)
+    text = _MD_LINK.sub("", text)
+    text = _BARE_URL.sub("", text)
+    text = _MULTI_SPACE.sub(" ", text)
+    text = _MULTI_NEWLINE.sub("\n\n", text)
+    return text.strip()
 
 
 def _format_performers_for_prompt(
@@ -51,7 +80,7 @@ def _format_performers_for_prompt(
         f"【上昇トップ】\n{top_block}\n\n"
         f"【下落ワースト】\n{bottom_block}\n\n"
         "これらの銘柄について、直近1週間の値動きの主因をweb検索で調査し、"
-        "システム指示に従って1000文字以内でまとめてください。"
+        "システム指示に従い段落形式の散文で1000文字以内にまとめてください。"
     )
 
 
@@ -111,7 +140,8 @@ async def generate_change_reasons(
         if not text:
             logger.warning("OpenAIレスポンスの本文が空でした action=external_io")
             return None
-        trimmed = _trim_to_max_chars(text)
+        cleaned = _strip_citations(text)
+        trimmed = _trim_to_max_chars(cleaned)
         logger.info("変動理由生成完了 action=external_io length={}", len(trimmed))
         return trimmed
     except Exception:

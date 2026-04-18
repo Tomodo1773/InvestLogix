@@ -533,7 +533,6 @@ async def send_weekly_performance_notification(
             "contents": flex_contents,
         }
 
-        # OpenAI で変動理由テキストを生成（失敗時は Flex のみ送信）
         reason_text = await generate_change_reasons(top_performers, bottom_performers)
 
         messages: list[dict] = [flex_message]

@@ -39,8 +39,6 @@ def _format_performers_for_prompt(
     top_performers: list[StockWeeklyPerformance],
     bottom_performers: list[StockWeeklyPerformance],
 ) -> str:
-    """OpenAI への入力として、上位・下位銘柄のリストを文字列化する。"""
-
     def _format_line(rank: int, p: StockWeeklyPerformance) -> str:
         sign = "+" if p.change_rate >= 0 else ""
         return f"{rank}. {p.name}（{p.symbol}）: {sign}{p.change_rate:.2f}%"
@@ -58,7 +56,6 @@ def _format_performers_for_prompt(
 
 
 def _trim_to_max_chars(text: str, max_chars: int = MAX_OUTPUT_CHARS) -> str:
-    """指定文字数を超えたら句点または改行で切り詰め、末尾に「…」を付加する。"""
     if len(text) <= max_chars:
         return text
 

@@ -1,10 +1,12 @@
 """週間騰落率通知APIのテスト"""
 
+import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from stock.schemas import StockWeeklyPerformance
+from stock.services.change_reason_service import ChangeReasonSections
 from stock.services.notification_service import (
     WEEKLY_PERFORMANCE_COLOR_GREEN,
     WEEKLY_PERFORMANCE_COLOR_RED,
@@ -258,8 +260,8 @@ async def test_weekly_performance_notify_endpoint(
 
 
 @pytest.mark.asyncio
-async def test_send_weekly_performance_notification_includes_reason_text(monkeypatch, mocker):
-    """generate_change_reasons が文字列を返すとき、LINE push に Flex + Text の2件が送られること"""
+async def test_send_weekly_performance_notification_embeds_sections_in_flex(monkeypatch, mocker):
+    """generate_change_reasons が ChangeReasonSections を返すとき、Flex 本文に各セクション文が含まれる"""
     monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
 
     mocker.patch(
@@ -270,7 +272,11 @@ async def test_send_weekly_performance_notification_includes_reason_text(monkeyp
     mocker.patch(
         "stock.services.notification_service.generate_change_reasons",
         new_callable=AsyncMock,
-        return_value="トヨタ自動車は好決算で上昇。任天堂はガイダンス下方修正で下落。",
+        return_value=ChangeReasonSections(
+            market_overview="今週は地合い改善。",
+            top_commentary="トヨタ自動車は好決算で上昇。",
+            bottom_commentary="任天堂はガイダンス下方修正で下落。",
+        ),
     )
 
     mock_line_response = MagicMock()
@@ -298,10 +304,14 @@ async def test_send_weekly_performance_notification_includes_reason_text(monkeyp
 
     assert result is True
     posted = mock_post.call_args.kwargs["json"]
-    assert len(posted["messages"]) == 2
+    assert len(posted["messages"]) == 1
     assert posted["messages"][0]["type"] == "flex"
-    assert posted["messages"][1]["type"] == "text"
-    assert "トヨタ自動車は好決算" in posted["messages"][1]["text"]
+
+    body_json = json.dumps(posted["messages"][0]["contents"], ensure_ascii=False)
+    assert "マーケット概況" in body_json
+    assert "今週は地合い改善。" in body_json
+    assert "トヨタ自動車は好決算で上昇。" in body_json
+    assert "任天堂はガイダンス下方修正で下落。" in body_json
 
 
 @pytest.mark.asyncio

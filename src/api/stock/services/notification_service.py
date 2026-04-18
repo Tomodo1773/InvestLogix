@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..utils.datetime import now_jst
-from .change_reason_service import generate_change_reasons
+from .change_reason_service import ChangeReasonSections, generate_change_reasons
 
 # 環境変数のロード
 load_dotenv()
@@ -405,43 +405,76 @@ def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: float) ->
     }
 
 
-def _build_weekly_performance_flex_message(top_performers: list, bottom_performers: list) -> dict:
+def _section_heading(text: str) -> dict:
+    return {
+        "type": "text",
+        "text": text,
+        "weight": "bold",
+        "size": "md",
+        "margin": "lg",
+        "color": "#333333",
+    }
+
+
+def _section_body(text: str, margin: str = "md") -> dict:
+    return {
+        "type": "text",
+        "text": text,
+        "wrap": True,
+        "size": "sm",
+        "margin": margin,
+        "color": "#555555",
+    }
+
+
+def _ranking_contents(performers: list) -> list[dict]:
+    if not performers:
+        return [{"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}]
+    return [_build_ranking_row(i, p.name, p.symbol, p.change_rate) for i, p in enumerate(performers, 1)]
+
+
+def _build_weekly_performance_flex_message(
+    top_performers: list,
+    bottom_performers: list,
+    sections: ChangeReasonSections | None = None,
+) -> dict:
     """
     週間騰落率ランキングのFlex Messageを作成する
 
     Args:
         top_performers (list): 上昇トップのリスト
         bottom_performers (list): 下落ワーストのリスト
+        sections: 変動理由セクション（概況/上昇解説/下落解説）。None ならランキングのみ表示。
 
     Returns:
         dict: LINE Flex Message形式の辞書
     """
-    # 日本時間の現在時刻
-    current_time = now_jst()
-    today = current_time.strftime("%Y/%m/%d")
+    today = now_jst().strftime("%Y/%m/%d")
+    top_contents = _ranking_contents(top_performers)
+    bottom_contents = _ranking_contents(bottom_performers)
 
-    # 上昇トップ5のコンテンツ
-    top_contents = []
-    if top_performers:
-        for i, perf in enumerate(top_performers, 1):
-            top_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
-    else:
-        top_contents.append(
-            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
-        )
+    body_contents: list[dict] = [{"type": "separator", "color": "#E0E0E0"}]
 
-    # 下落ワースト5のコンテンツ
-    bottom_contents = []
-    if bottom_performers:
-        for i, perf in enumerate(bottom_performers, 1):
-            bottom_contents.append(_build_ranking_row(i, perf.name, perf.symbol, perf.change_rate))
-    else:
-        bottom_contents.append(
-            {"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}
-        )
+    if sections:
+        body_contents.append(_section_heading("マーケット概況"))
+        body_contents.append(_section_body(sections.market_overview))
+        body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+
+    body_contents.append(_section_heading("上昇トップ5"))
+    body_contents.append({"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"})
+    if sections:
+        body_contents.append(_section_body(sections.top_commentary, margin="lg"))
+
+    body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+
+    body_contents.append(_section_heading("下落ワースト5"))
+    body_contents.append({"type": "box", "layout": "vertical", "contents": bottom_contents, "margin": "sm"})
+    if sections:
+        body_contents.append(_section_body(sections.bottom_commentary, margin="lg"))
 
     return {
         "type": "bubble",
+        "size": "giga",
         "header": {
             "type": "box",
             "layout": "vertical",
@@ -463,28 +496,7 @@ def _build_weekly_performance_flex_message(top_performers: list, bottom_performe
         "body": {
             "type": "box",
             "layout": "vertical",
-            "contents": [
-                {"type": "separator", "color": "#E0E0E0"},
-                {
-                    "type": "text",
-                    "text": "上昇トップ5",
-                    "weight": "bold",
-                    "size": "md",
-                    "margin": "lg",
-                    "color": "#333333",
-                },
-                {"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"},
-                {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
-                {
-                    "type": "text",
-                    "text": "下落ワースト5",
-                    "weight": "bold",
-                    "size": "md",
-                    "margin": "lg",
-                    "color": "#333333",
-                },
-                {"type": "box", "layout": "vertical", "contents": bottom_contents, "margin": "sm"},
-            ],
+            "contents": body_contents,
             "paddingAll": "20px",
             "backgroundColor": "#FFFFFF",
         },
@@ -524,8 +536,8 @@ async def send_weekly_performance_notification(
             logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
             return False
 
-        # Flex Messageの作成
-        flex_contents = _build_weekly_performance_flex_message(top_performers, bottom_performers)
+        sections = await generate_change_reasons(top_performers, bottom_performers)
+        flex_contents = _build_weekly_performance_flex_message(top_performers, bottom_performers, sections)
 
         flex_message = {
             "type": "flex",
@@ -533,11 +545,7 @@ async def send_weekly_performance_notification(
             "contents": flex_contents,
         }
 
-        reason_text = await generate_change_reasons(top_performers, bottom_performers)
-
         messages: list[dict] = [flex_message]
-        if reason_text:
-            messages.append({"type": "text", "text": reason_text})
 
         headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
 

@@ -1,12 +1,16 @@
 """週間騰落率通知APIのテスト"""
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from stock.schemas import StockWeeklyPerformance
-from stock.services.notification_service import _build_ranking_row
-from stock.services.notification_service import WEEKLY_PERFORMANCE_COLOR_GREEN, WEEKLY_PERFORMANCE_COLOR_RED
+from stock.services.notification_service import (
+    WEEKLY_PERFORMANCE_COLOR_GREEN,
+    WEEKLY_PERFORMANCE_COLOR_RED,
+    _build_ranking_row,
+    send_weekly_performance_notification,
+)
 from stock.services.weekly_performance_service import get_top_bottom_performers
 
 
@@ -251,3 +255,90 @@ async def test_weekly_performance_notify_endpoint(
 
     # 通知が送信されたこと
     assert data["notification_sent"] is True
+
+
+@pytest.mark.asyncio
+async def test_send_weekly_performance_notification_includes_reason_text(monkeypatch, mocker):
+    """generate_change_reasons が文字列を返すとき、LINE push に Flex + Text の2件が送られること"""
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+
+    mocker.patch(
+        "stock.services.notification_service.NotificationService.get_line_user_id",
+        new_callable=AsyncMock,
+        return_value="U1234567890",
+    )
+    mocker.patch(
+        "stock.services.notification_service.generate_change_reasons",
+        new_callable=AsyncMock,
+        return_value="トヨタ自動車は好決算で上昇。任天堂はガイダンス下方修正で下落。",
+    )
+
+    mock_line_response = MagicMock()
+    mock_line_response.status_code = 200
+    mock_post = mocker.patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        return_value=mock_line_response,
+    )
+
+    top = [
+        StockWeeklyPerformance(
+            symbol="7203", name="トヨタ自動車", latest_price=3300.0, old_price=3000.0, change_rate=10.0
+        )
+    ]
+    bottom = [
+        StockWeeklyPerformance(
+            symbol="7974", name="任天堂", latest_price=6500.0, old_price=7000.0, change_rate=-7.14
+        )
+    ]
+
+    result = await send_weekly_performance_notification(
+        user_id=1, top_performers=top, bottom_performers=bottom, db=None
+    )
+
+    assert result is True
+    posted = mock_post.call_args.kwargs["json"]
+    assert len(posted["messages"]) == 2
+    assert posted["messages"][0]["type"] == "flex"
+    assert posted["messages"][1]["type"] == "text"
+    assert "トヨタ自動車は好決算" in posted["messages"][1]["text"]
+
+
+@pytest.mark.asyncio
+async def test_send_weekly_performance_notification_falls_back_without_reason(monkeypatch, mocker):
+    """generate_change_reasons が None を返すとき、LINE push は Flex のみ"""
+    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+
+    mocker.patch(
+        "stock.services.notification_service.NotificationService.get_line_user_id",
+        new_callable=AsyncMock,
+        return_value="U1234567890",
+    )
+    mocker.patch(
+        "stock.services.notification_service.generate_change_reasons",
+        new_callable=AsyncMock,
+        return_value=None,
+    )
+
+    mock_line_response = MagicMock()
+    mock_line_response.status_code = 200
+    mock_post = mocker.patch(
+        "httpx.AsyncClient.post",
+        new_callable=AsyncMock,
+        return_value=mock_line_response,
+    )
+
+    top = [
+        StockWeeklyPerformance(
+            symbol="7203", name="トヨタ自動車", latest_price=3300.0, old_price=3000.0, change_rate=10.0
+        )
+    ]
+
+    result = await send_weekly_performance_notification(
+        user_id=1, top_performers=top, bottom_performers=[], db=None
+    )
+
+    assert result is True
+    posted = mock_post.call_args.kwargs["json"]
+    assert len(posted["messages"]) == 1
+    assert posted["messages"][0]["type"] == "flex"

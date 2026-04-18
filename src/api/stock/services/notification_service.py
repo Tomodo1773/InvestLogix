@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..utils.datetime import now_jst
+from .change_reason_service import generate_change_reasons
 
 # 環境変数のロード
 load_dotenv()
@@ -532,9 +533,16 @@ async def send_weekly_performance_notification(
             "contents": flex_contents,
         }
 
+        # OpenAI で変動理由テキストを生成（失敗時は Flex のみ送信）
+        reason_text = await generate_change_reasons(top_performers, bottom_performers)
+
+        messages: list[dict] = [flex_message]
+        if reason_text:
+            messages.append({"type": "text", "text": reason_text})
+
         headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
 
-        data = {"to": line_user_id, "messages": [flex_message]}
+        data = {"to": line_user_id, "messages": messages}
 
         # LINE Message APIにリクエストを送信
         async with httpx.AsyncClient() as client:

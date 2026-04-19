@@ -9,15 +9,13 @@ from ..models import User
 from ..services.portfolio_service import PortfolioService
 from ._runner import run_job
 
-JOB_NAME = "update_and_notify"
-
 
 async def _action(db: AsyncSession, user: User) -> None:
     await PortfolioService(db).update_and_notify(user.user_id)
 
 
 def main() -> None:
-    run_job(JOB_NAME, _action)
+    run_job(__name__, _action)
 
 
 if __name__ == "__main__":

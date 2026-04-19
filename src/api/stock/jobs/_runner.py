@@ -11,11 +11,12 @@ from typing import Awaitable, Callable, List
 
 from loguru import logger
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import AsyncSessionLocal, set_rls_user_id
 from ..models import User
 
-UserAction = Callable[["AsyncSessionLocal", User], Awaitable[None]]
+UserAction = Callable[[AsyncSession, User], Awaitable[None]]
 
 
 async def _fetch_target_users() -> List[User]:

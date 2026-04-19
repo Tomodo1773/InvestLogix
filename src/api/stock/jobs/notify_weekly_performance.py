@@ -13,8 +13,6 @@ from ..services.weekly_performance_service import (
 )
 from ._runner import run_job
 
-JOB_NAME = "notify_weekly_performance"
-
 
 async def _action(db: AsyncSession, user: User) -> None:
     performances = await calculate_weekly_performance(db, user.user_id)
@@ -28,7 +26,7 @@ async def _action(db: AsyncSession, user: User) -> None:
 
 
 def main() -> None:
-    run_job(JOB_NAME, _action)
+    run_job(__name__, _action)
 
 
 if __name__ == "__main__":

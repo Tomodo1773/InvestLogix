@@ -9,15 +9,13 @@ from ..models import User
 from ..services.holding_service import update_all_holdings_pl
 from ._runner import run_job
 
-JOB_NAME = "recalc_holdings"
-
 
 async def _action(db: AsyncSession, user: User) -> None:
     await update_all_holdings_pl(db, user.user_id)
 
 
 def main() -> None:
-    run_job(JOB_NAME, _action)
+    run_job(__name__, _action)
 
 
 if __name__ == "__main__":

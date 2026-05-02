@@ -1,4 +1,4 @@
-import { RefreshCw } from "lucide-react"
+import { Download, RefreshCw } from "lucide-react"
 import useSWR from "swr"
 import { HoldingAllocationChart } from "@/components/dashboard/holding-allocation-chart"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
@@ -6,6 +6,7 @@ import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Button } from "@/components/ui/button"
 import { getHoldings } from "@/lib/api/client"
+import { downloadCsv, holdingsToCsv } from "@/lib/csv"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Holdings() {
@@ -21,15 +22,32 @@ export default function Holdings() {
     mutate()
   }
 
+  const handleExport = () => {
+    if (!holdings) return
+    const activeHoldings = holdings.filter((h) => h.quantity > 0)
+    if (activeHoldings.length === 0) return
+    const now = new Date()
+    const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
+    downloadCsv(`holdings_${yyyymmdd}.csv`, holdingsToCsv(activeHoldings))
+  }
+
+  const exportDisabled = isLoading || !holdings || holdings.filter((h) => h.quantity > 0).length === 0
+
   return (
     <AuthenticatedLayout>
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">保有状況</h2>
-          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleExport} disabled={exportDisabled}>
+              <Download className="h-4 w-4" />
+              CSVエクスポート
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
+              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         </div>
         <SecurityTypeChart data={holdings} isLoading={isLoading} />
         <HoldingAllocationChart data={holdings} isLoading={isLoading} />

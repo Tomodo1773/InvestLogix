@@ -1,0 +1,97 @@
+import { describe, expect, it } from "vitest"
+import type { Holding } from "./api/types"
+import { escapeCsvField, holdingsToCsv } from "./csv"
+
+const BOM = "﻿"
+
+const baseHolding: Holding = {
+  symbol: "7203",
+  quantity: 100,
+  average_cost: 2000,
+  total_cost: 200000,
+  current_price: 2500,
+  market_value: 250000,
+  realized_pl: 1000,
+  total_dividend: 500,
+  unrealized_pl: 50000,
+  unrealized_pl_percentage: 25,
+  total_pl: 51500,
+  total_pl_percentage: 25.75,
+  user_id: 1,
+  last_updated: "2026-05-01T10:00:00+09:00",
+  stock_name: "トヨタ自動車",
+  security_type: "stock",
+  currency: "JPY",
+}
+
+describe("escapeCsvField", () => {
+  it("通常の文字列はそのまま返す", () => {
+    expect(escapeCsvField("hello")).toBe("hello")
+  })
+
+  it("数値は文字列化して返す", () => {
+    expect(escapeCsvField(123.45)).toBe("123.45")
+  })
+
+  it("nullは空文字を返す", () => {
+    expect(escapeCsvField(null)).toBe("")
+  })
+
+  it("undefinedは空文字を返す", () => {
+    expect(escapeCsvField(undefined)).toBe("")
+  })
+
+  it("カンマを含む値はダブルクォートで囲む", () => {
+    expect(escapeCsvField("a,b")).toBe('"a,b"')
+  })
+
+  it("改行を含む値はダブルクォートで囲む", () => {
+    expect(escapeCsvField("a\nb")).toBe('"a\nb"')
+  })
+
+  it("ダブルクォートを含む値はエスケープして囲む", () => {
+    expect(escapeCsvField('a"b')).toBe('"a""b"')
+  })
+})
+
+describe("holdingsToCsv", () => {
+  it("BOM始まり・CRLF区切りでヘッダー行を出力する", () => {
+    const csv = holdingsToCsv([])
+    expect(csv.startsWith(BOM)).toBe(true)
+    expect(csv).toBe(
+      `${BOM}銘柄コード,銘柄名,株数,評価額,含み損益,含み損益率,実現損益,受取配当金,合計損益,合計損益率,最終更新日時`
+    )
+  })
+
+  it("1件の保有データを期待通りの順で出力する", () => {
+    const csv = holdingsToCsv([baseHolding])
+    const lines = csv.replace(BOM, "").split("\r\n")
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toBe(
+      "7203,トヨタ自動車,100,250000,50000,25,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
+    )
+  })
+
+  it("数値フィールドがnullの場合は空文字で出力する", () => {
+    const holding: Holding = {
+      ...baseHolding,
+      market_value: null,
+      unrealized_pl: null,
+      unrealized_pl_percentage: null,
+      total_pl: null,
+      total_pl_percentage: null,
+      realized_pl: null,
+      total_dividend: null,
+      stock_name: null,
+    }
+    const csv = holdingsToCsv([holding])
+    const lines = csv.replace(BOM, "").split("\r\n")
+    expect(lines[1]).toBe("7203,,100,,,,,,,,2026-05-01T10:00:00+09:00")
+  })
+
+  it("銘柄名にカンマが含まれる場合はエスケープする", () => {
+    const holding: Holding = { ...baseHolding, stock_name: "Alphabet, Inc." }
+    const csv = holdingsToCsv([holding])
+    expect(csv).toContain('"Alphabet, Inc."')
+  })
+})

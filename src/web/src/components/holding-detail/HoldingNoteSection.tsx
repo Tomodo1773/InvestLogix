@@ -16,7 +16,7 @@ interface HoldingNoteSectionProps {
 
 export function HoldingNoteSection({ symbol, note, isLoading, onSaved }: HoldingNoteSectionProps) {
   const [isEditing, setIsEditing] = useState(false)
-  const [draft, setDraft] = useState(note ?? "")
+  const [draft, setDraft] = useState("")
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -36,7 +36,7 @@ export function HoldingNoteSection({ symbol, note, isLoading, onSaved }: Holding
     setError(null)
     try {
       const trimmed = draft.trim()
-      await updateHoldingNote(symbol, trimmed === "" ? null : draft)
+      await updateHoldingNote(symbol, trimmed === "" ? null : trimmed)
       setIsEditing(false)
       onSaved()
     } catch (e) {

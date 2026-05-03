@@ -22,16 +22,15 @@ export default function Holdings() {
     mutate()
   }
 
+  const activeHoldings = holdings?.filter((h) => h.quantity > 0) ?? []
+  const exportDisabled = isLoading || activeHoldings.length === 0
+
   const handleExport = () => {
-    if (!holdings) return
-    const activeHoldings = holdings.filter((h) => h.quantity > 0)
     if (activeHoldings.length === 0) return
     const now = new Date()
     const yyyymmdd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
     downloadCsv(`holdings_${yyyymmdd}.csv`, holdingsToCsv(activeHoldings))
   }
-
-  const exportDisabled = isLoading || !holdings || holdings.filter((h) => h.quantity > 0).length === 0
 
   return (
     <AuthenticatedLayout>

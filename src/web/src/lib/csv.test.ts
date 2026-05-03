@@ -68,7 +68,7 @@ describe("holdingsToCsv", () => {
     const lines = csv.replace(BOM, "").split("\r\n")
     expect(lines).toHaveLength(2)
     expect(lines[1]).toBe(
-      "7203,トヨタ自動車,100,250000,50000,25.00,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
+      "7203,トヨタ自動車,100,250000,50000,25,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
     )
   })
 
@@ -83,6 +83,27 @@ describe("holdingsToCsv", () => {
     const fields = lines[1].split(",")
     expect(fields[5]).toBe("90.52")
     expect(fields[9]).toBe("-47.79")
+  })
+
+  it("株数は浮動小数点誤差を除き小数4桁までに丸める", () => {
+    const holding: Holding = { ...baseHolding, quantity: 50.80600000000001 }
+    const csv = holdingsToCsv([holding])
+    const fields = csv.replace(BOM, "").split("\r\n")[1].split(",")
+    expect(fields[2]).toBe("50.806")
+  })
+
+  it("金額は浮動小数点誤差を除き小数2桁までに丸め、末尾ゼロを削除する", () => {
+    const holding: Holding = {
+      ...baseHolding,
+      market_value: 1929510.2680000004,
+      unrealized_pl: 727.296600000016,
+      total_pl: 16975.6829,
+    }
+    const csv = holdingsToCsv([holding])
+    const fields = csv.replace(BOM, "").split("\r\n")[1].split(",")
+    expect(fields[3]).toBe("1929510.27")
+    expect(fields[4]).toBe("727.3")
+    expect(fields[8]).toBe("16975.68")
   })
 
   it("最終更新日時のマイクロ秒を削除する", () => {

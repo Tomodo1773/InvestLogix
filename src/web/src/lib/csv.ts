@@ -23,9 +23,9 @@ export function escapeCsvField(value: string | number | null | undefined): strin
   return str
 }
 
-function formatPercent(value: number | null | undefined): string {
+function roundNumeric(value: number | null | undefined, digits: number): string {
   if (value === null || value === undefined) return ""
-  return value.toFixed(2)
+  return Number(value.toFixed(digits)).toString()
 }
 
 function stripMicroseconds(isoDate: string | null | undefined): string {
@@ -38,14 +38,14 @@ export function holdingsToCsv(holdings: Holding[]): string {
     [
       h.symbol,
       h.stock_name,
-      h.quantity,
-      h.market_value,
-      h.unrealized_pl,
-      formatPercent(h.unrealized_pl_percentage),
-      h.realized_pl,
-      h.total_dividend,
-      h.total_pl,
-      formatPercent(h.total_pl_percentage),
+      roundNumeric(h.quantity, 4),
+      roundNumeric(h.market_value, 2),
+      roundNumeric(h.unrealized_pl, 2),
+      roundNumeric(h.unrealized_pl_percentage, 2),
+      roundNumeric(h.realized_pl, 2),
+      roundNumeric(h.total_dividend, 2),
+      roundNumeric(h.total_pl, 2),
+      roundNumeric(h.total_pl_percentage, 2),
       stripMicroseconds(h.last_updated),
     ]
       .map(escapeCsvField)

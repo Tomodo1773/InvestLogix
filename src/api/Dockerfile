@@ -2,7 +2,8 @@
 FROM python:3.13-slim-bookworm
 
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
@@ -14,7 +15,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY stock ./stock/
 COPY alembic ./alembic/
 
-# 本番用依存のみインストール
+# 本番用依存のみインストール（/app/.venv に作成され、上の PATH で `python` から参照される）
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8080

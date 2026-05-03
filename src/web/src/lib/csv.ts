@@ -12,6 +12,7 @@ const CSV_HEADERS = [
   "合計損益",
   "合計損益率",
   "最終更新日時",
+  "メモ",
 ] as const
 
 export function escapeCsvField(value: string | number | null | undefined): string {
@@ -47,6 +48,7 @@ export function holdingsToCsv(holdings: Holding[]): string {
       roundNumeric(h.total_pl, 2),
       roundNumeric(h.total_pl_percentage, 2),
       stripMicroseconds(h.last_updated),
+      h.note,
     ]
       .map(escapeCsvField)
       .join(",")

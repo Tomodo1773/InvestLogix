@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, get_db_for_user
 from ..models import User
-from ..schemas import Holding
+from ..schemas import Holding, HoldingNoteUpdate
 from ..services import holding_service
 
 router = APIRouter()
@@ -27,6 +27,29 @@ async def recalculate_holding_pl(
         Holding: 更新された保有情報
     """
     holding = await holding_service.update_single_holding_pl(db, current_user.user_id, symbol)
+    if not holding:
+        raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in user's holdings")
+    return holding
+
+
+@router.put("/{symbol}/note", response_model=Holding)
+async def update_holding_note(
+    symbol: str,
+    payload: HoldingNoteUpdate,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db_for_user),
+):
+    """
+    保有銘柄のメモ（投資意図）を更新します。
+
+    Args:
+        symbol (str): 銘柄コード
+        payload (HoldingNoteUpdate): メモ本文（最大2000文字、Noneでクリア）
+
+    Returns:
+        Holding: 更新された保有情報
+    """
+    holding = await holding_service.update_holding_note(db, current_user.user_id, symbol, payload.note)
     if not holding:
         raise HTTPException(status_code=404, detail=f"Symbol {symbol} not found in user's holdings")
     return holding

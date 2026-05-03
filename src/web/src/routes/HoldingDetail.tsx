@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router"
 import useSWR from "swr"
 import { AuthProvider } from "@/components/AuthProvider"
 import { HoldingDividendsSection } from "@/components/holding-detail/HoldingDividendsSection"
+import { HoldingNoteSection } from "@/components/holding-detail/HoldingNoteSection"
 import { HoldingStockSplitsSection } from "@/components/holding-detail/HoldingStockSplitsSection"
 import { HoldingSummarySection } from "@/components/holding-detail/HoldingSummarySection"
 import { HoldingTransactionsSection } from "@/components/holding-detail/HoldingTransactionsSection"
@@ -23,9 +24,12 @@ function HoldingDetailContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const { symbol } = useParams<{ symbol: string }>()
 
-  const { data: holdings, isLoading: isLoadingHolding } = useSWR(
-    isAuthenticated && symbol ? `/holdings/${symbol}` : null,
-    () => (symbol ? getHoldingBySymbol(symbol) : null)
+  const {
+    data: holdings,
+    isLoading: isLoadingHolding,
+    mutate: mutateHolding,
+  } = useSWR(isAuthenticated && symbol ? `/holdings/${symbol}` : null, () =>
+    symbol ? getHoldingBySymbol(symbol) : null
   )
 
   const { data: transactions, isLoading: isLoadingTransactions } = useSWR(
@@ -99,6 +103,14 @@ function HoldingDetailContent() {
 
         {/* 保有状況サマリ */}
         <HoldingSummarySection holding={holding} isLoading={isLoadingHolding} />
+
+        {/* メモ */}
+        <HoldingNoteSection
+          symbol={symbol}
+          note={holding?.note ?? null}
+          isLoading={isLoadingHolding}
+          onSaved={() => mutateHolding()}
+        />
 
         {/* 株価グラフ */}
         <PriceChart

@@ -165,6 +165,11 @@ class HoldingBase(BaseModel):
     unrealized_pl_percentage: Optional[float]
     total_pl: Optional[float]
     total_pl_percentage: Optional[float]
+    note: Optional[str] = None
+
+
+class HoldingNoteUpdate(BaseModel):
+    note: Optional[str] = Field(None, max_length=2000)
 
 
 class Holding(HoldingBase):

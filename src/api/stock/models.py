@@ -172,6 +172,7 @@ class Holding(Base):
     unrealized_pl_percentage = Column(Float)  # [AUTO_CALC] 評価損益率（評価損益 / 取得価格合計）
     total_pl = Column(Float)  # [AUTO_CALC] 全体損益（含み益 + 実現損益 + 配当）
     total_pl_percentage = Column(Float)  # [AUTO_CALC] 全体損益率（全体損益 / 取得価格合計）
+    note = Column(String(2000))  # [USER_INPUT] 投資意図のメモ
     last_updated = Column(
         DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
     )  # [SYSTEM] 最終更新日時（JST）

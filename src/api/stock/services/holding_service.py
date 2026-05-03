@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -333,6 +333,45 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
         logger.info("Holdingsを更新しました action=update user_id={} symbol={}", user_id, symbol)
     else:
         logger.info("Holdingsを更新できませんでした action=update user_id={} symbol={}", user_id, symbol)
+
+    return holding
+
+
+async def update_holding_note(
+    db: AsyncSession, user_id: int, symbol: str, note: Optional[str]
+) -> Optional[Holding]:
+    """
+    指定された銘柄のメモ（投資意図）を更新します。
+
+    Args:
+        db (AsyncSession): 非同期データベースセッション
+        user_id (int): ユーザーID
+        symbol (str): 銘柄コード
+        note (Optional[str]): メモ本文。Noneでクリア
+
+    Returns:
+        Optional[Holding]: 更新後の保有情報。未保有銘柄の場合はNone
+    """
+    holding_query = select(Holding).where(Holding.user_id == user_id, Holding.symbol == symbol)
+    result = await db.execute(holding_query)
+    holding = result.scalar_one_or_none()
+
+    if not holding:
+        logger.info("Holdingsが見つかりませんでした action=select user_id={} symbol={}", user_id, symbol)
+        return None
+
+    holding.note = note
+    await db.flush()
+    await db.refresh(holding)
+    logger.info("Holdingsのメモを更新しました action=update_note user_id={} symbol={}", user_id, symbol)
+
+    # list_holdingsと同様に銘柄情報をレスポンスに含める
+    stock_query = select(Stock).where(Stock.symbol == symbol)
+    stock = (await db.execute(stock_query)).scalar_one_or_none()
+    if stock:
+        holding.stock_name = stock.name
+        holding.security_type = stock.security_type
+        holding.currency = stock.currency
 
     return holding
 

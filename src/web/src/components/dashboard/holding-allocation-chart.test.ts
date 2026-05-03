@@ -26,6 +26,7 @@ describe("transformHoldingsToChartData", () => {
     stock_name: stockName,
     security_type: securityType,
     currency: "JPY",
+    note: null,
   })
 
   it("上位20銘柄を個別に表示する", () => {

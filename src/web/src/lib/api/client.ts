@@ -107,6 +107,14 @@ export async function getHoldingBySymbol(symbol: string): Promise<Holding[]> {
   return fetchWithAuth<Holding[]>(`/api/v1/holdings/?symbol=${encodeURIComponent(symbol)}`)
 }
 
+export async function updateHoldingNote(symbol: string, note: string | null): Promise<Holding> {
+  return fetchWithAuth<Holding>(`/api/v1/holdings/${encodeURIComponent(symbol)}/note`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ note }),
+  })
+}
+
 export async function getTransactionsBySymbol(symbol: string): Promise<TransactionWithPL[]> {
   return fetchWithAuth<TransactionWithPL[]>(
     `/api/v1/transactions/?symbol=${encodeURIComponent(symbol)}&include_unrealized_pl=true`

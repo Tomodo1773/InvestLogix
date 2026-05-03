@@ -22,6 +22,7 @@ const baseHolding: Holding = {
   stock_name: "トヨタ自動車",
   security_type: "stock",
   currency: "JPY",
+  note: null,
 }
 
 describe("escapeCsvField", () => {
@@ -59,7 +60,7 @@ describe("holdingsToCsv", () => {
     const csv = holdingsToCsv([])
     expect(csv.startsWith(BOM)).toBe(true)
     expect(csv).toBe(
-      `${BOM}銘柄コード,銘柄名,株数,評価額,含み損益,含み損益率,実現損益,受取配当金,合計損益,合計損益率,最終更新日時`
+      `${BOM}銘柄コード,銘柄名,株数,評価額,含み損益,含み損益率,実現損益,受取配当金,合計損益,合計損益率,最終更新日時,メモ`
     )
   })
 
@@ -68,7 +69,7 @@ describe("holdingsToCsv", () => {
     const lines = csv.replace(BOM, "").split("\r\n")
     expect(lines).toHaveLength(2)
     expect(lines[1]).toBe(
-      "7203,トヨタ自動車,100,250000,50000,25,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
+      "7203,トヨタ自動車,100,250000,50000,25,1000,500,51500,25.75,2026-05-01T10:00:00+09:00,"
     )
   })
 
@@ -127,12 +128,18 @@ describe("holdingsToCsv", () => {
     }
     const csv = holdingsToCsv([holding])
     const lines = csv.replace(BOM, "").split("\r\n")
-    expect(lines[1]).toBe("7203,,100,,,,,,,,2026-05-01T10:00:00+09:00")
+    expect(lines[1]).toBe("7203,,100,,,,,,,,2026-05-01T10:00:00+09:00,")
   })
 
   it("銘柄名にカンマが含まれる場合はエスケープする", () => {
     const holding: Holding = { ...baseHolding, stock_name: "Alphabet, Inc." }
     const csv = holdingsToCsv([holding])
     expect(csv).toContain('"Alphabet, Inc."')
+  })
+
+  it("メモに改行・カンマが含まれる場合はエスケープして出力する", () => {
+    const holding: Holding = { ...baseHolding, note: "AI戦略\n半導体, 検索" }
+    const csv = holdingsToCsv([holding])
+    expect(csv).toContain('"AI戦略\n半導体, 検索"')
   })
 })

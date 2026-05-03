@@ -331,3 +331,69 @@ async def test_recalculate_holding_pl_delisted_stock(
     #          = -11700
     expected_total_pl = -15000.0 + 2500.0 + 800.0
     assert float(data["total_pl"]) == expected_total_pl
+
+
+@pytest.mark.asyncio
+async def test_update_holding_note(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+):
+    """保有銘柄のメモ更新テスト
+
+    期待する動作:
+    - ステータスコード200
+    - レスポンスにメモが含まれる
+    - 一覧取得APIでもメモが取得できる
+    """
+    # メモを更新
+    response = await client.put(
+        "/api/v1/holdings/8058/note",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"note": "総合商社。資源価格と配当に期待。"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "8058"
+    assert data["note"] == "総合商社。資源価格と配当に期待。"
+    assert data["stock_name"] == "三菱商事"
+
+    # 一覧取得でもメモが取得できる
+    list_response = await client.get(
+        "/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"}
+    )
+    assert list_response.status_code == 200
+    assert list_response.json()[0]["note"] == "総合商社。資源価格と配当に期待。"
+
+
+@pytest.mark.asyncio
+async def test_update_holding_note_clear(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+):
+    """メモにnullを送るとクリアできることを検証する"""
+    # 一旦書き込み
+    await client.put(
+        "/api/v1/holdings/8058/note",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"note": "あとで消す"},
+    )
+
+    # nullで上書き
+    response = await client.put(
+        "/api/v1/holdings/8058/note",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"note": None},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["note"] is None
+
+
+@pytest.mark.asyncio
+async def test_update_holding_note_not_found(client: AsyncClient, auth_token: str):
+    """未保有銘柄に対するメモ更新は404"""
+    response = await client.put(
+        "/api/v1/holdings/UNKNOWN/note",
+        headers={"Authorization": f"Bearer {auth_token}"},
+        json={"note": "test"},
+    )
+    assert response.status_code == 404

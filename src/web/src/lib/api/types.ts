@@ -57,6 +57,7 @@ export interface Holding {
   stock_name: string | null
   security_type: string | null
   currency: string | null
+  note: string | null
 }
 
 // Transactions

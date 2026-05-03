@@ -23,6 +23,16 @@ export function escapeCsvField(value: string | number | null | undefined): strin
   return str
 }
 
+function formatPercent(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ""
+  return value.toFixed(2)
+}
+
+function stripMicroseconds(isoDate: string | null | undefined): string {
+  if (!isoDate) return ""
+  return isoDate.replace(/\.\d+(?=[+\-Z])/, "")
+}
+
 export function holdingsToCsv(holdings: Holding[]): string {
   const rows = holdings.map((h) =>
     [
@@ -31,12 +41,12 @@ export function holdingsToCsv(holdings: Holding[]): string {
       h.quantity,
       h.market_value,
       h.unrealized_pl,
-      h.unrealized_pl_percentage,
+      formatPercent(h.unrealized_pl_percentage),
       h.realized_pl,
       h.total_dividend,
       h.total_pl,
-      h.total_pl_percentage,
-      h.last_updated,
+      formatPercent(h.total_pl_percentage),
+      stripMicroseconds(h.last_updated),
     ]
       .map(escapeCsvField)
       .join(",")

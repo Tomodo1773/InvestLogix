@@ -68,8 +68,28 @@ describe("holdingsToCsv", () => {
     const lines = csv.replace(BOM, "").split("\r\n")
     expect(lines).toHaveLength(2)
     expect(lines[1]).toBe(
-      "7203,トヨタ自動車,100,250000,50000,25,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
+      "7203,トヨタ自動車,100,250000,50000,25.00,1000,500,51500,25.75,2026-05-01T10:00:00+09:00"
     )
+  })
+
+  it("損益率は小数点2桁に丸めて出力する", () => {
+    const holding: Holding = {
+      ...baseHolding,
+      unrealized_pl_percentage: 90.51679707632479,
+      total_pl_percentage: -47.794392523364486,
+    }
+    const csv = holdingsToCsv([holding])
+    const lines = csv.replace(BOM, "").split("\r\n")
+    const fields = lines[1].split(",")
+    expect(fields[5]).toBe("90.52")
+    expect(fields[9]).toBe("-47.79")
+  })
+
+  it("最終更新日時のマイクロ秒を削除する", () => {
+    const holding: Holding = { ...baseHolding, last_updated: "2026-05-02T07:40:00.882068+09:00" }
+    const csv = holdingsToCsv([holding])
+    expect(csv).toContain("2026-05-02T07:40:00+09:00")
+    expect(csv).not.toContain("882068")
   })
 
   it("数値フィールドがnullの場合は空文字で出力する", () => {

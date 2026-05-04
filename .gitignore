@@ -69,3 +69,11 @@ next-env.d.ts
 # pnpm cache
 src/web/.pnpm-store/
 src/web/.pnpm-state/
+
+# Terraform (infra/)
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/backend.hcl
+# import は完了済みだが、再 import する可能性に備えて手元には残し、push はしない
+infra/imports.tf

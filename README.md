@@ -16,17 +16,41 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - LINE通知（ポートフォリオ状況の通知）
 - 認証（JWT）
 
+## 構成
+
+### アプリ
+- フロントエンド: React（Vite）
+- バックエンド: FastAPI（Python 3.13）
+- 定時ジョブ: Python（`python -m` で起動）
+- DB: PostgreSQL
+
+### インフラ
+- フロントエンド: Vercel
+- バックエンド: Google Cloud Run
+  - API は Cloud Run Service
+  - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler
+- DB: Supabase（マネージド PostgreSQL）
+- シークレットは事前に Secret Manager に登録
+- 上記の構造（env, IAM, scaling, cron 等）は OpenTofu でプロビジョニング
+
+### デプロイと運用
+- アプリのデプロイ: フロントは Vercel 連携、バックエンドは Cloud Build による Cloud Run 自動デプロイ
+- インフラ構造の変更: `infra/*.tf` を編集して `tofu apply`
+- シークレット値の更新: `gcloud secrets versions add`（Terraform は値を持たない）
+- Cloud Run Jobs のイメージ更新: main マージ後に `scripts/update-cloud-run-jobs.sh`
+
 ## リポジトリ構成
 
 ```
 InvestLogix/
 ├── src/
-│   ├── api/                 # FastAPI API
+│   ├── api/                 # FastAPI API + 定時ジョブ
 │   ├── web/                 # React + Vite SPA
 │   ├── docker-compose.yaml  # ローカル開発用（DB + API）
-│   └── Dockerfile           # ローカルDB用（PostgreSQL）
-├── infra/                   # Azure Bicep
-└── csv/                     # サンプルデータ等
+│   └── Dockerfile           # API のコンテナイメージ
+├── infra/                   # OpenTofu (Google Cloud)
+├── scripts/                 # 運用スクリプト（Cloud Run Jobs 更新等）
+└── samples/                 # SBI証券エクスポートサンプル
 ```
 
 ## クイックスタート（ローカル開発）

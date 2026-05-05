@@ -11,12 +11,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from . import models, schemas
 from .database import get_db, set_rls_user_id, settings
 
-# パスワードハッシュ化のための設定（Argon2id）
 password_hash = PasswordHash.recommended()
 
-# JWT設定
 SECRET_KEY = settings.JWT_SECRET_KEY
-# アルゴリズムとトークン有効期限は固定値として定義
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 1日
 

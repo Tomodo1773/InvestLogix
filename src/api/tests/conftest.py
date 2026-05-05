@@ -146,68 +146,47 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
             # トランザクションは自動的にロールバックされます
 
 
-@pytest_asyncio.fixture
-async def auth_token(client: AsyncClient, setup_database) -> None:
-    """テスト用一般ユーザーを作成し、clientにCookieをセットするフィクスチャー
+async def _create_user_and_login(
+    client: AsyncClient, setup_database, username: str, email: str, password: str, is_admin: bool
+) -> None:
+    """テストユーザーをDBに作成しログインする共通ヘルパー
 
     /api/v1/token のレスポンスのSet-Cookieをhttpx AsyncClientが自動保存するため、
-    以降のリクエストはCookie認証で通る。
-
-    Args:
-        client: 非同期HTTPクライアント
-        setup_database: データベースセットアップのフィクスチャー
+    呼び出し後の同clientへのリクエストはCookie認証で通る。
     """
-    from sqlalchemy.orm import sessionmaker
-
-    # setup_databaseから新しいセッションファクトリを作成
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
-
-    # テストユーザーのデータ
-    user_data = {
-        "username": "testuser",
-        "email": "test@example.com",
-        "password": "testpassword",
-        "is_admin": False,
-    }
-
-    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
-        await AuthService(session).create_user(UserCreate(**user_data))
+        await AuthService(session).create_user(
+            UserCreate(username=username, email=email, password=password), is_admin=is_admin
+        )
         await session.commit()
+    await client.post("/api/v1/token", json={"username": username, "password": password})
 
-    # ログイン（Set-Cookieがclientに自動保存される）
-    login_data = {"username": user_data["username"], "password": user_data["password"]}
-    await client.post("/api/v1/token", json=login_data)
+
+@pytest_asyncio.fixture
+async def auth_token(client: AsyncClient, setup_database) -> None:
+    """テスト用一般ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
+    await _create_user_and_login(
+        client,
+        setup_database,
+        username="testuser",
+        email="test@example.com",
+        password="testpassword",
+        is_admin=False,
+    )
 
 
 @pytest_asyncio.fixture
 async def auth_admin_token(client: AsyncClient, setup_database) -> None:
-    """テスト用管理者ユーザーを作成し、clientにCookieをセットするフィクスチャー
-
-    /api/v1/token のレスポンスのSet-Cookieをhttpx AsyncClientが自動保存するため、
-    以降のリクエストはCookie認証で通る。
-
-    Args:
-        client: 非同期HTTPクライアント
-        setup_database: データベースセットアップのフィクスチャー
-    """
-    from sqlalchemy.orm import sessionmaker
-
-    # setup_databaseから新しいセッションファクトリを作成
-    TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
-
-    # 管理者ユーザーのデータ
-    admin_user_data = {"username": "adminuser", "email": "admin@example.com", "password": "adminpassword"}
-
-    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
-    async with TestingSessionLocalFunc() as session:
-        # is_admin=Trueを明示的に渡す
-        await AuthService(session).create_user(UserCreate(**admin_user_data), is_admin=True)
-        await session.commit()
-
-    # ログイン（Set-Cookieがclientに自動保存される）
-    login_data = {"username": admin_user_data["username"], "password": admin_user_data["password"]}
-    await client.post("/api/v1/token", json=login_data)
+    """テスト用管理者ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
+    await _create_user_and_login(
+        client,
+        setup_database,
+        username="adminuser",
+        email="admin@example.com",
+        password="adminpassword",
+        is_admin=True,
+    )
 
 
 @pytest_asyncio.fixture

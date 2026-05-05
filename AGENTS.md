@@ -48,7 +48,7 @@ InvestLogix/
 │   ├── scripts/                # データインポート等のスクリプト
 │   ├── Dockerfile              # APIのDockerイメージ
 │   └── docker-compose.yaml     # ローカル開発用のDocker構成
-├── infra/                      # Azure Bicep テンプレート
+├── infra/                      # Google Cloud インフラ (OpenTofu)
 ├── csv/                        # データサンプル
 ├── samples/                    # SBI証券エクスポートcsvサンプル
 │   └── sbi_export_file/
@@ -67,7 +67,6 @@ InvestLogix/
 | `api-ci.yml` | バックエンドのリント・型チェック |
 | `api-test.yml` | バックエンドのテスト |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
-| `appservice_deploy.yml` | Azure App Serviceへのデプロイ |
 | `ruff-autofix.yml` | Ruffによるコードの自動修正とコミット（手動実行） |
 | `biome-autofix.yml` | Biomeによるコードの自動修正とコミット（手動実行） |
 

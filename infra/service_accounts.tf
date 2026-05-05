@@ -13,30 +13,19 @@ resource "google_service_account" "jobs_invoker" {
   display_name = "Cloud Scheduler -> Cloud Run Jobs invoker"
 }
 
-# GitHub Actions が WIF 経由で成り代わる CD 用 SA。
-# Cloud Run Service / Jobs の image 更新と、Artifact Registry への push を行う。
 resource "google_service_account" "deployer" {
-  account_id   = var.deployer_sa_id
+  account_id   = local.deployer_sa_id
   display_name = "GitHub Actions deployer (CD)"
 }
 
-# deployer に Cloud Run Service / Jobs のデプロイ権限を付与
-resource "google_project_iam_member" "deployer_run_admin" {
-  project = var.project_id
-  role    = "roles/run.admin"
-  member  = "serviceAccount:${google_service_account.deployer.email}"
-}
+resource "google_project_iam_member" "deployer" {
+  for_each = toset([
+    "roles/run.admin",
+    "roles/iam.serviceAccountUser",
+    "roles/artifactregistry.writer",
+  ])
 
-# Cloud Run のランタイム SA を deployer が指定できるようにする
-resource "google_project_iam_member" "deployer_sa_user" {
   project = var.project_id
-  role    = "roles/iam.serviceAccountUser"
-  member  = "serviceAccount:${google_service_account.deployer.email}"
-}
-
-# Artifact Registry への push 権限
-resource "google_project_iam_member" "deployer_ar_writer" {
-  project = var.project_id
-  role    = "roles/artifactregistry.writer"
+  role    = each.value
   member  = "serviceAccount:${google_service_account.deployer.email}"
 }

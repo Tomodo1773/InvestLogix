@@ -68,7 +68,7 @@ export interface MonthlySummaryItem {
 }
 
 // Transactions
-export type AccountType = "NISA(成長投資枠)" | "NISA(つみたて投資枠)" | "ジュニアNISA" | "旧NISA" | "特定"
+type AccountType = "NISA(成長投資枠)" | "NISA(つみたて投資枠)" | "ジュニアNISA" | "旧NISA" | "特定"
 
 export interface Transaction {
   symbol: string
@@ -113,7 +113,7 @@ export interface MonthlyDividendItem {
 }
 
 // Stocks
-export type SecurityType = "STOCK" | "ETF" | "REIT" | "FUND"
+type SecurityType = "STOCK" | "ETF" | "REIT" | "FUND"
 
 export interface Stock {
   symbol: string

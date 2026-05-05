@@ -64,7 +64,6 @@ async def test_get_japanese_stock_price_history(
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
         params={"interval": "daily", "limit": 80},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンス検証
@@ -136,7 +135,6 @@ async def test_get_us_stock_price_history(
     response = await client.get(
         "/api/v1/stocks/AAPL/price-history",
         params={"interval": "daily", "limit": 80},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンス検証
@@ -218,7 +216,6 @@ async def test_get_price_history_with_weekly_interval(
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
         params={"interval": "weekly", "limit": 80},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンス検証
@@ -300,7 +297,6 @@ async def test_get_price_history_with_monthly_interval(
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
         params={"interval": "monthly", "limit": 60},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンス検証
@@ -332,7 +328,6 @@ async def test_get_price_history_stock_not_found(
     response = await client.get(
         "/api/v1/stocks/INVALID/price-history",
         params={"interval": "daily", "limit": 80},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンス検証
@@ -436,7 +431,6 @@ async def test_get_price_history_with_limit(
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
         params={"interval": "daily", "limit": 10},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 200
@@ -467,7 +461,6 @@ async def test_get_price_history_monthly_limit_validation(
     response = await client.get(
         "/api/v1/stocks/8058/price-history",
         params={"interval": "monthly", "limit": 61},
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     assert response.status_code == 400

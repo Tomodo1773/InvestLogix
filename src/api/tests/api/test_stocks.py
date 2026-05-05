@@ -22,9 +22,7 @@ async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSessi
     stock_data = StockCreate(symbol="8058")  # 三菱商事のシンボル
 
     # APIリクエスト実行
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
 
     # レスポンス検証
     assert response.status_code == 200
@@ -56,9 +54,7 @@ async def test_create_us_stock(
     stock_data = StockCreate(symbol="AAPL")  # Appleのシンボル
 
     # APIリクエスト実行
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
 
     # レスポンス検証
     assert response.status_code == 200
@@ -97,9 +93,7 @@ async def test_create_us_etf(
     stock_data = StockCreate(symbol="SPYD")
 
     # APIリクエスト実行
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
 
     # レスポンス検証
     assert response.status_code == 200
@@ -131,9 +125,7 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
     stock_data = StockCreate(symbol="JP90C000J569")  # 投資信託のシンボル
 
     # APIリクエスト実行
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
 
     # レスポンス検証
     assert response.status_code == 200
@@ -164,9 +156,7 @@ async def test_create_duplicate_stock(
     stock_data = StockCreate(symbol="AAPL")  # Appleのシンボル
 
     # 最初の登録
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
     assert response.status_code == 200
     first_data = response.json()
 
@@ -179,9 +169,7 @@ async def test_create_duplicate_stock(
     mock_external_apis["search"].reset_mock()
 
     # 2回目の登録（重複）
-    response = await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/stocks/", json=stock_data.model_dump())
     assert response.status_code == 200
     second_data = response.json()
 
@@ -214,7 +202,7 @@ async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, 
     # setup_portfolio_test_dataにより既に日本株と米国株が登録されている
 
     # 銘柄一覧を取得
-    response = await client.get("/api/v1/stocks/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/stocks/")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -253,9 +241,7 @@ async def test_refresh_us_stock(
     """
     # まず銘柄を登録
     stock_data = StockCreate(symbol="AAPL")
-    await client.post(
-        "/api/v1/stocks/", json=stock_data.model_dump(), headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    await client.post("/api/v1/stocks/", json=stock_data.model_dump())
 
     # モックの名前を変更して更新を検証
     mock_external_apis["overview"].return_value = {
@@ -265,7 +251,7 @@ async def test_refresh_us_stock(
     }
 
     # PUT で更新
-    response = await client.put("/api/v1/stocks/AAPL", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.put("/api/v1/stocks/AAPL")
 
     assert response.status_code == 200
     data = response.json()
@@ -276,5 +262,5 @@ async def test_refresh_us_stock(
 @pytest.mark.asyncio
 async def test_refresh_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
     """未登録銘柄の更新で404が返ること"""
-    response = await client.put("/api/v1/stocks/ZZZZ", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.put("/api/v1/stocks/ZZZZ")
     assert response.status_code == 404

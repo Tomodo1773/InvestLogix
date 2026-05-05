@@ -352,12 +352,6 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
-class TokenData(BaseModel):
-    """JWTトークンデータ"""
-
-    username: str | None = None
-
-
 class StockCreate(BaseModel):
     """株式銘柄登録リクエスト"""
 

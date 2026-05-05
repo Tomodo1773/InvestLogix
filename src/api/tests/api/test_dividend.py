@@ -32,9 +32,7 @@ async def test_create_dividend(
         "fee": "0.0",
     }
 
-    response = await client.post(
-        "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/dividends/", json=dividend_data)
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -50,9 +48,7 @@ async def test_create_dividend(
     assert float(data["fee"]) == float(dividend_data["fee"])
 
     # 保有情報の確認（配当金が反映されているか）
-    holdings_response = await client.get(
-        "/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    holdings_response = await client.get("/api/v1/holdings/")
     assert holdings_response.status_code == 200
     holdings = holdings_response.json()
     holding = next((h for h in holdings if h["symbol"] == "8058"), None)
@@ -82,9 +78,7 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
         "fee": "0.0",
     }
 
-    response = await client.post(
-        "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/dividends/", json=dividend_data)
 
     # レスポンス検証
     assert response.status_code == 404
@@ -133,7 +127,7 @@ async def test_list_dividends(
         await create_dividend(dividend_data)
 
     # 配当一覧を取得
-    response = await client.get("/api/v1/dividends/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/dividends/")
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -168,9 +162,7 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
         setup_dividend_data: テスト用配当データ
     """
     # 月次配当金集計の取得
-    response = await client.get(
-        "/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.get("/api/v1/dividends/monthly")
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -230,9 +222,7 @@ async def test_get_monthly_dividends_respects_jst_boundary(
     }
     await create_dividend(boundary_dividend)
 
-    response = await client.get(
-        "/api/v1/dividends/monthly", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.get("/api/v1/dividends/monthly")
     assert response.status_code == 200
     data = response.json()
 
@@ -273,7 +263,6 @@ async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_token:
 
     response = await client.get(
         "/api/v1/dividends/monthly",
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()

@@ -146,74 +146,47 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
             # トランザクションは自動的にロールバックされます
 
 
-@pytest_asyncio.fixture
-async def auth_token(client: AsyncClient, setup_database) -> str:
-    """テスト用の認証トークンを取得するフィクスチャー
+async def _create_user_and_login(
+    client: AsyncClient, setup_database, username: str, email: str, password: str, is_admin: bool
+) -> None:
+    """テストユーザーをDBに作成しログインする共通ヘルパー
 
-    認証ユーザーを新規作成し、コミットすることで別セッションでも参照可能にします。
-
-    Args:
-        client: 非同期HTTPクライアント
-        setup_database: データベースセットアップのフィクスチャー
-
-    Returns:
-        str: JWTアクセストークン
+    /api/v1/token のレスポンスのSet-Cookieをhttpx AsyncClientが自動保存するため、
+    呼び出し後の同clientへのリクエストはCookie認証で通る。
     """
-    from sqlalchemy.orm import sessionmaker
-
-    # setup_databaseから新しいセッションファクトリを作成
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
-
-    # テストユーザーのデータ
-    user_data = {
-        "username": "testuser",
-        "email": "test@example.com",
-        "password": "testpassword",
-        "is_admin": False,
-    }
-
-    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
     async with TestingSessionLocalFunc() as session:
-        await AuthService(session).create_user(UserCreate(**user_data))
+        await AuthService(session).create_user(
+            UserCreate(username=username, email=email, password=password), is_admin=is_admin
+        )
         await session.commit()
-
-    # ログインして認証トークンを取得（JSON形式でリクエスト）
-    login_data = {"username": user_data["username"], "password": user_data["password"]}
-    response = await client.post("/api/v1/token", json=login_data)
-    return response.json()["access_token"]
+    await client.post("/api/v1/token", json={"username": username, "password": password})
 
 
 @pytest_asyncio.fixture
-async def auth_admin_token(client: AsyncClient, setup_database) -> str:
-    """テスト用の管理者権限トークンを取得するフィクスチャー
+async def auth_token(client: AsyncClient, setup_database) -> None:
+    """テスト用一般ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
+    await _create_user_and_login(
+        client,
+        setup_database,
+        username="testuser",
+        email="test@example.com",
+        password="testpassword",
+        is_admin=False,
+    )
 
-    管理者権限を持つユーザーを新規作成し、コミットすることで別セッションでも参照可能にします。
 
-    Args:
-        client: 非同期HTTPクライアント
-        setup_database: データベースセットアップのフィクスチャー
-
-    Returns:
-        str: 管理者権限のJWTアクセストークン
-    """
-    from sqlalchemy.orm import sessionmaker
-
-    # setup_databaseから新しいセッションファクトリを作成
-    TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
-
-    # 管理者ユーザーのデータ
-    admin_user_data = {"username": "adminuser", "email": "admin@example.com", "password": "adminpassword"}
-
-    # db_sessionフィクスチャと独立したセッションでユーザー作成とコミットを実施
-    async with TestingSessionLocalFunc() as session:
-        # is_admin=Trueを明示的に渡す
-        await AuthService(session).create_user(UserCreate(**admin_user_data), is_admin=True)
-        await session.commit()
-
-    # ログインして認証トークンを取得（JSON形式でリクエスト）
-    login_data = {"username": admin_user_data["username"], "password": admin_user_data["password"]}
-    response = await client.post("/api/v1/token", json=login_data)
-    return response.json()["access_token"]
+@pytest_asyncio.fixture
+async def auth_admin_token(client: AsyncClient, setup_database) -> None:
+    """テスト用管理者ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
+    await _create_user_and_login(
+        client,
+        setup_database,
+        username="adminuser",
+        email="admin@example.com",
+        password="adminpassword",
+        is_admin=True,
+    )
 
 
 @pytest_asyncio.fixture
@@ -437,16 +410,14 @@ async def create_transaction(client, auth_token):
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_token: 認証フィクスチャ（clientにCookieをセットする副作用）
 
     Returns:
         function: 取引登録用の関数
     """
 
     async def _create_transaction(transaction_data):
-        response = await client.post(
-            "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
-        )
+        response = await client.post("/api/v1/transactions/", json=transaction_data)
         assert response.status_code == 200
         return response.json()
 
@@ -459,16 +430,14 @@ async def create_dividend(client, auth_token):
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_token: 認証フィクスチャ（clientにCookieをセットする副作用）
 
     Returns:
         function: 配当登録用の関数
     """
 
     async def _create_dividend(dividend_data):
-        response = await client.post(
-            "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
-        )
+        response = await client.post("/api/v1/dividends/", json=dividend_data)
         assert response.status_code == 200
         return response.json()
 

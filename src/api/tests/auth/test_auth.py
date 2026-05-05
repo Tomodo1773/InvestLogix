@@ -24,9 +24,7 @@ async def test_create_user(client: AsyncClient, auth_admin_token: str, db_sessio
     user_data = {"username": "testuser2", "email": "test2@example.com", "password": "testpassword"}
 
     # APIリクエスト実行（Authorizationヘッダーを追加）
-    response = await client.post(
-        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
-    )
+    response = await client.post("/api/v1/users/", json=user_data)
 
     # レスポンス検証
     assert response.status_code == 200
@@ -54,14 +52,10 @@ async def test_create_duplicate_user(client: AsyncClient, auth_admin_token: str,
     user_data = {"username": "testuser3", "email": "test3@example.com", "password": "testpassword"}
 
     # 1人目のユーザーを作成
-    await client.post(
-        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
-    )
+    await client.post("/api/v1/users/", json=user_data)
 
     # 同じユーザー名で2人目を作成
-    response = await client.post(
-        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_admin_token}"}
-    )
+    response = await client.post("/api/v1/users/", json=user_data)
 
     # レスポンス検証
     assert response.status_code == 400
@@ -87,9 +81,7 @@ async def test_create_user_without_admin_privileges(
     user_data = {"username": "newuser", "email": "newuser@example.com", "password": "newpassword"}
 
     # 管理者権限なしでリクエスト実行
-    response = await client.post(
-        "/api/v1/users/", json=user_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/users/", json=user_data)
 
     # レスポンス検証
     assert response.status_code == 403

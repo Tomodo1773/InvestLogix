@@ -30,9 +30,7 @@ async def test_transaction_response_datetime_is_jst(
         "transaction_date": "2024-06-15T10:30:00",  # naive datetime
     }
 
-    response = await client.post(
-        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/transactions/", json=transaction_data)
 
     assert response.status_code == 200
     data = response.json()
@@ -69,12 +67,10 @@ async def test_transaction_list_response_datetime_is_jst(
         "tax": "0.0",
         "transaction_date": "2024-06-15T10:30:00",
     }
-    await client.post(
-        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    await client.post("/api/v1/transactions/", json=transaction_data)
 
     # 取引一覧を取得
-    response = await client.get("/api/v1/transactions/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/transactions/")
 
     assert response.status_code == 200
     data = response.json()
@@ -106,9 +102,7 @@ async def test_dividend_response_datetime_is_jst(
         "fee": "0.0",
     }
 
-    response = await client.post(
-        "/api/v1/dividends/", json=dividend_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/dividends/", json=dividend_data)
 
     assert response.status_code == 200
     data = response.json()
@@ -148,7 +142,7 @@ async def test_dividend_list_response_datetime_is_jst(
     await create_dividend(dividend_data)
 
     # 配当一覧を取得
-    response = await client.get("/api/v1/dividends/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/dividends/")
 
     assert response.status_code == 200
     data = response.json()
@@ -171,7 +165,7 @@ async def test_holdings_response_datetime_is_jst(
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有株一覧を取得
-    response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/holdings/")
 
     assert response.status_code == 200
     data = response.json()
@@ -207,15 +201,11 @@ async def test_transaction_monthly_summary_uses_jst(
         "transaction_date": "2024-12-01T00:00:00+09:00",  # JST
     }
 
-    response = await client.post(
-        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/transactions/", json=transaction_data)
     assert response.status_code == 200
 
     # 月次集計を取得
-    monthly_response = await client.get(
-        "/api/v1/transactions/monthly-summary", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    monthly_response = await client.get("/api/v1/transactions/monthly-summary")
     assert monthly_response.status_code == 200
     data = monthly_response.json()
 
@@ -254,15 +244,11 @@ async def test_transaction_yearly_summary_uses_jst(
         "transaction_date": "2024-01-01T00:00:00+09:00",  # JST
     }
 
-    response = await client.post(
-        "/api/v1/transactions/", json=transaction_data, headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/transactions/", json=transaction_data)
     assert response.status_code == 200
 
     # 年次集計を取得
-    yearly_response = await client.get(
-        "/api/v1/transactions/yearly-summary", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    yearly_response = await client.get("/api/v1/transactions/yearly-summary")
     assert yearly_response.status_code == 200
     data = yearly_response.json()
 

@@ -24,9 +24,7 @@ async def test_recalculate_holding_pl_japanese_stock(
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有損益再計算APIを呼び出し
-    response = await client.post(
-        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/holdings/8058/recalculate")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -59,9 +57,7 @@ async def test_recalculate_holding_pl_us_stock(
         mock_external_apis: モック化されたAPI
     """
     # 保有損益再計算APIを呼び出し
-    response = await client.post(
-        "/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/holdings/AAPL/recalculate")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -95,7 +91,7 @@ async def test_list_holdings(
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有銘柄一覧を取得
-    response = await client.get("/api/v1/holdings/", headers={"Authorization": f"Bearer {auth_token}"})
+    response = await client.get("/api/v1/holdings/")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -129,9 +125,7 @@ async def test_recalculate_all_holdings_pl(
         setup_us_stock_data: 米国株のテストデータ
     """
     # 全銘柄の損益再計算APIを呼び出し
-    response = await client.post(
-        "/api/v1/holdings/recalculate-all", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/holdings/recalculate-all")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -211,9 +205,7 @@ async def test_recalculate_holding_pl_updates_realized_pl(
     await db_session.commit()
 
     # 再計算APIを呼び出し、実現損益が更新されることを確認
-    response = await client.post(
-        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/holdings/8058/recalculate")
     assert response.status_code == 200
     data = response.json()
     assert float(data["realized_pl"]) == 2500.0
@@ -288,9 +280,7 @@ async def test_recalculate_holding_pl_delisted_stock(
     )
 
     # 株価取得が0を返す状態で保有損益を再計算
-    response = await client.post(
-        "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/holdings/8058/recalculate")
 
     # レスポンス検証
     assert response.status_code == 200
@@ -347,7 +337,6 @@ async def test_update_holding_note(
     # メモを更新
     response = await client.put(
         "/api/v1/holdings/8058/note",
-        headers={"Authorization": f"Bearer {auth_token}"},
         json={"note": "総合商社。資源価格と配当に期待。"},
     )
 
@@ -358,9 +347,7 @@ async def test_update_holding_note(
     assert data["stock_name"] == "三菱商事"
 
     # 一覧取得でもメモが取得できる
-    list_response = await client.get(
-        "/api/v1/holdings/?symbol=8058", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    list_response = await client.get("/api/v1/holdings/?symbol=8058")
     assert list_response.status_code == 200
     assert list_response.json()[0]["note"] == "総合商社。資源価格と配当に期待。"
 
@@ -373,14 +360,12 @@ async def test_update_holding_note_clear(
     # 一旦書き込み
     await client.put(
         "/api/v1/holdings/8058/note",
-        headers={"Authorization": f"Bearer {auth_token}"},
         json={"note": "あとで消す"},
     )
 
     # nullで上書き
     response = await client.put(
         "/api/v1/holdings/8058/note",
-        headers={"Authorization": f"Bearer {auth_token}"},
         json={"note": None},
     )
 
@@ -393,7 +378,6 @@ async def test_update_holding_note_not_found(client: AsyncClient, auth_token: st
     """未保有銘柄に対するメモ更新は404"""
     response = await client.put(
         "/api/v1/holdings/UNKNOWN/note",
-        headers={"Authorization": f"Bearer {auth_token}"},
         json={"note": "test"},
     )
     assert response.status_code == 404

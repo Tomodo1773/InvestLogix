@@ -139,7 +139,6 @@ async def test_excludes_zero_quantity_holdings(
 
     response = await client.post(
         "/api/v1/portfolio/weekly-performance-notify",
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
     assert response.status_code == 200
     data = response.json()
@@ -242,7 +241,6 @@ async def test_weekly_performance_notify_endpoint(
     # APIリクエスト実行
     response = await client.post(
         "/api/v1/portfolio/weekly-performance-notify",
-        headers={"Authorization": f"Bearer {auth_token}"},
     )
 
     # レスポンスの検証

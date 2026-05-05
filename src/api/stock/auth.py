@@ -1,8 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Annotated, AsyncGenerator
 
-from fastapi import Cookie, Depends, Header, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import Cookie, Depends, HTTPException, status
 from jose import JWTError, jwt
 from loguru import logger
 from pwdlib import PasswordHash
@@ -12,17 +11,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from . import models, schemas
 from .database import get_db, set_rls_user_id, settings
 
-# パスワードハッシュ化のための設定（Argon2id）
 password_hash = PasswordHash.recommended()
 
-# JWT設定
 SECRET_KEY = settings.JWT_SECRET_KEY
-# アルゴリズムとトークン有効期限は固定値として定義
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 1日
-
-# OAuth2スキームを更新してOAuthエンドポイントを指すように
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oauth/token")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -101,48 +94,31 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 
 async def get_current_user(
-    access_token_cookie: Annotated[str | None, Cookie(alias="token")] = None,
-    authorization: Annotated[str | None, Header()] = None,
+    token: Annotated[str | None, Cookie()] = None,
     db: AsyncSession = Depends(get_db),
 ) -> schemas.User:
     """
-    現在のユーザーを取得する。以下の順序で認証を試みる：
-    1. Bearerトークン（OAuth2）
-    2. クッキーのアクセストークン
-    3. Authorizationヘッダー
+    現在のユーザーをCookie認証で取得する
+    - token: Cookieに格納されたJWT
+    - 認証失敗時: 401 Unauthorized
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
     )
 
-    jwt_token = None  # 初期化して未定義エラーを防止
-
-    if access_token_cookie:  # if に変更
-        # クッキーからトークンを取得（Bearerプレフィックスがある場合は削除）
-        if access_token_cookie.startswith("Bearer "):
-            jwt_token = access_token_cookie.replace("Bearer ", "")
-        else:
-            jwt_token = access_token_cookie
-    elif authorization and authorization.startswith("Bearer "):
-        jwt_token = authorization.replace("Bearer ", "")
-    else:
+    if not token:
         raise credentials_exception
 
     try:
-        if not jwt_token:
-            raise credentials_exception
-
-        payload = jwt.decode(jwt_token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str | None = payload.get("sub")
         if username is None:
             raise credentials_exception
-        token_data = schemas.TokenData(username=username)
     except JWTError:
         raise credentials_exception
 
-    user = await get_user(db, username=token_data.username)
+    user = await get_user(db, username=username)
     if user is None:
         raise credentials_exception
     return user

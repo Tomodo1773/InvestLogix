@@ -175,13 +175,14 @@ uv run alembic downgrade -1
 
 ### 認証認可
 
+Cookie(httponly) ベースの認証に一本化。`/api/v1/token` がログイン成功時にCookieをセットし、以降のAPIリクエストはCookieで認証する。定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない。
+
 想定クライアントは以下
 
 | クライアント | 認証方法 | 用途 |
 |-------------|---------|------|
 | Webフロントエンド | Cookie(httponly) | ブラウザからのアクセス |
-| ユーザー端末からの直接API呼び出し | Authorization ヘッダー | スクリプトや CLI からのアクセス |
-| Swagger UI (/docs) | OAuth2形式 | API テスト・開発 |
+| Swagger UI (/docs) | Cookie(httponly) | `/api/v1/token` を Try it out でログイン後、Cookieが自動付与される |
 
 ### パスワードハッシュ
 

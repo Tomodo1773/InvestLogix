@@ -27,9 +27,9 @@
 
 ### 認証
 
-- 一般ユーザー: `auth_token` フィクスチャ（username: "testuser"）
-- 管理者ユーザー: `auth_admin_token` フィクスチャ（username: "adminuser"）
-- APIリクエストには `headers={"Authorization": f"Bearer {auth_token}"}` を指定
+- 一般ユーザー: `auth_token` フィクスチャ（username: "testuser"、副作用としてclientにCookieをセット）
+- 管理者ユーザー: `auth_admin_token` フィクスチャ（username: "adminuser"、副作用としてclientにCookieをセット）
+- フィクスチャを引数で受け取るだけで認証済みとなる（`headers` の明示指定は不要）
 
 ### 外部APIのモック
 

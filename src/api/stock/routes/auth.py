@@ -2,7 +2,6 @@ import os
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from fastapi.security import OAuth2PasswordRequestForm
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,7 +33,6 @@ async def login_for_access_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
         )
 
     access_token = create_access_token(data={"sub": user.username})
@@ -51,31 +49,6 @@ async def login_for_access_token(
         path="/",
     )
     logger.info("Authトークンを発行しました action=create user_id={}", user.user_id)
-    return {"access_token": access_token, "token_type": "bearer"}
-
-
-@router.post("/oauth/token", response_model=Token)
-async def login_for_access_token_oauth(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
-):
-    """
-    OAuth2形式でログイントークンを取得する（/docsでの認証用）
-    - form_data: ユーザー名とパスワード（application/x-www-form-urlencoded形式）
-    - 認証成功時: アクセストークンを返却
-    - 認証失敗時: 401 Unauthorized
-
-    このエンドポイントはFastAPIの/docsページの「authorize」ボタンで使用するための最小限の実装です。
-    """
-    user = await authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": user.username})
-
-    # シンプルなトークンレスポンスのみを返す
     return {"access_token": access_token, "token_type": "bearer"}
 
 

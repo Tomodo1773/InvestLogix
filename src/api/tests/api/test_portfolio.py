@@ -55,9 +55,7 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
         setup_portfolio_test_data: テストデータ準備用フィクスチャー
     """
     # APIリクエスト実行
-    response = await client.get(
-        "/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.get("/api/v1/portfolio/summary")
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -128,13 +126,11 @@ async def test_portfolio_update_with_price_changes(
     await create_dividend(us_dividend)
 
     # ホールディングの更新
-    await client.post("/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
-    await client.post("/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"})
+    await client.post("/api/v1/holdings/8058/recalculate")
+    await client.post("/api/v1/holdings/AAPL/recalculate")
 
     # POST /api/v1/portfolio/summary を呼び出してポートフォリオ履歴を作成
-    response = await client.post(
-        "/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.post("/api/v1/portfolio/summary")
 
     # レスポンスの検証
     assert response.status_code == 200
@@ -157,9 +153,7 @@ async def test_portfolio_update_with_price_changes(
     assert "USD" in created_summary["holdings_by_currency"]
 
     # データベースに正しく記録されたことを確認するために、GET でも確認
-    get_response = await client.get(
-        "/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    get_response = await client.get("/api/v1/portfolio/summary")
     get_summary = get_response.json()
 
     # POSTとGETの結果が一致することを確認
@@ -187,20 +181,14 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
     # まず複数の履歴データを作成（3回ポートフォリオを更新）
     for _ in range(3):
         # ホールディングの更新
-        await client.post(
-            "/api/v1/holdings/8058/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-        )
-        await client.post(
-            "/api/v1/holdings/AAPL/recalculate", headers={"Authorization": f"Bearer {auth_token}"}
-        )
+        await client.post("/api/v1/holdings/8058/recalculate")
+        await client.post("/api/v1/holdings/AAPL/recalculate")
 
         # ポートフォリオ履歴を作成
-        await client.post("/api/v1/portfolio/summary", headers={"Authorization": f"Bearer {auth_token}"})
+        await client.post("/api/v1/portfolio/summary")
 
     # 履歴取得APIを呼び出す
-    response = await client.get(
-        "/api/v1/portfolio/history", headers={"Authorization": f"Bearer {auth_token}"}
-    )
+    response = await client.get("/api/v1/portfolio/history")
 
     # レスポンスの検証
     assert response.status_code == 200

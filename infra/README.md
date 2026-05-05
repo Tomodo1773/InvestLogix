@@ -22,11 +22,13 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 | `versions.tf` | OpenTofu / Provider バージョン制約、GCS backend 宣言 |
 | `variables.tf` | 入力変数 |
 | `locals.tf` | ジョブ・スケジュール・シークレットの一覧（map 化） |
-| `service_accounts.tf` | 3 つの Service Account |
+| `service_accounts.tf` | ランタイム / invoker / CD deployer の Service Account と IAM |
 | `secrets.tf` | 既存シークレットの data 参照と IAM 付与 |
 | `cloud_run_service.tf` | API 用 Cloud Run Service |
 | `cloud_run_jobs.tf` | バッチジョブ × 3 と invoker IAM |
 | `cloud_scheduler.tf` | Cloud Scheduler × 3（OAuth 認証で Job をキック） |
+| `artifact_registry.tf` | コンテナイメージ置き場 |
+| `workload_identity.tf` | GitHub Actions が鍵レスで成り代わるための WIF |
 | `outputs.tf` | 最小限の output（sensitive） |
 
 ## 設計方針
@@ -36,10 +38,24 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 - Secret 値は Secret Manager に置き、`data "google_secret_manager_secret"` で参照のみ。state には機密値が乗らない（state 自体も非公開 GCS バケットに置く）。
 - state バックエンドのバケット名は `backend.hcl`（gitignore 対象）に書き、`tofu init -backend-config=backend.hcl` で渡す。`.tf` には書かない。
 
-### Cloud Build 自動デプロイとの役割分担
-- コンテナイメージタグ (`<image>:<commit-sha>`) は Cloud Build の継続的デプロイが直接 Cloud Run に反映する。
-- OpenTofu は image を `ignore_changes` で無視する。**OpenTofu は構造（env, SA, scaling, schedule）を管理、Cloud Build は image を管理。**
-- 同じ理由で `gcb-build-id` 等の Cloud Build 由来ラベルも無視する。
+### GitHub Actions CD との役割分担
+- コンテナイメージタグ (`<image>:<commit-sha>`) は GitHub Actions の `api-cd.yml` が docker push → `gcloud run deploy` / `gcloud run jobs update` で直接反映する。
+- OpenTofu は image を `ignore_changes` で無視する。**OpenTofu は構造（env, SA, scaling, schedule, WIF, AR）を管理、GitHub Actions は image を管理。**
+- 同じ理由で Cloud Run の `client` / `client_version` / `revision` 等の自動更新フィールドも無視する。
+
+### CD 用リソースと GitHub Actions Variables の同期
+- WIF / Artifact Registry / Deployer SA は OpenTofu 管理下にある。
+- ワークフロー側は GCP プロジェクト ID 等の識別子を YAML に書かない（public リポのため）。`tofu output` の値を GitHub の **Settings → Secrets and variables → Actions → Variables** に手動で登録する。
+- 必要な Variables: `WIF_PROVIDER`, `DEPLOYER_SA`, `IMAGE_BASE`, `GCP_REGION`, `SERVICE_NAME`。
+- 取得手順:
+  ```bash
+  cd infra
+  set -a; source .env; set +a
+  tofu output -raw wif_provider
+  tofu output -raw deployer_sa_email
+  tofu output -raw image_base
+  ```
+  これらの値と、`var.region` (`asia-northeast1`) / `var.service_name` (`investlogix-api`) を Variables に登録する。WIF / AR / SA の構成を変えたときだけ再同期すればよい。
 
 ---
 
@@ -90,7 +106,20 @@ unset VALUE
 
 ## イメージのデプロイ
 
-Cloud Build トリガーで自動。Cloud Run Jobs への反映は `scripts/update-cloud-run-jobs.sh`。OpenTofu は image を `ignore_changes` しているので何もしない。
+main への push で `.github/workflows/api-cd.yml` が起動し、build → push → `gcloud run deploy` (Service) → `gcloud run jobs update` (Jobs) を 1 本のワークフローで実行する。OpenTofu は image を `ignore_changes` しているので何もしない。
+
+## Artifact Registry の初回 import
+
+既存の `cloud-run-source-deploy` リポを OpenTofu 管理下に取り込む（既に Cloud Build が自動作成済みのため、新規作成ではなく import）:
+
+```bash
+cd infra
+set -a; source .env; set +a
+tofu import google_artifact_registry_repository.api \
+  projects/$TF_VAR_project_id/locations/$TF_VAR_region/repositories/$TF_VAR_artifact_registry_repo_id
+tofu plan   # 破壊的差分が無いことを確認
+tofu apply
+```
 
 ## 全削除（やり直したいとき）
 

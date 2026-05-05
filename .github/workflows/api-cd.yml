@@ -1,0 +1,83 @@
+name: API CD (Cloud Run)
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/api/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Configure docker auth for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build image
+        working-directory: src/api
+        run: docker build -t ${{ vars.IMAGE_BASE }}:${{ env.IMAGE_TAG }} .
+
+      - name: Push image
+        run: docker push ${{ vars.IMAGE_BASE }}:${{ env.IMAGE_TAG }}
+
+      - name: Deploy Cloud Run Service
+        run: |
+          gcloud run deploy ${{ vars.SERVICE_NAME }} \
+            --image=${{ vars.IMAGE_BASE }}:${{ env.IMAGE_TAG }} \
+            --region=${{ vars.GCP_REGION }} \
+            --quiet
+
+      # Jobs 名は infra/locals.tf の jobs map と同期させること。
+      - name: Update Cloud Run Jobs
+        run: |
+          for job in recalc-holdings update-and-notify notify-weekly-performance; do
+            gcloud run jobs update "$job" \
+              --image=${{ vars.IMAGE_BASE }}:${{ env.IMAGE_TAG }} \
+              --region=${{ vars.GCP_REGION }} \
+              --quiet
+          done
+
+      - name: Verify image SHA on Service and Jobs
+        run: |
+          expected="${{ vars.IMAGE_BASE }}:${{ env.IMAGE_TAG }}"
+          fail=0
+          actual_service=$(gcloud run services describe ${{ vars.SERVICE_NAME }} \
+            --region=${{ vars.GCP_REGION }} \
+            --format='value(spec.template.spec.containers[0].image)')
+          if [ "$actual_service" = "$expected" ]; then
+            echo "OK  service ${{ vars.SERVICE_NAME }}"
+          else
+            echo "NG  service ${{ vars.SERVICE_NAME }} -> $actual_service" >&2
+            fail=1
+          fi
+          for job in recalc-holdings update-and-notify notify-weekly-performance; do
+            actual=$(gcloud run jobs describe "$job" \
+              --region=${{ vars.GCP_REGION }} \
+              --format='value(spec.template.spec.template.spec.containers[0].image)')
+            if [ "$actual" = "$expected" ]; then
+              echo "OK  job $job"
+            else
+              echo "NG  job $job -> $actual" >&2
+              fail=1
+            fi
+          done
+          exit $fail

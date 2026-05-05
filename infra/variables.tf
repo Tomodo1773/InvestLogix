@@ -58,3 +58,35 @@ variable "jobs_invoker_sa_id" {
   type    = string
   default = "investlogix-jobs-invoker"
 }
+
+variable "github_repository" {
+  type        = string
+  description = "GitHub Actions から WIF 経由でデプロイを許可するリポジトリ (owner/repo)。"
+}
+
+variable "artifact_registry_repo_id" {
+  type        = string
+  description = "Cloud Run Service / Jobs が参照する Artifact Registry リポジトリ名。Cloud Build の自動作成リポを既存資産として流用するため、デフォルトは cloud-run-source-deploy。"
+  default     = "cloud-run-source-deploy"
+}
+
+variable "artifact_registry_image_name" {
+  type        = string
+  description = "Artifact Registry 内の image 名（リポジトリ配下のパス）。フル URI は LOCATION-docker.pkg.dev/PROJECT/REPO/IMAGE_NAME。"
+  default     = "investlogix/investlogix-api"
+}
+
+variable "deployer_sa_id" {
+  type    = string
+  default = "investlogix-deployer"
+}
+
+variable "wif_pool_id" {
+  type    = string
+  default = "github-actions-pool"
+}
+
+variable "wif_provider_id" {
+  type    = string
+  default = "github-actions-provider"
+}

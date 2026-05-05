@@ -58,3 +58,14 @@ variable "jobs_invoker_sa_id" {
   type    = string
   default = "investlogix-jobs-invoker"
 }
+
+variable "github_repository" {
+  type        = string
+  description = "GitHub Actions から WIF 経由でデプロイを許可するリポジトリ (owner/repo)。"
+}
+
+variable "artifact_registry_repo_id" {
+  type        = string
+  description = "Cloud Run が参照する Artifact Registry リポジトリ名。Cloud Build の自動生成リポを流用するためデフォルトは cloud-run-source-deploy。"
+  default     = "cloud-run-source-deploy"
+}

@@ -35,4 +35,12 @@ locals {
   ]
 
   all_secrets = toset(concat(local.service_secrets, local.jobs_secrets))
+
+  # CD 用リソースの ID。環境ごとに変える必要がないため variable ではなく local。
+  artifact_registry_image_name = "investlogix/investlogix-api"
+  deployer_sa_id               = "investlogix-deployer"
+  wif_pool_id                  = "github-actions-pool"
+  wif_provider_id              = "github-actions-provider"
+
+  image_base = "${var.region}-docker.pkg.dev/${var.project_id}/${var.artifact_registry_repo_id}/${local.artifact_registry_image_name}"
 }

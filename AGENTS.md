@@ -66,6 +66,7 @@ InvestLogix/
 |-------------|------|
 | `api-ci.yml` | バックエンドのリント・型チェック |
 | `api-test.yml` | バックエンドのテスト |
+| `api-cd.yml` | バックエンドのCloud Runへのデプロイ（main push時） |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
 | `ruff-autofix.yml` | Ruffによるコードの自動修正とコミット（手動実行） |
 | `biome-autofix.yml` | Biomeによるコードの自動修正とコミット（手動実行） |

@@ -34,9 +34,11 @@ Cloud Build が自動生成した `cloud-run-source-deploy` リポを OpenTofu �
 
 ```bash
 tofu import google_artifact_registry_repository.api \
-  projects/$TF_VAR_project_id/locations/$TF_VAR_region/repositories/$TF_VAR_artifact_registry_repo_id
+  projects/$TF_VAR_project_id/locations/asia-northeast1/repositories/cloud-run-source-deploy
 ```
 
+> `region` と `artifact_registry_repo_id` は `variables.tf` の default を使う前提で `.env` に書かない運用なので、import の ID にはリテラルで埋める。
+>
 > 既に import 済みなら "Resource already managed" エラーになるので、その場合はスキップ。
 
 ### A-4. plan で差分確認
@@ -87,9 +89,9 @@ GitHub の **Settings → Secrets and variables → Actions → Variables タブ
 `gh` CLI が手元にあるなら一括登録も可:
 
 ```bash
-gh variable set WIF_PROVIDER --body "$(cd infra && tofu output -raw wif_provider)"
-gh variable set DEPLOYER_SA  --body "$(cd infra && tofu output -raw deployer_sa_email)"
-gh variable set IMAGE_BASE   --body "$(cd infra && tofu output -raw image_base)"
+gh variable set WIF_PROVIDER --body "$(tofu output -raw wif_provider)"
+gh variable set DEPLOYER_SA  --body "$(tofu output -raw deployer_sa_email)"
+gh variable set IMAGE_BASE   --body "$(tofu output -raw image_base)"
 gh variable set GCP_REGION   --body "asia-northeast1"
 gh variable set SERVICE_NAME --body "investlogix-api"
 ```

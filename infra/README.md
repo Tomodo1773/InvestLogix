@@ -2,8 +2,6 @@
 
 InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Scheduler / Service Accounts / Secret Manager IAM）を OpenTofu で管理する。
 
-旧 Azure Bicep ファイルは `azure-bicep/` 配下に退避済み（参照のみ）。
-
 > CLI は `tofu`。HCL は Terraform 互換なので、`hashicorp/google` プロバイダ等はそのまま使える。
 
 ## 用語ミニ解説

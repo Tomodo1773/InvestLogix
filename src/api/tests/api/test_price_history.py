@@ -96,7 +96,7 @@ async def test_get_us_stock_price_history(
     期待する動作:
     - ステータスコード200
     - 株価データのリストを返却
-    - Stooqから株価が取得されること
+    - Tiingoから株価が取得されること
 
     Args:
         client: 非同期HTTPクライアント
@@ -105,8 +105,8 @@ async def test_get_us_stock_price_history(
         setup_us_stock_data: 米国株テストデータ
         mocker: モッカー
     """
-    # Stooqのモックデータ
-    mock_stooq_data = [
+    # Tiingoのモックデータ
+    mock_tiingo_data = [
         {
             "date": "2025-01-20",
             "open": 240.0,
@@ -128,7 +128,7 @@ async def test_get_us_stock_price_history(
     # キャッシュされたメソッドをモック化
     mock_fetch_us = mocker.patch(
         "stock.services.price_history_service.PriceHistoryService._fetch_us_stock_prices_cached",
-        return_value=mock_stooq_data,
+        return_value=mock_tiingo_data,
     )
 
     # APIリクエスト実行
@@ -436,59 +436,6 @@ async def test_get_price_history_with_limit(
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) == 10
-
-
-@pytest.mark.asyncio
-async def test_get_index_price_history(
-    client: AsyncClient,
-    db_session: AsyncSession,
-    auth_token: str,
-    mocker,
-):
-    """主要株価指数の取得テスト（正常系）
-
-    期待する動作:
-    - DB登録不要でステータスコード200
-    - Stooqから指数シンボル（^spx）で取得されること
-    """
-    mock_index_data = [
-        {
-            "date": "2025-01-20",
-            "open": 5800.0,
-            "high": 5850.0,
-            "low": 5780.0,
-            "close": 5820.0,
-            "volume": 0,
-        },
-        {
-            "date": "2025-01-21",
-            "open": 5820.0,
-            "high": 5880.0,
-            "low": 5810.0,
-            "close": 5860.0,
-            "volume": 0,
-        },
-    ]
-
-    mock_fetch_index = mocker.patch(
-        "stock.services.price_history_service.PriceHistoryService._fetch_index_prices_cached",
-        return_value=mock_index_data,
-    )
-
-    response = await client.get(
-        "/api/v1/symbols/SP500/price-history",
-        params={"interval": "daily", "limit": 10},
-    )
-
-    assert response.status_code == 200
-    data = response.json()
-    assert data["symbol"] == "SP500"
-    assert data["interval"] == "daily"
-    assert len(data["data"]) == 2
-    assert data["data"][0]["close"] == 5820.0
-
-    mock_fetch_index.assert_called_once()
-    assert mock_fetch_index.call_args.args[0] == "^spx"
 
 
 @pytest.mark.asyncio

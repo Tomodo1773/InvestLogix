@@ -1,6 +1,6 @@
 """
 株価時系列データ取得サービス
-日本株はJ-Quants API、米国株はStooqを使用
+日本株はJ-Quants API、米国株はTiingoを使用
 """
 
 from datetime import datetime, timedelta
@@ -15,14 +15,7 @@ from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval
 from ..utils.cache import timed_cache
 from .jquants_service import get_jquants_client
-from .stooq_service import fetch_daily_prices_from_stooq, fetch_us_daily_prices_from_stooq
-
-INDEX_SYMBOL_MAP: dict[str, str] = {
-    "N225": "^nkx",
-    "TOPIX": "^tpx",
-    "SP500": "^spx",
-    "NASDAQ": "^ndq",
-}
+from .tiingo_service import fetch_us_daily_prices_from_tiingo
 
 
 class PriceHistoryService:
@@ -162,7 +155,7 @@ class PriceHistoryService:
     @timed_cache(seconds=3600)  # 1時間キャッシュ
     def _fetch_us_stock_prices_cached(symbol: str, start_date: str, end_date: str) -> List[dict]:
         """
-        Stooqから米国株の株価データを取得（キャッシュ付き）
+        Tiingoから米国株の株価データを取得（キャッシュ付き）
 
         Args:
             symbol: 銘柄コード
@@ -173,7 +166,7 @@ class PriceHistoryService:
             株価データのリスト
         """
         try:
-            result = fetch_us_daily_prices_from_stooq(symbol, start_date, end_date)
+            result = fetch_us_daily_prices_from_tiingo(symbol, start_date, end_date)
             logger.info(
                 "米国株株価を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
                 symbol,
@@ -207,32 +200,6 @@ class PriceHistoryService:
             株価データのリスト
         """
         return self._fetch_us_stock_prices_cached(symbol, start_date, end_date)
-
-    @staticmethod
-    @timed_cache(seconds=3600)
-    def _fetch_index_prices_cached(stooq_symbol: str, start_date: str, end_date: str) -> List[dict]:
-        """Stooqから指数の日足データを取得（1時間キャッシュ）"""
-        try:
-            result = fetch_daily_prices_from_stooq(
-                stooq_symbol, start_date, end_date, allow_missing_volume=True
-            )
-            logger.info(
-                "指数を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
-                stooq_symbol,
-                start_date,
-                end_date,
-                len(result),
-            )
-            return result
-        except Exception as e:
-            logger.error(
-                "指数の取得に失敗しました action=external_io symbol={} start_date={} end_date={} error={}",
-                stooq_symbol,
-                start_date,
-                end_date,
-                str(e),
-            )
-            raise Exception(f"Failed to fetch index prices: {str(e)}")
 
     async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> List[dict]:
         result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
@@ -274,10 +241,7 @@ class PriceHistoryService:
         start_date = self._calculate_start_date(interval, limit)
         end_date = datetime.now().strftime("%Y-%m-%d")
 
-        if symbol in INDEX_SYMBOL_MAP:
-            data = self._fetch_index_prices_cached(INDEX_SYMBOL_MAP[symbol], start_date, end_date)
-        else:
-            data = await self._fetch_stock_prices(symbol, start_date, end_date)
+        data = await self._fetch_stock_prices(symbol, start_date, end_date)
 
         if interval == PriceHistoryInterval.WEEKLY:
             data = self._aggregate_to_weekly(data)

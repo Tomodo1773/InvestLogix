@@ -10,7 +10,7 @@ from loguru import logger
 
 from ..utils.datetime import get_date_range_for_api
 from .jquants_service import get_jquants_client
-from .stooq_service import fetch_us_daily_prices_from_stooq
+from .tiingo_service import fetch_us_daily_prices_from_tiingo
 
 
 async def fetch_japan_stock_prices(symbol: str, days_back: int = 7) -> list[dict]:
@@ -55,7 +55,7 @@ async def fetch_us_stock_prices(symbol: str, days_back: int = 7) -> list[dict]:
     try:
         start_date, end_date = get_date_range_for_api(days_back=days_back)
         prices = await asyncio.to_thread(
-            fetch_us_daily_prices_from_stooq,
+            fetch_us_daily_prices_from_tiingo,
             symbol,
             start_date,
             end_date,

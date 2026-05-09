@@ -8,6 +8,7 @@ from typing import List
 
 import pandas as pd
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
@@ -233,6 +234,22 @@ class PriceHistoryService:
             )
             raise Exception(f"Failed to fetch index prices: {str(e)}")
 
+    async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> List[dict]:
+        result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
+        stock = result.scalar_one_or_none()
+
+        if not stock:
+            logger.error("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
+            raise ValueError(f"Stock {symbol} not found")
+
+        if stock.security_type == "FUND":
+            logger.error("投資信託は価格履歴未対応です action=select symbol={} security_type=FUND", symbol)
+            raise ValueError("Price history is not available for investment funds")
+
+        if stock.market in ["JPX", "東証", "東証グロース", "東証スタンダード"]:
+            return await self._fetch_japanese_stock_prices(symbol, start_date, end_date)
+        return await self._fetch_us_stock_prices(symbol, start_date, end_date)
+
     async def get_price_history(
         self,
         symbol: str,
@@ -258,38 +275,15 @@ class PriceHistoryService:
         end_date = datetime.now().strftime("%Y-%m-%d")
 
         if symbol in INDEX_SYMBOL_MAP:
-            # 主要株価指数：DB照会をスキップしStooqから直接取得
             data = self._fetch_index_prices_cached(INDEX_SYMBOL_MAP[symbol], start_date, end_date)
         else:
-            from sqlalchemy import select
+            data = await self._fetch_stock_prices(symbol, start_date, end_date)
 
-            result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
-            stock = result.scalar_one_or_none()
-
-            if not stock:
-                logger.error("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
-                raise ValueError(f"Stock {symbol} not found")
-
-            # 投資信託は非対応
-            if stock.security_type == "FUND":
-                logger.error(
-                    "投資信託は価格履歴未対応です action=select symbol={} security_type=FUND", symbol
-                )
-                raise ValueError("Price history is not available for investment funds")
-
-            # 市場に応じてデータを取得
-            if stock.market in ["JPX", "東証", "東証グロース", "東証スタンダード"]:
-                data = await self._fetch_japanese_stock_prices(symbol, start_date, end_date)
-            else:  # 米国株
-                data = await self._fetch_us_stock_prices(symbol, start_date, end_date)
-
-        # 間隔に応じて集計
         if interval == PriceHistoryInterval.WEEKLY:
             data = self._aggregate_to_weekly(data)
         elif interval == PriceHistoryInterval.MONTHLY:
             data = self._aggregate_to_monthly(data)
 
-        # 最新のlimit件のみを返す
         data = data[-limit:] if len(data) > limit else data
 
         logger.info(

@@ -22,18 +22,16 @@ function calcWeeklyChange(history: PriceHistoryResponse | undefined): {
   latest: number | null
   changePct: number | null
 } {
-  if (!history?.data || history.data.length === 0) {
+  const data = history?.data
+  if (!data || data.length === 0) {
     return { latest: null, changePct: null }
   }
-  const latest = history.data[history.data.length - 1].close
-  // 5営業日前との比較。データ不足時は最古の値で代用
-  const baseIndex = Math.max(0, history.data.length - 1 - 5)
-  const base = history.data[baseIndex].close
-  if (base === 0) {
+  const latest = data[data.length - 1].close
+  if (data.length < 6) {
     return { latest, changePct: null }
   }
-  const changePct = (latest / base - 1) * 100
-  return { latest, changePct }
+  const base = data[data.length - 6].close
+  return { latest, changePct: (latest / base - 1) * 100 }
 }
 
 function formatIndexValue(value: number | null, currency: "JPY" | "USD"): string {

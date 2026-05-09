@@ -57,7 +57,7 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 # 各機能のエンドポイント
 app.include_router(holdings.router, prefix="/api/v1/holdings", tags=["holdings"])
 app.include_router(stocks.router, prefix="/api/v1/stocks", tags=["stocks"])
-app.include_router(price_history.router, prefix="/api/v1/stocks", tags=["stocks"])
+app.include_router(price_history.router, prefix="/api/v1/symbols", tags=["symbols"])
 app.include_router(stock_splits.router, prefix="/api/v1/stock-splits", tags=["stock-splits"])
 app.include_router(transactions.router, prefix="/api/v1/transactions", tags=["transactions"])
 app.include_router(portfolio.router, prefix="/api/v1/portfolio", tags=["portfolio"])

@@ -8,13 +8,21 @@ from typing import List
 
 import pandas as pd
 from loguru import logger
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval
 from ..utils.cache import timed_cache
 from .jquants_service import get_jquants_client
-from .stooq_service import fetch_us_daily_prices_from_stooq
+from .stooq_service import fetch_daily_prices_from_stooq, fetch_us_daily_prices_from_stooq
+
+INDEX_SYMBOL_MAP: dict[str, str] = {
+    "N225": "^nkx",
+    "TOPIX": "^tpx",
+    "SP500": "^spx",
+    "NASDAQ": "^ndq",
+}
 
 
 class PriceHistoryService:
@@ -200,6 +208,48 @@ class PriceHistoryService:
         """
         return self._fetch_us_stock_prices_cached(symbol, start_date, end_date)
 
+    @staticmethod
+    @timed_cache(seconds=3600)
+    def _fetch_index_prices_cached(stooq_symbol: str, start_date: str, end_date: str) -> List[dict]:
+        """Stooqから指数の日足データを取得（1時間キャッシュ）"""
+        try:
+            result = fetch_daily_prices_from_stooq(
+                stooq_symbol, start_date, end_date, allow_missing_volume=True
+            )
+            logger.info(
+                "指数を取得しました action=external_io symbol={} start_date={} end_date={} count={}",
+                stooq_symbol,
+                start_date,
+                end_date,
+                len(result),
+            )
+            return result
+        except Exception as e:
+            logger.error(
+                "指数の取得に失敗しました action=external_io symbol={} start_date={} end_date={} error={}",
+                stooq_symbol,
+                start_date,
+                end_date,
+                str(e),
+            )
+            raise Exception(f"Failed to fetch index prices: {str(e)}")
+
+    async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> List[dict]:
+        result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
+        stock = result.scalar_one_or_none()
+
+        if not stock:
+            logger.error("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
+            raise ValueError(f"Stock {symbol} not found")
+
+        if stock.security_type == "FUND":
+            logger.error("投資信託は価格履歴未対応です action=select symbol={} security_type=FUND", symbol)
+            raise ValueError("Price history is not available for investment funds")
+
+        if stock.market in ["JPX", "東証", "東証グロース", "東証スタンダード"]:
+            return await self._fetch_japanese_stock_prices(symbol, start_date, end_date)
+        return await self._fetch_us_stock_prices(symbol, start_date, end_date)
+
     async def get_price_history(
         self,
         symbol: str,
@@ -221,38 +271,19 @@ class PriceHistoryService:
             ValueError: 投資信託など非対応の証券種別の場合
             Exception: データ取得失敗時
         """
-        # 銘柄情報を取得して市場を判定
-        from sqlalchemy import select
-
-        result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
-        stock = result.scalar_one_or_none()
-
-        if not stock:
-            logger.error("Stockが見つかりませんでした action=select symbol={} found=false", symbol)
-            raise ValueError(f"Stock {symbol} not found")
-
-        # 投資信託は非対応
-        if stock.security_type == "FUND":
-            logger.error("投資信託は価格履歴未対応です action=select symbol={} security_type=FUND", symbol)
-            raise ValueError("Price history is not available for investment funds")
-
-        # 開始日・終了日を計算
         start_date = self._calculate_start_date(interval, limit)
         end_date = datetime.now().strftime("%Y-%m-%d")
 
-        # 市場に応じてデータを取得
-        if stock.market in ["JPX", "東証", "東証グロース", "東証スタンダード"]:
-            data = await self._fetch_japanese_stock_prices(symbol, start_date, end_date)
-        else:  # 米国株
-            data = await self._fetch_us_stock_prices(symbol, start_date, end_date)
+        if symbol in INDEX_SYMBOL_MAP:
+            data = self._fetch_index_prices_cached(INDEX_SYMBOL_MAP[symbol], start_date, end_date)
+        else:
+            data = await self._fetch_stock_prices(symbol, start_date, end_date)
 
-        # 間隔に応じて集計
         if interval == PriceHistoryInterval.WEEKLY:
             data = self._aggregate_to_weekly(data)
         elif interval == PriceHistoryInterval.MONTHLY:
             data = self._aggregate_to_monthly(data)
 
-        # 最新のlimit件のみを返す
         data = data[-limit:] if len(data) > limit else data
 
         logger.info(

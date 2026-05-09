@@ -62,7 +62,7 @@ async def test_get_japanese_stock_price_history(
 
     # APIリクエスト実行
     response = await client.get(
-        "/api/v1/stocks/8058/price-history",
+        "/api/v1/symbols/8058/price-history",
         params={"interval": "daily", "limit": 80},
     )
 
@@ -133,7 +133,7 @@ async def test_get_us_stock_price_history(
 
     # APIリクエスト実行
     response = await client.get(
-        "/api/v1/stocks/AAPL/price-history",
+        "/api/v1/symbols/AAPL/price-history",
         params={"interval": "daily", "limit": 80},
     )
 
@@ -214,7 +214,7 @@ async def test_get_price_history_with_weekly_interval(
 
     # APIリクエスト実行（週次指定）
     response = await client.get(
-        "/api/v1/stocks/8058/price-history",
+        "/api/v1/symbols/8058/price-history",
         params={"interval": "weekly", "limit": 80},
     )
 
@@ -295,7 +295,7 @@ async def test_get_price_history_with_monthly_interval(
 
     # APIリクエスト実行（月次指定）
     response = await client.get(
-        "/api/v1/stocks/8058/price-history",
+        "/api/v1/symbols/8058/price-history",
         params={"interval": "monthly", "limit": 60},
     )
 
@@ -326,7 +326,7 @@ async def test_get_price_history_stock_not_found(
     """
     # APIリクエスト実行（存在しない銘柄）
     response = await client.get(
-        "/api/v1/stocks/INVALID/price-history",
+        "/api/v1/symbols/INVALID/price-history",
         params={"interval": "daily", "limit": 80},
     )
 
@@ -370,7 +370,7 @@ async def test_get_price_history_without_auth(
     async with AsyncClient(transport=transport, base_url="http://test") as test_client:
         # APIリクエスト実行（認証ヘッダーなし、cookieなし）
         response = await test_client.get(
-            "/api/v1/stocks/8058/price-history",
+            "/api/v1/symbols/8058/price-history",
             params={"interval": "daily", "limit": 80},
         )
 
@@ -429,13 +429,66 @@ async def test_get_price_history_with_limit(
 
     # limit=10でテスト
     response = await client.get(
-        "/api/v1/stocks/8058/price-history",
+        "/api/v1/symbols/8058/price-history",
         params={"interval": "daily", "limit": 10},
     )
 
     assert response.status_code == 200
     data = response.json()
     assert len(data["data"]) == 10
+
+
+@pytest.mark.asyncio
+async def test_get_index_price_history(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    mocker,
+):
+    """主要株価指数の取得テスト（正常系）
+
+    期待する動作:
+    - DB登録不要でステータスコード200
+    - Stooqから指数シンボル（^spx）で取得されること
+    """
+    mock_index_data = [
+        {
+            "date": "2025-01-20",
+            "open": 5800.0,
+            "high": 5850.0,
+            "low": 5780.0,
+            "close": 5820.0,
+            "volume": 0,
+        },
+        {
+            "date": "2025-01-21",
+            "open": 5820.0,
+            "high": 5880.0,
+            "low": 5810.0,
+            "close": 5860.0,
+            "volume": 0,
+        },
+    ]
+
+    mock_fetch_index = mocker.patch(
+        "stock.services.price_history_service.PriceHistoryService._fetch_index_prices_cached",
+        return_value=mock_index_data,
+    )
+
+    response = await client.get(
+        "/api/v1/symbols/SP500/price-history",
+        params={"interval": "daily", "limit": 10},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["symbol"] == "SP500"
+    assert data["interval"] == "daily"
+    assert len(data["data"]) == 2
+    assert data["data"][0]["close"] == 5820.0
+
+    mock_fetch_index.assert_called_once()
+    assert mock_fetch_index.call_args.args[0] == "^spx"
 
 
 @pytest.mark.asyncio
@@ -459,7 +512,7 @@ async def test_get_price_history_monthly_limit_validation(
     """
     # limit=61でリクエスト（月足の上限60を超える）
     response = await client.get(
-        "/api/v1/stocks/8058/price-history",
+        "/api/v1/symbols/8058/price-history",
         params={"interval": "monthly", "limit": 61},
     )
 

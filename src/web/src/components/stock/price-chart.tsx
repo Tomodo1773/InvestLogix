@@ -88,7 +88,7 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
   const limit = interval === "monthly" ? 60 : 80
 
   const { data, isLoading, error } = useSWR(
-    securityType === "FUND" ? null : `/stocks/${symbol}/price-history?interval=${interval}&limit=${limit}`,
+    securityType === "FUND" ? null : `/symbols/${symbol}/price-history?interval=${interval}&limit=${limit}`,
     () => getPriceHistory(symbol, interval, limit)
   )
 

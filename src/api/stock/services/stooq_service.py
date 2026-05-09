@@ -26,18 +26,21 @@ def _build_stooq_symbol(symbol: str) -> str:
     return f"{normalized}.us"
 
 
-def fetch_us_daily_prices_from_stooq(
-    symbol: str,
+def fetch_daily_prices_from_stooq(
+    stooq_symbol: str,
     start_date: DateInput,
     end_date: DateInput,
+    *,
+    allow_missing_volume: bool = False,
 ) -> list[dict]:
     """
-    Stooq から米国株の日足データを取得する。
+    Stooq から日足データを取得する汎用関数。
+    stooq_symbol はサフィックス処理済みの生シンボル（例: "aapl.us" / "^spx"）。
+    指数のようにVolumeが "N/D" になり得るケースは allow_missing_volume=True で 0 扱いする。
     返却データは日付の昇順（古い順）。
     """
     start = _to_date(start_date)
     end = _to_date(end_date)
-    stooq_symbol = _build_stooq_symbol(symbol)
     url = f"https://stooq.com/q/d/l/?s={stooq_symbol}&i=d"
 
     try:
@@ -46,7 +49,7 @@ def fetch_us_daily_prices_from_stooq(
     except Exception as e:
         logger.error(
             "Stooqへのリクエストに失敗しました action=external_io symbol={} error={}",
-            symbol,
+            stooq_symbol,
             str(e),
         )
         raise
@@ -62,9 +65,16 @@ def fetch_us_daily_prices_from_stooq(
             or row.get("High") in (None, "N/D")
             or row.get("Low") in (None, "N/D")
             or row.get("Close") in (None, "N/D")
-            or row.get("Volume") in (None, "N/D")
         ):
             continue
+
+        volume_raw = row.get("Volume")
+        if volume_raw in (None, "N/D"):
+            if not allow_missing_volume:
+                continue
+            volume = 0
+        else:
+            volume = int(float(volume_raw))
 
         record_date = datetime.strptime(row["Date"], "%Y-%m-%d").date()
         if record_date < start or record_date > end:
@@ -77,9 +87,21 @@ def fetch_us_daily_prices_from_stooq(
                 "high": float(row["High"]),
                 "low": float(row["Low"]),
                 "close": float(row["Close"]),
-                "volume": int(float(row["Volume"])),
+                "volume": volume,
             }
         )
 
     rows.sort(key=lambda x: x["date"])
     return rows
+
+
+def fetch_us_daily_prices_from_stooq(
+    symbol: str,
+    start_date: DateInput,
+    end_date: DateInput,
+) -> list[dict]:
+    """
+    Stooq から米国株の日足データを取得する。
+    返却データは日付の昇順（古い順）。
+    """
+    return fetch_daily_prices_from_stooq(_build_stooq_symbol(symbol), start_date, end_date)

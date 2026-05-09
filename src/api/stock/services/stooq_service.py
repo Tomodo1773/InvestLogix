@@ -41,10 +41,13 @@ def fetch_daily_prices_from_stooq(
     """
     start = _to_date(start_date)
     end = _to_date(end_date)
-    url = f"https://stooq.com/q/d/l/?s={stooq_symbol}&i=d"
 
     try:
-        response = httpx.get(url, timeout=10.0)
+        response = httpx.get(
+            "https://stooq.com/q/d/l/",
+            params={"s": stooq_symbol, "i": "d"},
+            timeout=10.0,
+        )
         response.raise_for_status()
     except Exception as e:
         logger.error(

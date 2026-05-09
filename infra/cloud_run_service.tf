@@ -89,6 +89,10 @@ resource "google_cloud_run_v2_service" "api" {
     percent = 100
   }
 
+  # Secret Manager の IAM 伝播待ち（eventual consistency）の前に新リビジョンが起動して
+  # secretAccessor 権限不足で失敗するのを防ぐ。
+  depends_on = [google_secret_manager_secret_iam_member.api_runtime]
+
   lifecycle {
     # Cloud Build 自動デプロイが image とラベルを更新するため、OpenTofu は構造のみ管理する。
     ignore_changes = [

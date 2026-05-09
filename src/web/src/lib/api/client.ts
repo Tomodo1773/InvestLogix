@@ -84,6 +84,12 @@ export async function getHoldings(): Promise<Holding[]> {
   return fetchWithAuth<Holding[]>("/api/v1/holdings/")
 }
 
+export async function recalculateAllHoldings(): Promise<Holding[]> {
+  return fetchWithAuth<Holding[]>("/api/v1/holdings/recalculate-all", {
+    method: "POST",
+  })
+}
+
 // Transaction APIs
 export async function getTransactions(): Promise<Transaction[]> {
   return fetchWithAuth<Transaction[]>("/api/v1/transactions/")

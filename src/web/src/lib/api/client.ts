@@ -142,7 +142,7 @@ export async function getPriceHistory(
     limit: limit.toString(),
   })
   return fetchWithAuth<PriceHistoryResponse>(
-    `/api/v1/stocks/${encodeURIComponent(symbol)}/price-history?${params.toString()}`
+    `/api/v1/symbols/${encodeURIComponent(symbol)}/price-history?${params.toString()}`
   )
 }
 

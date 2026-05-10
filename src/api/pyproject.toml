@@ -23,10 +23,10 @@ dependencies = [
     "beautifulsoup4>=4.13.3",
     "pandas>=2.2.3",
     "psycopg2-binary>=2.9.12",
-    "psycopg>=3.2.4",
+    "psycopg>=3.3.4",
     "loguru>=0.7.3",
     "setuptools>=82.0.1",
-    "openai>=2.32.0",
+    "openai>=2.33.0",
 ]
 
 [tool.uv]

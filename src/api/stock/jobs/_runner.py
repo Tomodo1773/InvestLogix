@@ -16,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import AsyncSessionLocal, set_rls_user_id
 from ..models import User
 
-# action は失敗銘柄リストを返してもよい（None の場合は集計対象外）
 UserAction = Callable[[AsyncSession, User], Awaitable[Optional[List[str]]]]
 
 # サマリログに含める失敗銘柄の最大数。これを超えた分は省略件数として記録する

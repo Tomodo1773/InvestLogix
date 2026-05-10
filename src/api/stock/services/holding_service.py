@@ -393,15 +393,15 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> tuple[List[H
     # 保有銘柄一覧を取得
     holdings = await list_holdings(db, user_id)
     updated_holdings = []
-    failed_symbols: list[str] = []
+    failed_symbols: set[str] = set()
 
     # 各銘柄を更新
     for holding in holdings:
         result = await calculate_holding_pl(db, holding)
         if result.updated:
             updated_holdings.append(holding)
-        if result.price_fetch_failed and holding.symbol not in failed_symbols:
-            failed_symbols.append(holding.symbol)
+        if result.price_fetch_failed:
+            failed_symbols.add(holding.symbol)
 
     # 一括でフラッシュ
     await db.flush()
@@ -411,14 +411,14 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> tuple[List[H
         await db.refresh(holding)
 
     logger.info(
-        "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={} failed={}",
+        "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={} failed_symbol_count={}",
         user_id,
         len(holdings),
         len(updated_holdings),
         len(failed_symbols),
     )
 
-    return updated_holdings, failed_symbols
+    return updated_holdings, sorted(failed_symbols)
 
 
 async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:

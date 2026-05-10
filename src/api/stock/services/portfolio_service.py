@@ -151,7 +151,7 @@ class PortfolioService:
             Dict: 処理結果とポートフォリオサマリー
         """
         # 全銘柄の最新株価を取得して更新
-        await update_all_holdings_pl(self.db, user_id)
+        _, _ = await update_all_holdings_pl(self.db, user_id)
 
         # ポートフォリオの状態を履歴に保存
         portfolio_history = await self.create_portfolio_history(user_id)

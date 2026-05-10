@@ -3,7 +3,8 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.models import Holding
+from stock.models import Holding, User
+from stock.services.holding_service import update_all_holdings_pl
 from ..conftest import MOCK_JAPAN_STOCK_PRICE_UPDATED, MOCK_US_STOCK_PRICE_UPDATED, MOCK_USD_JPY_RATE_RESPONSE
 
 
@@ -381,3 +382,32 @@ async def test_update_holding_note_not_found(client: AsyncClient, auth_token: st
         json={"note": "test"},
     )
     assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_all_holdings_pl_returns_failed_symbols(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_japanese_stock_data,
+    setup_us_stock_data,
+    mocker,
+):
+    """update_all_holdings_pl が価格取得失敗銘柄リストを第2要素として返すことを検証する。
+
+    米国株(AAPL)の価格取得を 0.0（取得失敗）に固定し、戻り値の失敗リストに含まれることを確認する。
+    日本株(8058)はデフォルトのモックで取得成功するため失敗リストに含まれない。
+    """
+    # 米国株の価格取得を失敗させる
+    mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=0.0)
+
+    # auth_token フィクスチャで作成済みのテストユーザ ID を取得
+    result = await db_session.execute(select(User).where(User.username == "testuser"))
+    user_id = result.scalar_one().user_id
+
+    holdings, failed_symbols = await update_all_holdings_pl(db_session, user_id)
+
+    assert "AAPL" in failed_symbols
+    assert "8058" not in failed_symbols
+    # 日本株は更新成功している
+    assert any(h.symbol == "8058" for h in holdings)

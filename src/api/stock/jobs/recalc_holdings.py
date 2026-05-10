@@ -10,8 +10,9 @@ from ..services.holding_service import update_all_holdings_pl
 from ._runner import run_job
 
 
-async def _action(db: AsyncSession, user: User) -> None:
-    await update_all_holdings_pl(db, user.user_id)
+async def _action(db: AsyncSession, user: User) -> list[str]:
+    _, failed_symbols = await update_all_holdings_pl(db, user.user_id)
+    return failed_symbols
 
 
 def main() -> None:

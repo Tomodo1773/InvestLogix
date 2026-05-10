@@ -69,3 +69,9 @@ variable "artifact_registry_repo_id" {
   description = "Cloud Run が参照する Artifact Registry リポジトリ名。Cloud Build の自動生成リポを流用するためデフォルトは cloud-run-source-deploy。"
   default     = "cloud-run-source-deploy"
 }
+
+variable "alert_email" {
+  type        = string
+  description = "Cloud Monitoring からのジョブ失敗通知メール送信先（管理者）。"
+  sensitive   = true
+}

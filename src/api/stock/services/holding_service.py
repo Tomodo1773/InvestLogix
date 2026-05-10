@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, NamedTuple, Optional
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -14,6 +14,11 @@ from .stock_price_fetcher import (
     get_latest_japan_price,
     get_latest_us_price,
 )
+
+
+class HoldingUpdateResult(NamedTuple):
+    updated: bool
+    price_fetch_failed: bool
 
 
 async def get_japan_stock_price(symbol: str) -> float:
@@ -223,7 +228,7 @@ async def calculate_total_dividend_after_tax(
 async def calculate_holding_pl(
     db: AsyncSession,
     holding: models.Holding,
-) -> bool:
+) -> HoldingUpdateResult:
     """
     保有銘柄の損益情報を計算して更新する
 
@@ -232,7 +237,7 @@ async def calculate_holding_pl(
         holding (models.Holding): 更新対象のホールディング
 
     Returns:
-        bool: 更新に成功した場合は True、必要情報が不足した場合は False
+        HoldingUpdateResult: updated=損益計算まで進めたか、price_fetch_failed=価格取得が失敗扱いか
     """
     # 銘柄情報を取得
     stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
@@ -240,7 +245,7 @@ async def calculate_holding_pl(
     stock = stock_result.scalar_one_or_none()
     if not stock:
         logger.info("Stockが見つかりませんでした action=select symbol={}", holding.symbol)
-        return False
+        return HoldingUpdateResult(updated=False, price_fetch_failed=True)
     logger.info(
         "Stockを取得しました action=select user_id={} symbol={} found=true",
         holding.user_id,
@@ -265,11 +270,19 @@ async def calculate_holding_pl(
 
     # 現在値を取得
     current_price = await get_current_price(stock)
+    price_fetch_failed = current_price <= 0
     if current_price > 0:
         holding.current_price = current_price
     elif current_price == 0 and holding.current_price is None:
         # 上場廃止などで株価が取得できない場合は0を設定
         holding.current_price = 0.0
+
+    if price_fetch_failed:
+        logger.warning(
+            "価格取得に失敗しました action=price_fetch user_id={} symbol={}",
+            holding.user_id,
+            holding.symbol,
+        )
 
     # 現在値がない場合でも、初回取得時以外は既存の価格で計算を続行
     # 上場廃止銘柄でも実現損益と配当を反映するため、損益計算は必ず実行
@@ -279,7 +292,7 @@ async def calculate_holding_pl(
             "Holdingsの更新をスキップしました action=update symbol={} reason=no_current_price",
             holding.symbol,
         )
-        return False
+        return HoldingUpdateResult(updated=False, price_fetch_failed=True)
 
     # 時価評価額の計算
     holding.market_value = holding.current_price * holding.quantity
@@ -300,7 +313,7 @@ async def calculate_holding_pl(
         (holding.total_pl / holding.total_cost * 100) if holding.total_cost > 0 else 0.0
     )
 
-    return True
+    return HoldingUpdateResult(updated=True, price_fetch_failed=price_fetch_failed)
 
 
 async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) -> Holding:
@@ -326,8 +339,8 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     logger.info("Holdingsを取得しました action=select user_id={} symbol={} found=true", user_id, symbol)
 
     # 損益情報を更新
-    updated = await calculate_holding_pl(db, holding)
-    if updated:
+    result = await calculate_holding_pl(db, holding)
+    if result.updated:
         await db.flush()
         await db.refresh(holding)
         logger.info("Holdingsを更新しました action=update user_id={} symbol={}", user_id, symbol)
@@ -364,7 +377,7 @@ async def update_holding_note(
     return holding
 
 
-async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding]:
+async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> tuple[List[Holding], List[str]]:
     """
     ユーザーの保有する全銘柄の損益を一括更新します。
 
@@ -373,17 +386,22 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
         user_id (int): ユーザーID
 
     Returns:
-        List[Holding]: 更新された保有情報のリスト
+        tuple[List[Holding], List[str]]:
+            - 更新された保有情報のリスト
+            - 価格取得に失敗した銘柄シンボルのリスト（ユーザ内ユニーク）
     """
     # 保有銘柄一覧を取得
     holdings = await list_holdings(db, user_id)
     updated_holdings = []
+    failed_symbols: list[str] = []
 
     # 各銘柄を更新
     for holding in holdings:
-        updated = await calculate_holding_pl(db, holding)
-        if updated:
+        result = await calculate_holding_pl(db, holding)
+        if result.updated:
             updated_holdings.append(holding)
+        if result.price_fetch_failed and holding.symbol not in failed_symbols:
+            failed_symbols.append(holding.symbol)
 
     # 一括でフラッシュ
     await db.flush()
@@ -393,13 +411,14 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> List[Holding
         await db.refresh(holding)
 
     logger.info(
-        "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={}",
+        "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={} failed={}",
         user_id,
         len(holdings),
         len(updated_holdings),
+        len(failed_symbols),
     )
 
-    return updated_holdings
+    return updated_holdings, failed_symbols
 
 
 async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:

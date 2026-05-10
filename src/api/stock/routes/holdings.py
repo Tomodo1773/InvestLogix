@@ -84,4 +84,5 @@ async def recalculate_all_holdings_pl(
     Returns:
         List[Holding]: 更新された保有情報のリスト
     """
-    return await holding_service.update_all_holdings_pl(db, current_user.user_id)
+    holdings, _ = await holding_service.update_all_holdings_pl(db, current_user.user_id)
+    return holdings

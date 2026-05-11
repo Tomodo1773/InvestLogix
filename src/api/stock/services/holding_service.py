@@ -268,9 +268,14 @@ async def calculate_holding_pl(
     # 配当総額を配当テーブルから再集計（税・手数料控除後）
     holding.total_dividend = await calculate_total_dividend_after_tax(db, holding.user_id, holding.symbol)
 
-    # 現在値を取得
-    current_price = await get_current_price(stock)
-    price_fetch_failed = current_price <= 0
+    # 現在値を取得（保有数ゼロの銘柄は売却済み・上場廃止扱いとして価格取得自体をスキップする）
+    if holding.quantity > 0:
+        current_price = await get_current_price(stock)
+        price_fetch_failed = current_price <= 0
+    else:
+        current_price = 0.0
+        price_fetch_failed = False
+
     if current_price > 0:
         holding.current_price = current_price
     elif current_price == 0 and holding.current_price is None:

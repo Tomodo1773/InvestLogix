@@ -29,6 +29,7 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 | `cloud_scheduler.tf` | Cloud Scheduler × 3（OAuth 認証で Job をキック） |
 | `artifact_registry.tf` | コンテナイメージ置き場 |
 | `workload_identity.tf` | GitHub Actions が鍵レスで成り代わるための WIF |
+| `monitoring.tf` | Cloud Run Jobs の失敗を検知する Notification Channel と Alert Policy |
 | `outputs.tf` | 最小限の output（sensitive） |
 
 ## 設計方針

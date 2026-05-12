@@ -111,6 +111,7 @@ async def get_weekly_performance(
     return WeeklyPerformanceResponse(
         top_performers=top_performers,
         bottom_performers=bottom_performers,
+        all_performers=performances,
         timestamp=timestamp,
     )
 

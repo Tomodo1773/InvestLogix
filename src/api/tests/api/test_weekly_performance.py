@@ -296,6 +296,7 @@ async def test_get_weekly_performance_endpoint(
 
     assert "top_performers" in data
     assert "bottom_performers" in data
+    assert "all_performers" in data
     assert "timestamp" in data
     assert "notification_sent" not in data
 
@@ -304,6 +305,10 @@ async def test_get_weekly_performance_endpoint(
     bottom_symbols = [p["symbol"] for p in data["bottom_performers"]]
     assert "8058" in top_symbols
     assert "AAPL" in bottom_symbols
+
+    # all_performers には全銘柄が含まれること
+    all_symbols = {p["symbol"] for p in data["all_performers"]}
+    assert {"8058", "AAPL"}.issubset(all_symbols)
 
     # LINE通知は呼び出されないこと
     mock_notification.assert_not_called()

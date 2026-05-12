@@ -8,11 +8,19 @@ import { formatCurrency, formatPercent, getPLColorClass } from "@/lib/format"
 interface HoldingsTableProps {
   holdings: Holding[] | undefined
   isLoading: boolean
+  weeklyChangeMap?: Map<string, number>
 }
 
-type SortKey = "symbol" | "quantity" | "current_price" | "market_value" | "total_pl" | "total_pl_percentage"
+type SortKey =
+  | "symbol"
+  | "quantity"
+  | "current_price"
+  | "market_value"
+  | "total_pl"
+  | "total_pl_percentage"
+  | "weekly_change"
 
-export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
+export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: HoldingsTableProps) {
   const { sortKey, sortDirection, handleSort, getSortIcon } = useTableSort<SortKey>({
     defaultSortKey: "market_value",
     defaultSortDirection: "desc",
@@ -48,6 +56,10 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
         case "total_pl_percentage":
           aValue = a.total_pl_percentage ?? 0
           bValue = b.total_pl_percentage ?? 0
+          break
+        case "weekly_change":
+          aValue = weeklyChangeMap?.get(a.symbol) ?? Number.NEGATIVE_INFINITY
+          bValue = weeklyChangeMap?.get(b.symbol) ?? Number.NEGATIVE_INFINITY
           break
       }
 
@@ -129,6 +141,15 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                       {getSortIcon("total_pl_percentage")}
                     </div>
                   </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none text-right"
+                    onClick={() => handleSort("weekly_change")}
+                  >
+                    <div className="flex items-center justify-end">
+                      週次騰落率
+                      {getSortIcon("weekly_change")}
+                    </div>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -136,6 +157,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                   sortedHoldings.map((holding) => {
                     const plValue = holding.total_pl ?? 0
                     const plColor = getPLColorClass(plValue)
+                    const weeklyChange = weeklyChangeMap?.get(holding.symbol)
 
                     return (
                       <TableRow key={holding.symbol}>
@@ -162,12 +184,19 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                         <TableCell className={`text-right font-medium ${plColor}`}>
                           {holding.total_pl_percentage ? formatPercent(holding.total_pl_percentage) : "-"}
                         </TableCell>
+                        <TableCell
+                          className={`text-right font-medium ${
+                            weeklyChange !== undefined ? getPLColorClass(weeklyChange) : ""
+                          }`}
+                        >
+                          {weeklyChange !== undefined ? formatPercent(weeklyChange) : "-"}
+                        </TableCell>
                       </TableRow>
                     )
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       保有銘柄がありません
                     </TableCell>
                   </TableRow>

@@ -242,5 +242,6 @@ export interface StockWeeklyPerformance {
 export interface WeeklyPerformanceResponse {
   top_performers: StockWeeklyPerformance[]
   bottom_performers: StockWeeklyPerformance[]
+  all_performers: StockWeeklyPerformance[]
   timestamp: string
 }

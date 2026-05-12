@@ -453,6 +453,7 @@ class WeeklyPerformanceResponse(BaseModel):
 
     top_performers: List[StockWeeklyPerformance]
     bottom_performers: List[StockWeeklyPerformance]
+    all_performers: List[StockWeeklyPerformance]
     timestamp: str
 
 

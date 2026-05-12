@@ -1,5 +1,5 @@
 import { AlertCircle, Calculator, Download, RefreshCw } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import useSWR, { mutate as globalMutate } from "swr"
 import { HoldingAllocationChart } from "@/components/dashboard/holding-allocation-chart"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
@@ -7,7 +7,7 @@ import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { getHoldings, recalculateAllHoldings } from "@/lib/api/client"
+import { getHoldings, getWeeklyPerformance, recalculateAllHoldings } from "@/lib/api/client"
 import { downloadCsv, holdingsToCsv } from "@/lib/csv"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
@@ -19,6 +19,16 @@ export default function Holdings() {
     isLoading,
     mutate,
   } = useSWR(isAuthenticated ? "/api/v1/holdings/" : null, getHoldings)
+
+  const { data: weeklyPerformance } = useSWR(
+    isAuthenticated ? "weekly-performance" : null,
+    getWeeklyPerformance
+  )
+
+  const weeklyChangeMap = useMemo(() => {
+    if (!weeklyPerformance?.all_performers) return undefined
+    return new Map(weeklyPerformance.all_performers.map((p) => [p.symbol, p.change_rate]))
+  }, [weeklyPerformance])
 
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [recalcError, setRecalcError] = useState<string | null>(null)
@@ -92,7 +102,7 @@ export default function Holdings() {
         )}
         <SecurityTypeChart data={holdings} isLoading={isLoading} />
         <HoldingAllocationChart data={holdings} isLoading={isLoading} />
-        <HoldingsTable holdings={holdings} isLoading={isLoading} />
+        <HoldingsTable holdings={holdings} isLoading={isLoading} weeklyChangeMap={weeklyChangeMap} />
       </div>
     </AuthenticatedLayout>
   )

@@ -258,6 +258,58 @@ async def test_weekly_performance_notify_endpoint(
 
 
 @pytest.mark.asyncio
+async def test_get_weekly_performance_endpoint(
+    client, auth_token, setup_japanese_stock_data, setup_us_stock_data, mocker
+):
+    """週間騰落率取得API（GET）の統合テスト
+
+    setup_japanese_stock_dataとsetup_us_stock_dataフィクスチャで取引データが登録済み。
+    画面表示用のGETエンドポイントが正しく動作することを確認する。
+
+    期待する動作:
+    - ステータスコード200
+    - top_performers / bottom_performers / timestamp を含むレスポンス
+    - notification_sent フィールドは含まれない
+    - LINE通知関数は呼び出されない
+    """
+    mock_jp_prices = mocker.patch(
+        "stock.services.weekly_performance_service.get_japan_stock_weekly_prices",
+        new_callable=AsyncMock,
+    )
+    mock_jp_prices.return_value = (3300.0, 3000.0)
+
+    mock_us_prices = mocker.patch(
+        "stock.services.weekly_performance_service.get_us_stock_weekly_prices",
+        new_callable=AsyncMock,
+    )
+    mock_us_prices.return_value = (216.324, 240.36)
+
+    mock_notification = mocker.patch(
+        "stock.routes.portfolio.send_weekly_performance_notification",
+        new_callable=AsyncMock,
+    )
+
+    response = await client.get("/api/v1/portfolio/weekly-performance")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "top_performers" in data
+    assert "bottom_performers" in data
+    assert "timestamp" in data
+    assert "notification_sent" not in data
+
+    # 値上がり銘柄に日本株、値下がり銘柄に米国株が含まれること
+    top_symbols = [p["symbol"] for p in data["top_performers"]]
+    bottom_symbols = [p["symbol"] for p in data["bottom_performers"]]
+    assert "8058" in top_symbols
+    assert "AAPL" in bottom_symbols
+
+    # LINE通知は呼び出されないこと
+    mock_notification.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_send_weekly_performance_notification_embeds_sections_in_flex(monkeypatch, mocker):
     """generate_change_reasons が ChangeReasonSections を返すとき、Flex 本文に各セクション文が含まれる"""
     monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")

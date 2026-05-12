@@ -4,7 +4,13 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user, get_db_for_user
-from ..schemas import PortfolioHistoryResponse, PortfolioSummary, User, WeeklyPerformanceNotifyResponse
+from ..schemas import (
+    PortfolioHistoryResponse,
+    PortfolioSummary,
+    User,
+    WeeklyPerformanceNotifyResponse,
+    WeeklyPerformanceResponse,
+)
 from ..services.notification_service import send_weekly_performance_notification
 from ..services.portfolio_service import PortfolioService
 from ..services.weekly_performance_service import calculate_weekly_performance, get_top_bottom_performers
@@ -82,6 +88,31 @@ async def update_portfolio_and_notify(
     """
     portfolio_service = PortfolioService(db)
     return await portfolio_service.update_and_notify(current_user.user_id)
+
+
+@router.get("/weekly-performance", response_model=WeeklyPerformanceResponse)
+async def get_weekly_performance(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
+):
+    """
+    週間騰落率を取得する（画面表示用、LINE通知は行わない）
+    - 保有銘柄の週間騰落率を計算（保有数量が0の銘柄は除外）
+    - 投資信託（FUND）は対象外
+    - 騰落率の上位・下位5位を抽出
+    - 以下の情報を返却:
+        - 上位5銘柄の騰落率情報
+        - 下位5銘柄の騰落率情報
+        - タイムスタンプ
+    """
+    performances = await calculate_weekly_performance(db, current_user.user_id)
+    top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
+    timestamp = now_jst().isoformat()
+
+    return WeeklyPerformanceResponse(
+        top_performers=top_performers,
+        bottom_performers=bottom_performers,
+        timestamp=timestamp,
+    )
 
 
 @router.post("/weekly-performance-notify", response_model=WeeklyPerformanceNotifyResponse)

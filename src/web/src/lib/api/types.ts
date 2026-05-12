@@ -229,3 +229,18 @@ export interface DividendImportConfirmResponse {
   failed_count: number
   errors: string[]
 }
+
+// Weekly Performance
+export interface StockWeeklyPerformance {
+  symbol: string
+  name: string
+  latest_price: number
+  old_price: number
+  change_rate: number
+}
+
+export interface WeeklyPerformanceResponse {
+  top_performers: StockWeeklyPerformance[]
+  bottom_performers: StockWeeklyPerformance[]
+  timestamp: string
+}

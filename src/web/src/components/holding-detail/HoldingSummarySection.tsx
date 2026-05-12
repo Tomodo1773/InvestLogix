@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Holding } from "@/lib/api/types"
-import { formatCurrency, formatPercent } from "@/lib/format"
+import { formatCurrency, formatPercent, getPLColorClass } from "@/lib/format"
 
 interface HoldingSummarySectionProps {
   holding: Holding | undefined
@@ -42,23 +42,13 @@ export function HoldingSummarySection({ holding, isLoading }: HoldingSummarySect
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">損益</p>
-              <p
-                className={`text-lg font-semibold ${
-                  holding.total_pl && holding.total_pl >= 0 ? "text-[#4CAF50]" : "text-destructive"
-                }`}
-              >
+              <p className={`text-lg font-semibold ${getPLColorClass(holding.total_pl)}`}>
                 {holding.total_pl ? formatCurrency(holding.total_pl) : "-"}
               </p>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">損益率</p>
-              <p
-                className={`text-lg font-semibold ${
-                  holding.total_pl_percentage && holding.total_pl_percentage >= 0
-                    ? "text-[#4CAF50]"
-                    : "text-destructive"
-                }`}
-              >
+              <p className={`text-lg font-semibold ${getPLColorClass(holding.total_pl_percentage)}`}>
                 {holding.total_pl_percentage ? formatPercent(holding.total_pl_percentage) : "-"}
               </p>
             </div>

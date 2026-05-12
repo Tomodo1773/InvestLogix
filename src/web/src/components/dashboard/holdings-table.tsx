@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
-import { formatCurrency, formatPercent } from "@/lib/format"
+import { formatCurrency, formatPercent, getPLColorClass } from "@/lib/format"
 
 interface HoldingsTableProps {
   holdings: Holding[] | undefined
@@ -135,7 +135,7 @@ export function HoldingsTable({ holdings, isLoading }: HoldingsTableProps) {
                 {sortedHoldings && sortedHoldings.length > 0 ? (
                   sortedHoldings.map((holding) => {
                     const plValue = holding.total_pl ?? 0
-                    const plColor = plValue >= 0 ? "text-[#4CAF50]" : "text-destructive"
+                    const plColor = getPLColorClass(plValue)
 
                     return (
                       <TableRow key={holding.symbol}>

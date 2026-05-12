@@ -1,7 +1,7 @@
 import { TrendingDown, TrendingUp } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { StockWeeklyPerformance } from "@/lib/api/types"
-import { formatPercent } from "@/lib/format"
+import { formatPercent, getPLColorClass } from "@/lib/format"
 
 interface WeeklyPerformanceCardProps {
   performers: StockWeeklyPerformance[] | undefined
@@ -13,7 +13,7 @@ const DIRECTION_META = {
   top: {
     title: "今週の値上がりトップ5",
     Icon: TrendingUp,
-    iconColor: "text-[#4CAF50]",
+    iconColor: "text-success",
   },
   bottom: {
     title: "今週の値下がりトップ5",
@@ -34,9 +34,7 @@ function PerformerList({ performers }: { performers: StockWeeklyPerformance[] })
               <p className="text-xs text-muted-foreground">{p.symbol}</p>
             </div>
           </div>
-          <span
-            className={`shrink-0 font-bold ${p.change_rate >= 0 ? "text-[#4CAF50]" : "text-destructive"}`}
-          >
+          <span className={`shrink-0 font-bold ${getPLColorClass(p.change_rate)}`}>
             {formatPercent(p.change_rate)}
           </span>
         </li>

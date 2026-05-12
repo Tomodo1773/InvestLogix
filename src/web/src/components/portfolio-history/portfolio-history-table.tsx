@@ -70,7 +70,7 @@ export function PortfolioHistoryTable({ history, isLoading }: PortfolioHistoryTa
   }
 
   const getPLColor = (value: number) => {
-    if (value > 0) return "text-[#4CAF50]"
+    if (value > 0) return "text-success"
     if (value < 0) return "text-destructive"
     return ""
   }

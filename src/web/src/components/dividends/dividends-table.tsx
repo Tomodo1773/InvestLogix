@@ -131,7 +131,7 @@ export function DividendsTable({ dividends, isLoading }: DividendsTableProps) {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">{dividend.shares_owned.toLocaleString()}</TableCell>
-                        <TableCell className="text-right font-medium text-[#4CAF50]">
+                        <TableCell className="text-right font-medium text-success">
                           {formatCurrency(dividend.total_amount)}
                         </TableCell>
                         <TableCell className="text-right">

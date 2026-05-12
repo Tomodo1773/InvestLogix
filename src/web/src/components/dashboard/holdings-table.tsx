@@ -158,6 +158,8 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                     const plValue = holding.total_pl ?? 0
                     const plColor = getPLColorClass(plValue)
                     const weeklyChange = weeklyChangeMap?.get(holding.symbol)
+                    const weeklyChangeText = weeklyChange !== undefined ? formatPercent(weeklyChange) : "-"
+                    const weeklyChangeColor = weeklyChange !== undefined ? getPLColorClass(weeklyChange) : ""
 
                     return (
                       <TableRow key={holding.symbol}>
@@ -184,12 +186,8 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                         <TableCell className={`text-right font-medium ${plColor}`}>
                           {holding.total_pl_percentage ? formatPercent(holding.total_pl_percentage) : "-"}
                         </TableCell>
-                        <TableCell
-                          className={`text-right font-medium ${
-                            weeklyChange !== undefined ? getPLColorClass(weeklyChange) : ""
-                          }`}
-                        >
-                          {weeklyChange !== undefined ? formatPercent(weeklyChange) : "-"}
+                        <TableCell className={`text-right font-medium ${weeklyChangeColor}`}>
+                          {weeklyChangeText}
                         </TableCell>
                       </TableRow>
                     )

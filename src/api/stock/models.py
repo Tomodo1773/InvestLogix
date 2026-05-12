@@ -2,8 +2,10 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Column,
+    Date,
     DateTime,
     Enum,
     Float,
@@ -238,6 +240,28 @@ class PortfolioHistory(Base):
     user = relationship("User", back_populates="portfolio_history")
 
     __table_args__ = (UniqueConstraint("user_id", "date", name="uq_user_date_portfolio"),)
+
+
+class PriceHistory(Base):
+    """
+    銘柄日次価格（調整済）。直近2週間分のみ保持し、日次バッチで更新される。
+    ユーザーに紐付かない共有データ。
+    """
+
+    __tablename__ = "price_history"
+
+    symbol = Column(String(15), ForeignKey("stocks.symbol"), primary_key=True)  # [SYSTEM] 銘柄コード
+    date = Column(Date, primary_key=True)  # [SYSTEM] 取引日（営業日）
+    open = Column(Float, nullable=False)  # [API_FETCH] 始値（調整済）
+    high = Column(Float, nullable=False)  # [API_FETCH] 高値（調整済）
+    low = Column(Float, nullable=False)  # [API_FETCH] 安値（調整済）
+    close = Column(Float, nullable=False)  # [API_FETCH] 終値（調整済）
+    volume = Column(BigInteger)  # [API_FETCH] 出来高（調整済）
+    last_updated = Column(
+        DateTime(timezone=True), default=get_jst_now, onupdate=get_jst_now
+    )  # [SYSTEM] 最終更新日時（JST）
+
+    stock = relationship("Stock", backref="price_history")
 
 
 class Dividend(Base):

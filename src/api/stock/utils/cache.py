@@ -76,9 +76,10 @@ def timed_cache(seconds: int = 3600):
             return result
 
         # 非同期関数か同期関数かを判定して適切なラッパーを返す
-        if asyncio.iscoroutinefunction(func):
-            return cast(F, async_wrapper)
-        return cast(F, sync_wrapper)
+        wrapper = async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
+        # キャッシュ辞書を属性として公開（invalidate_cache / テストからのクリア用）
+        wrapper.cache = cache  # type: ignore[attr-defined]
+        return cast(F, wrapper)
 
     return decorator
 
@@ -93,11 +94,8 @@ def invalidate_cache(func: Callable) -> None:
     Example:
         invalidate_cache(fetch_data)  # fetch_data関数のキャッシュを無効化
     """
-    if hasattr(func, "__wrapped__"):
-        # デコレータが適用された関数の場合
-        wrapper = func
-        if hasattr(wrapper, "cache"):
-            wrapper.cache.clear()  # type: ignore
+    if hasattr(func, "cache"):
+        func.cache.clear()  # type: ignore[attr-defined]
 
 
 class CacheManager:

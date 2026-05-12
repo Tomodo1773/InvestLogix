@@ -8,9 +8,24 @@ from typing import Optional
 
 from loguru import logger
 
+from ..utils.cache import timed_cache
 from ..utils.datetime import get_date_range_for_api
 from .jquants_service import get_jquants_client
 from .tiingo_service import fetch_us_daily_prices_from_tiingo
+
+# 外部APIレートリミット対策のキャッシュTTL（秒）
+# 同一(symbol, start_date, end_date)の重複呼び出しを吸収する
+_PRICE_CACHE_TTL = 600
+
+
+@timed_cache(seconds=_PRICE_CACHE_TTL)
+async def _fetch_japan_prices_cached(symbol: str, start_date: str, end_date: str) -> list[dict]:
+    return await get_jquants_client().get_prices(symbol=symbol, start_date=start_date, end_date=end_date)
+
+
+@timed_cache(seconds=_PRICE_CACHE_TTL)
+async def _fetch_us_prices_cached(symbol: str, start_date: str, end_date: str) -> list[dict]:
+    return await asyncio.to_thread(fetch_us_daily_prices_from_tiingo, symbol, start_date, end_date)
 
 
 async def fetch_japan_stock_prices(symbol: str, days_back: int = 7) -> list[dict]:
@@ -27,9 +42,7 @@ async def fetch_japan_stock_prices(symbol: str, days_back: int = 7) -> list[dict
     """
     try:
         start_date, end_date = get_date_range_for_api(days_back=days_back)
-        prices = await get_jquants_client().get_prices(
-            symbol=symbol, start_date=start_date, end_date=end_date
-        )
+        prices = await _fetch_japan_prices_cached(symbol, start_date, end_date)
         return prices or []
     except Exception as e:
         logger.error(
@@ -54,12 +67,7 @@ async def fetch_us_stock_prices(symbol: str, days_back: int = 7) -> list[dict]:
     """
     try:
         start_date, end_date = get_date_range_for_api(days_back=days_back)
-        prices = await asyncio.to_thread(
-            fetch_us_daily_prices_from_tiingo,
-            symbol,
-            start_date,
-            end_date,
-        )
+        prices = await _fetch_us_prices_cached(symbol, start_date, end_date)
         return prices or []
     except Exception as e:
         logger.error(

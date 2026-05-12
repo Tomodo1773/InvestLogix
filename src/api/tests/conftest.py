@@ -23,6 +23,21 @@ from stock.services.auth_service import AuthService
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
 
 
+@pytest.fixture(autouse=True)
+def _clear_stock_price_cache():
+    """各テストの前後で stock_price_fetcher の価格キャッシュをクリアする"""
+    from stock.services.stock_price_fetcher import (
+        _fetch_japan_prices_cached,
+        _fetch_us_prices_cached,
+    )
+
+    _fetch_japan_prices_cached.cache.clear()
+    _fetch_us_prices_cached.cache.clear()
+    yield
+    _fetch_japan_prices_cached.cache.clear()
+    _fetch_us_prices_cached.cache.clear()
+
+
 def _render_url(url: URL) -> str:
     return url.render_as_string(hide_password=False)
 

@@ -21,17 +21,23 @@ class HoldingUpdateResult(NamedTuple):
     price_fetch_failed: bool
 
 
-async def get_japan_stock_price(symbol: str) -> float:
+async def get_japan_stock_price(
+    symbol: str, db: AsyncSession, *, fallback_to_external: bool = False
+) -> float:
     """
-    日本株の最新株価を取得します。
+    日本株の最新株価を取得します（price_history からの DB 引き）。
 
     Args:
-        symbol (str): 証券コード
+        symbol: 証券コード
+        db: DBセッション
+        fallback_to_external: DB に該当が無いとき外部APIへフォールバックするか
 
     Returns:
-        float: 最新株価。取得できない場合は0
+        最新株価。取得できない場合は0
     """
-    prices = await fetch_japan_stock_prices(symbol, days_back=7)
+    prices = await fetch_japan_stock_prices(
+        symbol, days_back=7, db=db, fallback_to_external=fallback_to_external
+    )
     price = get_latest_japan_price(prices)
     if price is not None:
         logger.info("日本株株価を取得しました symbol={} price={}", symbol, price)
@@ -40,15 +46,17 @@ async def get_japan_stock_price(symbol: str) -> float:
     return 0.0
 
 
-async def get_us_stock_price(symbol: str) -> float:
+async def get_us_stock_price(symbol: str, db: AsyncSession, *, fallback_to_external: bool = False) -> float:
     """
-    米国株・ETFの最新株価を円換算して取得します。
+    米国株・ETFの最新株価を円換算して取得します（price_history からの DB 引き）。
 
     Args:
-        symbol (str): ティッカーシンボル
+        symbol: ティッカーシンボル
+        db: DBセッション
+        fallback_to_external: DB に該当が無いとき外部APIへフォールバックするか
 
     Returns:
-        float: 最新株価（円換算後）。取得できない場合は0
+        最新株価（円換算後）。取得できない場合は0
     """
     try:
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
@@ -60,7 +68,9 @@ async def get_us_stock_price(symbol: str) -> float:
         logger.info("為替レートが取得できませんでした symbol={}", symbol)
         return 0.0
 
-    prices = await fetch_us_stock_prices(symbol, days_back=7)
+    prices = await fetch_us_stock_prices(
+        symbol, days_back=7, db=db, fallback_to_external=fallback_to_external
+    )
     price = get_latest_us_price(prices)
     if price is not None:
         price_jpy = price * float(usdjpy_rate)
@@ -71,24 +81,26 @@ async def get_us_stock_price(symbol: str) -> float:
     return 0.0
 
 
-async def get_current_price(stock: Stock) -> float:
+async def get_current_price(stock: Stock, db: AsyncSession, *, fallback_to_external: bool = False) -> float:
     """
     証券種別と通貨に基づいて最新株価を取得します。
     日本株、米国株、米国ETF、投資信託に対応します。
 
     Args:
-        stock (Stock): 銘柄情報
+        stock: 銘柄情報
+        db: DBセッション
+        fallback_to_external: DB に該当が無いとき外部APIへフォールバックするか（投資信託は対象外）
 
     Returns:
-        float: 最新株価
+        最新株価
     """
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
-            return await get_japan_stock_price(stock.symbol)
+            return await get_japan_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
         elif stock.currency == "USD":
-            return await get_us_stock_price(stock.symbol)
+            return await get_us_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
     elif stock.security_type == SecurityType.ETF and stock.currency == "USD":
-        return await get_us_stock_price(stock.symbol)
+        return await get_us_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
     elif stock.security_type == SecurityType.FUND:
         return await investment_trust_service.get_fund_price(stock.symbol)
     return 0.0
@@ -228,6 +240,8 @@ async def calculate_total_dividend_after_tax(
 async def calculate_holding_pl(
     db: AsyncSession,
     holding: models.Holding,
+    *,
+    fallback_to_external: bool = False,
 ) -> HoldingUpdateResult:
     """
     保有銘柄の損益情報を計算して更新する
@@ -235,6 +249,7 @@ async def calculate_holding_pl(
     Args:
         db (AsyncSession): データベースセッション
         holding (models.Holding): 更新対象のホールディング
+        fallback_to_external: price_history に該当が無いとき外部APIで補填するか
 
     Returns:
         HoldingUpdateResult: updated=損益計算まで進めたか、price_fetch_failed=価格取得が失敗扱いか
@@ -270,7 +285,7 @@ async def calculate_holding_pl(
 
     # 現在値を取得（保有数ゼロの銘柄は売却済み・上場廃止扱いとして価格取得自体をスキップする）
     if holding.quantity > 0:
-        current_price = await get_current_price(stock)
+        current_price = await get_current_price(stock, db, fallback_to_external=fallback_to_external)
         price_fetch_failed = current_price <= 0
     else:
         current_price = 0.0
@@ -343,8 +358,8 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
         return None
     logger.info("Holdingsを取得しました action=select user_id={} symbol={} found=true", user_id, symbol)
 
-    # 損益情報を更新
-    result = await calculate_holding_pl(db, holding)
+    # 損益情報を更新（取引/配当登録経路。新規銘柄は同期で外部APIフォールバック）
+    result = await calculate_holding_pl(db, holding, fallback_to_external=True)
     if result.updated:
         await db.flush()
         await db.refresh(holding)

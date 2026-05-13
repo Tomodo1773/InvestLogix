@@ -1,4 +1,5 @@
 import { TrendingDown, TrendingUp } from "lucide-react"
+import { Link } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { StockWeeklyPerformance } from "@/lib/api/types"
 import { formatPercent, getPLColorClass } from "@/lib/format"
@@ -29,10 +30,10 @@ function PerformerList({ performers }: { performers: StockWeeklyPerformance[] })
         <li key={p.symbol} className="flex items-center justify-between gap-3 border-b py-2 last:border-b-0">
           <div className="flex min-w-0 items-center gap-3">
             <span className="w-5 shrink-0 text-sm text-muted-foreground">{index + 1}</span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{p.name}</p>
+            <Link to={`/holdings/${p.symbol}`} className="min-w-0 hover:opacity-80">
+              <p className="truncate text-sm font-medium hover:underline">{p.name}</p>
               <p className="text-xs text-muted-foreground">{p.symbol}</p>
-            </div>
+            </Link>
           </div>
           <span className={`shrink-0 font-bold ${getPLColorClass(p.change_rate)}`}>
             {formatPercent(p.change_rate)}

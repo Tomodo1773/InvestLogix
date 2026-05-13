@@ -4,6 +4,7 @@ from typing import Dict, List
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from .. import models, schemas
 from ..services.holding_service import update_all_holdings_pl
@@ -17,7 +18,11 @@ class PortfolioService:
 
     async def _calculate_portfolio_summary(self, user_id: int) -> dict:
         """ポートフォリオのサマリー情報を計算する内部メソッド"""
-        holdings_query = select(models.Holding).where(models.Holding.user_id == user_id)
+        holdings_query = (
+            select(models.Holding)
+            .options(selectinload(models.Holding.stock))
+            .where(models.Holding.user_id == user_id)
+        )
         holdings_result = await self.db.execute(holdings_query)
         holdings = holdings_result.scalars().all()
 
@@ -28,10 +33,7 @@ class PortfolioService:
         total_realized_pl = 0
 
         for holding in holdings:
-            stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
-            stock_result = await self.db.execute(stock_query)
-            stock = stock_result.scalar_one_or_none()
-
+            stock = holding.stock
             market_value = holding.market_value or 0
             holdings_by_market[stock.market] = holdings_by_market.get(stock.market, 0) + market_value
             holdings_by_currency[stock.currency] = holdings_by_currency.get(stock.currency, 0) + market_value

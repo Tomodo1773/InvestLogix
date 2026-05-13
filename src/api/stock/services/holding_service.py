@@ -3,6 +3,7 @@ from typing import List, NamedTuple, Optional
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from .. import models
 from ..models import Holding, Stock
@@ -248,16 +249,15 @@ async def calculate_holding_pl(
 
     Args:
         db (AsyncSession): データベースセッション
-        holding (models.Holding): 更新対象のホールディング
+        holding (models.Holding): 更新対象のホールディング。
+            ``Holding.stock`` リレーションを ``selectinload`` 等で eager load 済みであること。
+            未ロードのまま渡すと AsyncSession 上で遅延ロードが走り MissingGreenlet 例外になる。
         fallback_to_external: price_history に該当が無いとき外部APIで補填するか
 
     Returns:
         HoldingUpdateResult: updated=損益計算まで進めたか、price_fetch_failed=価格取得が失敗扱いか
     """
-    # 銘柄情報を取得
-    stock_query = select(models.Stock).where(models.Stock.symbol == holding.symbol)
-    stock_result = await db.execute(stock_query)
-    stock = stock_result.scalar_one_or_none()
+    stock = holding.stock
     if not stock:
         logger.info("Stockが見つかりませんでした action=select symbol={}", holding.symbol)
         return HoldingUpdateResult(updated=False, price_fetch_failed=True)
@@ -349,7 +349,11 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
         Holding: 更新された保有情報
     """
     # 保有情報を取得
-    holding_query = select(Holding).where(Holding.user_id == user_id, Holding.symbol == symbol)
+    holding_query = (
+        select(Holding)
+        .options(selectinload(Holding.stock))
+        .where(Holding.user_id == user_id, Holding.symbol == symbol)
+    )
     result = await db.execute(holding_query)
     holding = result.scalar_one_or_none()
 
@@ -362,7 +366,6 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     result = await calculate_holding_pl(db, holding, fallback_to_external=True)
     if result.updated:
         await db.flush()
-        await db.refresh(holding)
         logger.info("Holdingsを更新しました action=update user_id={} symbol={}", user_id, symbol)
     else:
         logger.info("Holdingsを更新できませんでした action=update user_id={} symbol={}", user_id, symbol)
@@ -426,10 +429,6 @@ async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> tuple[List[H
     # 一括でフラッシュ
     await db.flush()
 
-    # 更新後のデータをリフレッシュ
-    for holding in updated_holdings:
-        await db.refresh(holding)
-
     logger.info(
         "Holdingsを更新しました action=bulk_update user_id={} holdings={} updated={} failed_symbol_count={}",
         user_id,
@@ -454,24 +453,18 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
     Returns:
         List[Holding]: 銘柄名、証券種別、通貨を含む保有銘柄情報のリスト
     """
-    query = (
-        select(Holding, Stock.name, Stock.security_type, Stock.currency)
-        .join(Stock, Holding.symbol == Stock.symbol)
-        .where(Holding.user_id == user_id)
-    )
+    query = select(Holding).options(selectinload(Holding.stock)).where(Holding.user_id == user_id)
 
     # symbolが指定された場合は、条件を追加
     if symbol:
         query = query.where(Holding.symbol == symbol)
 
     result = await db.execute(query)
-    holdings = []
-    for row in result:
-        holding = row[0]
-        holding.stock_name = row[1]
-        holding.security_type = row[2]
-        holding.currency = row[3]
-        holdings.append(holding)
+    holdings = result.scalars().all()
+    for holding in holdings:
+        holding.stock_name = holding.stock.name
+        holding.security_type = holding.stock.security_type
+        holding.currency = holding.stock.currency
     logger.info(
         "Holdingsを取得しました action=select user_id={} symbol={} count={}",
         user_id,

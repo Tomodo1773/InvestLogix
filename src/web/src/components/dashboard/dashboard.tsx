@@ -6,12 +6,14 @@ import {
   getPortfolioHistory,
   getPortfolioSummary,
   getTransactionsMonthlySummary,
+  getWeeklyPerformance,
 } from "@/lib/api/client"
 import { AssetChart } from "./asset-chart"
 import { DividendChart } from "./dividend-chart"
 import { NisaLimitGauge } from "./nisa-limit-gauge"
 import { StatCards } from "./stat-cards"
 import { TradeChart } from "./trade-chart"
+import { WeeklyPerformanceCard } from "./weekly-performance-card"
 
 export function Dashboard() {
   const {
@@ -38,13 +40,21 @@ export function Dashboard() {
     mutate: mutateDividends,
   } = useSWR("dividends-monthly", getDividendsMonthly)
 
-  const isRefreshing = summaryLoading || historyLoading || tradesLoading || dividendsLoading
+  const {
+    data: weeklyPerformance,
+    isLoading: weeklyPerformanceLoading,
+    mutate: mutateWeeklyPerformance,
+  } = useSWR("weekly-performance", getWeeklyPerformance)
+
+  const isRefreshing =
+    summaryLoading || historyLoading || tradesLoading || dividendsLoading || weeklyPerformanceLoading
 
   const handleRefresh = () => {
     mutateSummary()
     mutateHistory()
     mutateTrades()
     mutateDividends()
+    mutateWeeklyPerformance()
   }
 
   return (
@@ -59,6 +69,18 @@ export function Dashboard() {
       <StatCards summary={summary} isLoading={summaryLoading} />
       <NisaLimitGauge data={trades} isLoading={tradesLoading} />
       <AssetChart history={history} isLoading={historyLoading} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <WeeklyPerformanceCard
+          performers={weeklyPerformance?.top_performers}
+          direction="top"
+          isLoading={weeklyPerformanceLoading}
+        />
+        <WeeklyPerformanceCard
+          performers={weeklyPerformance?.bottom_performers}
+          direction="bottom"
+          isLoading={weeklyPerformanceLoading}
+        />
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <TradeChart data={trades} isLoading={tradesLoading} />
         <DividendChart data={dividends} isLoading={dividendsLoading} />

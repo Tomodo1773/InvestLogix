@@ -448,6 +448,15 @@ class WeeklyPerformanceNotifyResponse(BaseModel):
     timestamp: str
 
 
+class WeeklyPerformanceResponse(BaseModel):
+    """週間騰落率取得レスポンス（画面表示用）"""
+
+    top_performers: List[StockWeeklyPerformance]
+    bottom_performers: List[StockWeeklyPerformance]
+    all_performers: List[StockWeeklyPerformance]
+    timestamp: str
+
+
 # 株価時系列データ用のスキーマ
 class PriceDataPoint(BaseModel):
     """株価データポイント"""

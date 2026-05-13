@@ -157,7 +157,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                         <TableCell>
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                              isBuy ? "bg-[#4CAF50]/10 text-[#4CAF50]" : "bg-destructive/10 text-destructive"
+                              isBuy ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
                             }`}
                           >
                             {isBuy ? "買付" : "売却"}

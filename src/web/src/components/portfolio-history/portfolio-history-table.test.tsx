@@ -75,7 +75,7 @@ describe("PortfolioHistoryTable", () => {
     // 2024-01-15（評価損益+10万円）は緑色
     const positiveRow = rows.find((row) => row.textContent?.includes("2024/01/15"))
     const positiveCells = positiveRow?.querySelectorAll("td")
-    expect(positiveCells?.[3]).toHaveClass("text-[#4CAF50]") // 評価損益
+    expect(positiveCells?.[3]).toHaveClass("text-success") // 評価損益
 
     // 2024-01-16（評価損益-5万円）は赤色
     const negativeRow = rows.find((row) => row.textContent?.includes("2024/01/16"))

@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from datetime import date, timedelta
 from typing import AsyncGenerator, Generator
 
 import psycopg
@@ -305,17 +306,42 @@ MOCK_JQUANTS_COMPANY_INFO = {
     "MarginCode": "1",
 }
 
-# JQuantsの株価データモック（V2形式）
+# モック株価データの日付は現在日から遡って生成する。
+# recalc_holdings の prune_old_prices (keep_days=21) で削除されないよう近日扱いにする。
+_TODAY = date.today()
+_MOCK_PRICE_DATES = [_TODAY - timedelta(days=i) for i in range(6, -1, -1)]
+
+# JQuantsの株価データモック（V2形式・7日分・調整済値含む）
+# 週次騰落率計算は6営業日以上を要求するため余裕を持って7日分用意する
 MOCK_JQUANTS_PRICE_DATA = [
     {
-        "Date": "2024-01-01",
+        "Date": d.isoformat(),
         "Code": "8058",
         "Open": 3000.0,
         "High": 3100.0,
         "Low": 2900.0,
         "Close": 3000.0,
         "Volume": 1000000,
+        "AdjO": 3000.0,
+        "AdjH": 3100.0,
+        "AdjL": 2900.0,
+        "AdjC": 3000.0,
+        "AdjVo": 1000000,
     }
+    for d in _MOCK_PRICE_DATES
+]
+
+# Tiingoの株価データモック（7日分・調整済値）
+MOCK_TIINGO_PRICE_DATA = [
+    {
+        "date": d.isoformat(),
+        "open": 240.0,
+        "high": 245.0,
+        "low": 238.0,
+        "close": 240.0,
+        "volume": 50000000,
+    }
+    for d in _MOCK_PRICE_DATES
 ]
 
 
@@ -373,6 +399,12 @@ async def mock_external_apis(mocker):
     mocker.patch("stock.services.stock_price_fetcher.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
 
+    # Tiingo APIのモック化（recalc_holdings ジョブや新規銘柄フォールバック経路で利用）
+    mock_tiingo = mocker.patch(
+        "stock.services.stock_price_fetcher.fetch_us_daily_prices_from_tiingo",
+        return_value=MOCK_TIINGO_PRICE_DATA,
+    )
+
     # OpenAI分類サービスのモック化
     mock_classify = mocker.patch(
         "stock.services.stock_service.classify_fund_currency",
@@ -387,6 +419,7 @@ async def mock_external_apis(mocker):
         "us_price": mock_us_price,
         "usdjpy": mock_usdjpy,
         "jquants_client": mock_jquants_client,
+        "tiingo": mock_tiingo,
         "classify_currency": mock_classify,
     }
 

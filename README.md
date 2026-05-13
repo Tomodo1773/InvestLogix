@@ -38,6 +38,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - インフラ構造の変更: `infra/*.tf` を編集して `tofu apply`
 - シークレット値の更新: `gcloud secrets versions add`（Terraform は値を持たない）
 - Cloud Run Jobs のイメージ更新: main マージ後に `scripts/update-cloud-run-jobs.sh`
+- 株価データは `price_history` テーブルから読み込む。日次バッチ `recalc-holdings` が冒頭で直近2週間分を upsert する。新規環境やマイグレーション直後はテーブルが空でダッシュボードに評価額が出ないため、`gcloud run jobs execute recalc-holdings` で手動実行するか翌朝のスケジュール実行を待つ
 
 ## リポジトリ構成
 

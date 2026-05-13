@@ -1,7 +1,7 @@
 import { BarChart3, Coins, TrendingUp, Wallet } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import type { PortfolioSummary } from "@/lib/api/types"
-import { formatCurrency, formatPercent } from "@/lib/format"
+import { formatCurrency, formatPercent, getPLColorClass } from "@/lib/format"
 
 interface StatCardsProps {
   summary: PortfolioSummary | undefined
@@ -14,15 +14,15 @@ export function StatCards({ summary, isLoading }: StatCardsProps) {
       label: "Total P/L",
       value: summary ? formatCurrency(summary.total_pl) : "-",
       icon: Wallet,
-      color: summary && summary.total_pl >= 0 ? "text-[#4CAF50]" : "text-destructive",
-      bgColor: summary && summary.total_pl >= 0 ? "bg-[#4CAF50]/10" : "bg-destructive/10",
+      color: getPLColorClass(summary?.total_pl),
+      bgColor: summary && summary.total_pl >= 0 ? "bg-success/10" : "bg-destructive/10",
     },
     {
       label: "P/L Rate",
       value: summary ? formatPercent(summary.total_pl_percentage) : "-",
       icon: TrendingUp,
-      color: summary && summary.total_pl_percentage >= 0 ? "text-[#4CAF50]" : "text-destructive",
-      bgColor: summary && summary.total_pl_percentage >= 0 ? "bg-[#4CAF50]/10" : "bg-destructive/10",
+      color: getPLColorClass(summary?.total_pl_percentage),
+      bgColor: summary && summary.total_pl_percentage >= 0 ? "bg-success/10" : "bg-destructive/10",
     },
     {
       label: "Market Value",

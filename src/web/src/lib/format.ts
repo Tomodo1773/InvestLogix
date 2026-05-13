@@ -31,6 +31,11 @@ export function formatYearMonth(year: number, month: number): string {
   return `${year}/${month.toString().padStart(2, "0")}`
 }
 
+export function getPLColorClass(value: number | null | undefined): string {
+  if (value === null || value === undefined) return ""
+  return value >= 0 ? "text-success" : "text-destructive"
+}
+
 export function formatDate(dateString: string): string {
   const date = new Date(dateString)
   if (Number.isNaN(date.getTime())) {

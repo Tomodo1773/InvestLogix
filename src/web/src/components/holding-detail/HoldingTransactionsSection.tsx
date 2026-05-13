@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { TransactionWithPL } from "@/lib/api/types"
-import { formatCurrency, formatDate, formatPercent } from "@/lib/format"
+import { formatCurrency, formatDate, formatPercent, getPLColorClass } from "@/lib/format"
 
 interface HoldingTransactionsSectionProps {
   transactions: TransactionWithPL[] | undefined
@@ -46,8 +46,7 @@ export function HoldingTransactionsSection({ transactions, isLoading }: HoldingT
                       transaction.unrealized_pl_percentage !== undefined
                         ? transaction.unrealized_pl_percentage
                         : null
-                    const plColor =
-                      plValue !== null ? (plValue >= 0 ? "text-[#4CAF50]" : "text-destructive") : ""
+                    const plColor = plValue !== null ? getPLColorClass(plValue) : ""
 
                     return (
                       <TableRow key={transaction.transaction_id}>
@@ -55,7 +54,7 @@ export function HoldingTransactionsSection({ transactions, isLoading }: HoldingT
                         <TableCell>
                           <span
                             className={
-                              transaction.transaction_type === "buy" ? "text-[#4CAF50]" : "text-destructive"
+                              transaction.transaction_type === "buy" ? "text-success" : "text-destructive"
                             }
                           >
                             {transaction.transaction_type === "buy" ? "買付" : "売却"}

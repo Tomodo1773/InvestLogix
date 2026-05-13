@@ -3,6 +3,7 @@
 保有銘柄の週間騰落率を計算し、上位・下位5位を抽出する
 """
 
+import asyncio
 from typing import List, Optional, Tuple
 
 from loguru import logger
@@ -14,18 +15,19 @@ from ..schemas import SecurityType, StockWeeklyPerformance
 from .stock_price_fetcher import fetch_japan_stock_prices, fetch_us_stock_prices
 
 
-async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
+async def get_japan_stock_weekly_prices(symbol: str, db: AsyncSession) -> Optional[Tuple[float, float]]:
     """
-    日本株の最新株価と5営業日前の株価を取得します。
+    日本株の最新株価と5営業日前の株価を price_history から取得します。
 
     Args:
-        symbol (str): 証券コード
+        symbol: 証券コード
+        db: DBセッション
 
     Returns:
-        Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
+        (最新株価, 5営業日前株価)。データ不足の場合は None
     """
     # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
-    prices = await fetch_japan_stock_prices(symbol, days_back=14)
+    prices = await fetch_japan_stock_prices(symbol, days_back=14, db=db)
 
     # 6件以上のデータが必要（最新と5営業日前）
     if prices and len(prices) >= 6:
@@ -35,19 +37,20 @@ async def get_japan_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, fl
     return None
 
 
-async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float]]:
+async def get_us_stock_weekly_prices(symbol: str, db: AsyncSession) -> Optional[Tuple[float, float]]:
     """
-    米国株の最新株価と5営業日前の株価を取得します。
+    米国株の最新株価と5営業日前の株価を price_history から取得します。
     ※ 騰落率計算のため、円換算は行わず米ドル建てで返します。
 
     Args:
-        symbol (str): ティッカーシンボル
+        symbol: ティッカーシンボル
+        db: DBセッション
 
     Returns:
-        Optional[Tuple[float, float]]: (最新株価, 5営業日前株価)。取得できない場合はNone
+        (最新株価, 5営業日前株価)。データ不足の場合は None
     """
     # 2週間分のデータを取得（営業日を確実に取得するため余裕を持つ）
-    prices = await fetch_us_stock_prices(symbol, days_back=14)
+    prices = await fetch_us_stock_prices(symbol, days_back=14, db=db)
 
     # 返却は古い順なので末尾が最新、6件目後ろが5営業日前
     if len(prices) >= 6:
@@ -58,10 +61,29 @@ async def get_us_stock_weekly_prices(symbol: str) -> Optional[Tuple[float, float
     return None
 
 
+async def _fetch_stock_weekly_prices(stock: models.Stock, db: AsyncSession) -> Optional[Tuple[float, float]]:
+    """銘柄の通貨・種別に応じて適切な株価取得関数を呼び出す。対象外の銘柄は None を返す。"""
+    if stock.currency == "JPY" and stock.security_type in [
+        SecurityType.STOCK.value,
+        SecurityType.ETF.value,
+        SecurityType.REIT.value,
+    ]:
+        return await get_japan_stock_weekly_prices(stock.symbol, db)
+
+    if stock.currency == "USD" and stock.security_type in [
+        SecurityType.STOCK.value,
+        SecurityType.ETF.value,
+    ]:
+        return await get_us_stock_weekly_prices(stock.symbol, db)
+
+    return None
+
+
 async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[StockWeeklyPerformance]:
     """
     保有銘柄の週間騰落率を計算します。
     保有数量が0の銘柄と投資信託（FUND）は除外します。
+    株価取得は銘柄ごとに並列実行します。
 
     Args:
         db (AsyncSession): データベースセッション
@@ -70,7 +92,6 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
     Returns:
         List[StockWeeklyPerformance]: 騰落率情報のリスト
     """
-    # 保有銘柄を取得（保有数量 > 0の銘柄のみ）
     query = (
         select(models.Holding, models.Stock)
         .join(models.Stock, models.Holding.symbol == models.Stock.symbol)
@@ -82,33 +103,16 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
     result = await db.execute(query)
     holdings_with_stocks = result.all()
 
+    target_stocks = [
+        stock for _, stock in holdings_with_stocks if stock.security_type != SecurityType.FUND.value
+    ]
+
+    prices_list = await asyncio.gather(*(_fetch_stock_weekly_prices(stock, db) for stock in target_stocks))
+
     performances = []
-
-    for holding, stock in holdings_with_stocks:
-        # 投資信託は除外
-        if stock.security_type == SecurityType.FUND.value:
-            continue
-
-        prices = None
-
-        # 日本株の場合
-        if stock.currency == "JPY" and stock.security_type in [
-            SecurityType.STOCK.value,
-            SecurityType.ETF.value,
-            SecurityType.REIT.value,
-        ]:
-            prices = await get_japan_stock_weekly_prices(stock.symbol)
-
-        # 米国株・ETFの場合
-        elif stock.currency == "USD" and stock.security_type in [
-            SecurityType.STOCK.value,
-            SecurityType.ETF.value,
-        ]:
-            prices = await get_us_stock_weekly_prices(stock.symbol)
-
+    for stock, prices in zip(target_stocks, prices_list):
         if prices and prices[0] > 0 and prices[1] > 0:
             latest_price, old_price = prices
-            # 騰落率を計算: (最新 - 5営業日前) / 5営業日前 * 100
             change_rate = (latest_price - old_price) / old_price * 100
 
             performances.append(

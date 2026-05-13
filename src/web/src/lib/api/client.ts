@@ -19,6 +19,7 @@ import type {
   Transaction,
   TransactionWithPL,
   User,
+  WeeklyPerformanceResponse,
 } from "./types"
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
@@ -78,6 +79,10 @@ export async function getPortfolioSummary(): Promise<PortfolioSummary> {
 
 export async function getPortfolioHistory(): Promise<PortfolioHistoryItem[]> {
   return fetchWithAuth<PortfolioHistoryItem[]>("/api/v1/portfolio/history")
+}
+
+export async function getWeeklyPerformance(): Promise<WeeklyPerformanceResponse> {
+  return fetchWithAuth<WeeklyPerformanceResponse>("/api/v1/portfolio/weekly-performance")
 }
 
 export async function getHoldings(): Promise<Holding[]> {

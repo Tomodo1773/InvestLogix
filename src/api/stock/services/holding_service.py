@@ -400,21 +400,27 @@ async def update_holding_note(
     return holding
 
 
-async def update_all_holdings_pl(db: AsyncSession, user_id: int) -> tuple[List[Holding], List[str]]:
+async def update_all_holdings_pl(
+    db: AsyncSession,
+    user_id: int,
+    holdings: List[Holding] | None = None,
+) -> tuple[List[Holding], List[str]]:
     """
     ユーザーの保有する全銘柄の損益を一括更新します。
 
     Args:
         db (AsyncSession): 非同期データベースセッション
         user_id (int): ユーザーID
+        holdings: 事前に取得済みの保有銘柄一覧。Noneなら自前で list_holdings を実行。
+            渡す場合は list_holdings 経由で stock を eager load 済みのものを渡すこと。
 
     Returns:
         tuple[List[Holding], List[str]]:
             - 更新された保有情報のリスト
             - 価格取得に失敗した銘柄シンボルのリスト（ユーザ内ユニーク）
     """
-    # 保有銘柄一覧を取得
-    holdings = await list_holdings(db, user_id)
+    if holdings is None:
+        holdings = await list_holdings(db, user_id)
     updated_holdings = []
     failed_symbols: set[str] = set()
 

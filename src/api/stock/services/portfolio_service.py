@@ -4,10 +4,9 @@ from typing import Dict, List
 from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from .. import models, schemas
-from ..services.holding_service import update_all_holdings_pl
+from ..services.holding_service import list_holdings, update_all_holdings_pl
 from ..services.notification_service import NotificationService
 from ..utils.datetime import now_jst
 
@@ -16,15 +15,16 @@ class PortfolioService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def _calculate_portfolio_summary(self, user_id: int) -> dict:
-        """ポートフォリオのサマリー情報を計算する内部メソッド"""
-        holdings_query = (
-            select(models.Holding)
-            .options(selectinload(models.Holding.stock))
-            .where(models.Holding.user_id == user_id)
-        )
-        holdings_result = await self.db.execute(holdings_query)
-        holdings = holdings_result.scalars().all()
+    async def _calculate_portfolio_summary(
+        self, user_id: int, holdings: List[models.Holding] | None = None
+    ) -> dict:
+        """ポートフォリオのサマリー情報を計算する内部メソッド
+
+        holdings を渡すと自前フェッチをスキップする。stock を eager load 済みの
+        ものを渡すこと。
+        """
+        if holdings is None:
+            holdings = await list_holdings(self.db, user_id)
 
         holdings_by_market = {}
         holdings_by_currency = {}
@@ -74,9 +74,11 @@ class PortfolioService:
             "holdings_by_currency": holdings_by_currency,
         }
 
-    async def get_portfolio_summary(self, user_id: int) -> schemas.PortfolioSummary:
+    async def get_portfolio_summary(
+        self, user_id: int, holdings: List[models.Holding] | None = None
+    ) -> schemas.PortfolioSummary:
         """ポートフォリオのサマリー情報を計算して取得"""
-        summary = await self._calculate_portfolio_summary(user_id)
+        summary = await self._calculate_portfolio_summary(user_id, holdings=holdings)
         return schemas.PortfolioSummary(**summary)
 
     async def get_portfolio_history(self, user_id: int) -> List[models.PortfolioHistory]:
@@ -98,9 +100,11 @@ class PortfolioService:
         )
         return histories
 
-    async def create_portfolio_history(self, user_id: int) -> models.PortfolioHistory:
+    async def create_portfolio_history(
+        self, user_id: int, holdings: List[models.Holding] | None = None
+    ) -> models.PortfolioHistory:
         """現在のポートフォリオ状態を計算して履歴として保存"""
-        summary = await self._calculate_portfolio_summary(user_id)
+        summary = await self._calculate_portfolio_summary(user_id, holdings=holdings)
 
         portfolio_history = models.PortfolioHistory(
             user_id=user_id,
@@ -152,11 +156,11 @@ class PortfolioService:
         Returns:
             Dict: 処理結果とポートフォリオサマリー
         """
-        # 全銘柄の最新株価を取得して更新
-        await update_all_holdings_pl(self.db, user_id)
-
-        # ポートフォリオの状態を履歴に保存
-        portfolio_history = await self.create_portfolio_history(user_id)
+        # update_all_holdings_pl が holdings を in-place で書き換える前提で、
+        # 同じリストを履歴保存・サマリー集計まで使い回し、再フェッチを避ける
+        holdings = await list_holdings(self.db, user_id)
+        await update_all_holdings_pl(self.db, user_id, holdings=holdings)
+        portfolio_history = await self.create_portfolio_history(user_id, holdings=holdings)
 
         # 前週のデータを取得して差額を計算
         week_ago = now_jst() - timedelta(days=6)
@@ -187,8 +191,7 @@ class PortfolioService:
         # LINE通知を送信（DBセッションも渡す）
         notification_sent = await NotificationService.send_line_notification(user_id, portfolio_data, self.db)
 
-        # ポートフォリオサマリーを取得
-        summary = await self.get_portfolio_summary(user_id)
+        summary = await self.get_portfolio_summary(user_id, holdings=holdings)
 
         logger.info(
             "Portfolioを更新しました action=bulk_update user_id={} notification_sent={}",

@@ -7,7 +7,8 @@ import type { Holding } from "@/lib/api/types"
 import { type ColorScale, computeColorScale, getColorForValue } from "@/lib/color-scale"
 import { formatCurrency, formatPercent } from "@/lib/format"
 
-type CountryFilter = "ALL" | "JP" | "US" | "OTHER"
+type Country = "JP" | "US" | "OTHER"
+type CountryFilter = "ALL" | Country
 type SecurityTypeFilter = "ALL" | "STOCK" | "ETF" | "FUND" | "REIT"
 
 interface SectorTreemapProps {
@@ -20,29 +21,34 @@ interface TreemapLeaf {
   value: number
   symbol: string
   stockName: string
-  country: string
+  country: Country
   sectorName: string
   plPercentage: number | null
-  [key: string]: unknown
 }
 
 interface TreemapSector {
   name: string
   children: TreemapLeaf[]
-  [key: string]: unknown
+  value: number
 }
 
 interface TreemapCountry {
   name: string
   children: TreemapSector[]
-  [key: string]: unknown
+  value: number
+}
+
+const COUNTRY_LABELS: Record<Country, string> = {
+  JP: "日本",
+  US: "米国",
+  OTHER: "その他",
 }
 
 const COUNTRY_FILTERS: { value: CountryFilter; label: string }[] = [
   { value: "ALL", label: "すべて" },
-  { value: "JP", label: "日本" },
-  { value: "US", label: "米国" },
-  { value: "OTHER", label: "その他" },
+  { value: "JP", label: COUNTRY_LABELS.JP },
+  { value: "US", label: COUNTRY_LABELS.US },
+  { value: "OTHER", label: COUNTRY_LABELS.OTHER },
 ]
 
 const SECURITY_TYPE_FILTERS: { value: SecurityTypeFilter; label: string }[] = [
@@ -53,16 +59,15 @@ const SECURITY_TYPE_FILTERS: { value: SecurityTypeFilter; label: string }[] = [
   { value: "REIT", label: "REIT" },
 ]
 
-const COUNTRY_LABELS: Record<string, string> = {
-  JP: "日本",
-  US: "米国",
-  OTHER: "その他",
+function normalizeCountry(c: Holding["country"]): Country {
+  if (c === "JP" || c === "US") return c
+  return "OTHER"
 }
 
 /**
  * 保有銘柄を国 → セクター → 銘柄の3階層ツリーマップ用データに変換する。
  * 評価額（market_value）が 0 以下の銘柄、フィルタ条件に合わない銘柄は除外。
- * country/sector_name が null のものは "OTHER"/"その他" に集約する。
+ * country が null や未知の値、sector_name が null のものは "OTHER"/"その他" に集約する。
  */
 export function transformHoldingsToTreemap(
   holdings: Holding[] | undefined,
@@ -70,53 +75,50 @@ export function transformHoldingsToTreemap(
 ): TreemapCountry[] {
   if (!holdings || holdings.length === 0) return []
 
-  const filtered = holdings.filter((h) => {
-    if ((h.market_value ?? 0) <= 0) return false
-    const countryKey = h.country ?? "OTHER"
-    if (filters.country !== "ALL" && countryKey !== filters.country) return false
-    if (filters.securityType !== "ALL" && h.security_type !== filters.securityType) return false
-    return true
-  })
+  const byCountry = new Map<Country, Map<string, TreemapLeaf[]>>()
+  for (const h of holdings) {
+    if ((h.market_value ?? 0) <= 0) continue
+    const country = normalizeCountry(h.country)
+    if (filters.country !== "ALL" && country !== filters.country) continue
+    if (filters.securityType !== "ALL" && h.security_type !== filters.securityType) continue
 
-  const byCountry = new Map<string, Map<string, TreemapLeaf[]>>()
-  for (const h of filtered) {
-    const countryKey = h.country ?? "OTHER"
     const sectorKey = h.sector_name ?? "その他"
-    if (!byCountry.has(countryKey)) byCountry.set(countryKey, new Map())
-    const sectors = byCountry.get(countryKey)
-    if (!sectors) continue
-    if (!sectors.has(sectorKey)) sectors.set(sectorKey, [])
-    const leaves = sectors.get(sectorKey)
-    if (!leaves) continue
+    let sectors = byCountry.get(country)
+    if (!sectors) {
+      sectors = new Map()
+      byCountry.set(country, sectors)
+    }
+    let leaves = sectors.get(sectorKey)
+    if (!leaves) {
+      leaves = []
+      sectors.set(sectorKey, leaves)
+    }
     leaves.push({
       name: h.stock_name || h.symbol,
       value: h.market_value ?? 0,
       symbol: h.symbol,
       stockName: h.stock_name || h.symbol,
-      country: countryKey,
+      country,
       sectorName: sectorKey,
       plPercentage: h.unrealized_pl_percentage,
     })
   }
 
   const result: TreemapCountry[] = []
-  for (const [countryKey, sectors] of byCountry.entries()) {
+  for (const [country, sectors] of byCountry.entries()) {
     const sectorBranches: TreemapSector[] = []
+    let countryTotal = 0
     for (const [sectorName, leaves] of sectors.entries()) {
       leaves.sort((a, b) => b.value - a.value)
-      sectorBranches.push({ name: sectorName, children: leaves })
+      const sectorTotal = leaves.reduce((s, l) => s + l.value, 0)
+      sectorBranches.push({ name: sectorName, children: leaves, value: sectorTotal })
+      countryTotal += sectorTotal
     }
-    sectorBranches.sort((a, b) => sumLeafValues(b.children) - sumLeafValues(a.children))
-    result.push({ name: COUNTRY_LABELS[countryKey] ?? countryKey, children: sectorBranches })
+    sectorBranches.sort((a, b) => b.value - a.value)
+    result.push({ name: COUNTRY_LABELS[country], children: sectorBranches, value: countryTotal })
   }
-  const countryTotal = (c: TreemapCountry) =>
-    c.children.reduce((s, sec) => s + sumLeafValues(sec.children), 0)
-  result.sort((a, b) => countryTotal(b) - countryTotal(a))
+  result.sort((a, b) => b.value - a.value)
   return result
-}
-
-function sumLeafValues(leaves: TreemapLeaf[]): number {
-  return leaves.reduce((sum, l) => sum + l.value, 0)
 }
 
 /** カラースケール計算用に leaf の損益率を平らな配列で取り出す */
@@ -146,31 +148,9 @@ interface CellRenderProps {
 function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClick: (symbol: string) => void) {
   const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, plPercentage, symbol } = props
   const isLeaf = depth >= 2 && !!symbol
-  const fill = isLeaf ? getColorForValue(plPercentage ?? null, scale) : "transparent"
-  const showLabel = width > 60 && height > 24
 
-  if (isLeaf && symbol) {
+  if (!isLeaf) {
     return (
-      <g
-        role="button"
-        tabIndex={0}
-        style={{ cursor: "pointer" }}
-        onClick={() => onLeafClick(symbol)}
-        onKeyDown={(e: React.KeyboardEvent<SVGGElement>) => {
-          if (e.key === "Enter" || e.key === " ") onLeafClick(symbol)
-        }}
-      >
-        <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#ffffff" strokeWidth={1} />
-        {showLabel && (
-          <text x={x + 4} y={y + 14} fill="#111827" fontSize={11} fontWeight={500}>
-            {name}
-          </text>
-        )}
-      </g>
-    )
-  }
-  return (
-    <g>
       <rect
         x={x}
         y={y}
@@ -180,6 +160,27 @@ function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClic
         stroke={depth === 1 ? "#1f2937" : "#ffffff"}
         strokeWidth={depth === 1 ? 2 : 1}
       />
+    )
+  }
+
+  const fill = getColorForValue(plPercentage ?? null, scale)
+  const showLabel = width > 60 && height > 24
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      style={{ cursor: "pointer" }}
+      onClick={() => onLeafClick(symbol)}
+      onKeyDown={(e: React.KeyboardEvent<SVGGElement>) => {
+        if (e.key === "Enter" || e.key === " ") onLeafClick(symbol)
+      }}
+    >
+      <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#ffffff" strokeWidth={1} />
+      {showLabel && (
+        <text x={x + 4} y={y + 14} fill="#111827" fontSize={11} fontWeight={500}>
+          {name}
+        </text>
+      )}
     </g>
   )
 }
@@ -189,7 +190,7 @@ interface TooltipPayload {
     name?: string
     value?: number
     stockName?: string
-    country?: string
+    country?: Country
     sectorName?: string
     plPercentage?: number | null
     symbol?: string
@@ -204,7 +205,7 @@ function TreemapTooltip({ active, payload }: { active?: boolean; payload?: Toolt
     <div className="rounded border border-border bg-background/95 px-3 py-2 text-sm shadow">
       <div className="font-semibold">{data.stockName || data.name}</div>
       <div className="text-xs text-muted-foreground">
-        {COUNTRY_LABELS[data.country ?? ""] ?? data.country} / {data.sectorName}
+        {data.country ? COUNTRY_LABELS[data.country] : ""} / {data.sectorName}
       </div>
       <div className="mt-1">評価額: {formatCurrency(data.value ?? 0)}</div>
       <div>損益率: {formatPercent(data.plPercentage ?? null)}</div>
@@ -222,10 +223,7 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
     [data, countryFilter, securityTypeFilter]
   )
 
-  const colorScale = useMemo(
-    () => computeColorScale(flattenColorValues(treemapData), "pl_percentage"),
-    [treemapData]
-  )
+  const colorScale = useMemo(() => computeColorScale(flattenColorValues(treemapData)), [treemapData])
 
   const handleLeafClick = (symbol: string) => {
     navigate(`/holdings/${encodeURIComponent(symbol)}`)
@@ -287,14 +285,14 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
                 <Treemap
-                  data={treemapData}
+                  data={treemapData as unknown as ReadonlyArray<{ [key: string]: unknown }>}
                   dataKey="value"
                   nameKey="name"
                   aspectRatio={4 / 3}
                   isAnimationActive={false}
                   content={
                     ((props: CellRenderProps) =>
-                      renderTreemapCell(props, colorScale, handleLeafClick)) as never
+                      renderTreemapCell(props, colorScale, handleLeafClick)) as unknown as React.ReactElement
                   }
                 >
                   <Tooltip content={<TreemapTooltip />} />

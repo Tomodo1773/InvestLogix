@@ -26,7 +26,7 @@ describe("percentile", () => {
 
 describe("computeColorScale", () => {
   it("空配列ではメトリクスのデフォルトレンジを返す", () => {
-    const scale = computeColorScale([], "pl_percentage")
+    const scale = computeColorScale([])
     expect(scale.minValue).toBe(-50)
     expect(scale.maxValue).toBe(100)
     expect(scale.centerValue).toBe(0)
@@ -35,7 +35,7 @@ describe("computeColorScale", () => {
   })
 
   it("null や NaN を除外する", () => {
-    const scale = computeColorScale([null, undefined, Number.NaN, 10], "pl_percentage")
+    const scale = computeColorScale([null, undefined, Number.NaN, 10])
     // 有効値が 1 つだけ -> minValue は center - 5 で確保される
     expect(scale.minValue).toBeLessThanOrEqual(-5)
     expect(scale.maxValue).toBeGreaterThanOrEqual(5)
@@ -43,14 +43,14 @@ describe("computeColorScale", () => {
 
   it("全プラスの相場でも赤側が縮退しない（片側 5% 以上を保証）", () => {
     const allPositive = [5, 10, 15, 20, 25, 30, 40, 50]
-    const scale = computeColorScale(allPositive, "pl_percentage")
+    const scale = computeColorScale(allPositive)
     expect(scale.minValue).toBeLessThanOrEqual(-5)
     expect(scale.maxValue).toBeGreaterThanOrEqual(5)
   })
 
   it("全マイナスの相場でも緑側が縮退しない", () => {
     const allNegative = [-30, -20, -15, -10, -5, -2]
-    const scale = computeColorScale(allNegative, "pl_percentage")
+    const scale = computeColorScale(allNegative)
     expect(scale.minValue).toBeLessThanOrEqual(-5)
     expect(scale.maxValue).toBeGreaterThanOrEqual(5)
   })
@@ -58,21 +58,21 @@ describe("computeColorScale", () => {
   it("ceil を超える外れ値はクリップしてカウントする", () => {
     // P95 が 100% を超えてしまうほど多くの極端値を含むケース
     const values = Array.from({ length: 20 }, (_, i) => (i < 18 ? 10 : 250))
-    const scale = computeColorScale(values, "pl_percentage")
+    const scale = computeColorScale(values)
     expect(scale.maxValue).toBeLessThanOrEqual(100)
     expect(scale.outOfRangeAbove).toBeGreaterThanOrEqual(2)
   })
 
   it("floor を下回る外れ値はクリップしてカウントする", () => {
     const values = Array.from({ length: 20 }, (_, i) => (i < 18 ? -10 : -80))
-    const scale = computeColorScale(values, "pl_percentage")
+    const scale = computeColorScale(values)
     expect(scale.minValue).toBeGreaterThanOrEqual(-50)
     expect(scale.outOfRangeBelow).toBeGreaterThanOrEqual(2)
   })
 })
 
 describe("getColorForValue", () => {
-  const scale = computeColorScale([-30, -20, -10, 0, 10, 20, 30, 50], "pl_percentage")
+  const scale = computeColorScale([-30, -20, -10, 0, 10, 20, 30, 50])
 
   it("null は中立色を返す", () => {
     expect(getColorForValue(null, scale)).toBe("#9CA3AF")

@@ -52,7 +52,7 @@ export function Dashboard() {
     data: holdings,
     isLoading: holdingsLoading,
     mutate: mutateHoldings,
-  } = useSWR("holdings", getHoldings)
+  } = useSWR("/api/v1/holdings/", getHoldings)
 
   const isRefreshing =
     summaryLoading ||

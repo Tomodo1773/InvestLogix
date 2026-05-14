@@ -470,7 +470,7 @@ def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[st
     return country, sector_name
 
 
-async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:
+async def list_holdings(db: AsyncSession, user_id: int, symbol: Optional[str] = None) -> List[Holding]:
     """
     ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨、国、セクターと共に取得します。
     symbolが指定された場合は、その銘柄の情報のみを返します。

@@ -16,5 +16,6 @@
 		},
 		"editor.defaultFormatter": "charliermarsh.ruff"
 	},
-	"ruff.lineLength": 110
+	"ruff.lineLength": 110,
+	"azureTerraform.checkTerraformCmd": false
 }

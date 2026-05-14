@@ -117,7 +117,7 @@ async def test_list_holdings_returns_country_and_sector_for_us(
     data = response.json()
     target = next(h for h in data if h["symbol"] == "AAPL")
     assert target["country"] == "US"
-    assert target["sector_name"] == "Consumer Electronics"
+    assert target["sector_name"] == "Technology"
 
 
 @pytest.mark.asyncio

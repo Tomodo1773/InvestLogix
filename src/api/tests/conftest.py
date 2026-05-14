@@ -412,17 +412,6 @@ async def mock_external_apis(mocker):
     )
     mock_classify.return_value = "USD"
 
-    # 投資信託の名称取得（toushin-lib のスクレイピング）をモック化
-    mock_investment_trust = mocker.patch(
-        "stock.services.stock_service.fetch_investment_trust_details",
-        autospec=True,
-    )
-    mock_investment_trust.return_value = {
-        "name": "eMAXIS Slim 全世界株式(オール・カントリー)",
-        "market": None,
-        "industry": None,
-    }
-
     return {
         "overview": mock_overview,
         "search": mock_search,
@@ -432,7 +421,6 @@ async def mock_external_apis(mocker):
         "jquants_client": mock_jquants_client,
         "tiingo": mock_tiingo,
         "classify_currency": mock_classify,
-        "investment_trust": mock_investment_trust,
     }
 
 

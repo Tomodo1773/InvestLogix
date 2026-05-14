@@ -83,7 +83,9 @@ export function Dashboard() {
       <StatCards summary={summary} isLoading={summaryLoading} />
       <NisaLimitGauge data={trades} isLoading={tradesLoading} />
       <AssetChart history={history} isLoading={historyLoading} />
-      <SectorTreemap data={holdings} isLoading={holdingsLoading} />
+      <div className="hidden md:block">
+        <SectorTreemap data={holdings} isLoading={holdingsLoading} />
+      </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <WeeklyPerformanceCard
           performers={weeklyPerformance?.top_performers}

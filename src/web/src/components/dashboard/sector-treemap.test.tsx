@@ -2,31 +2,11 @@ import { render, screen } from "@testing-library/react"
 import { MemoryRouter } from "react-router"
 import { describe, expect, it } from "vitest"
 import type { Holding } from "@/lib/api/types"
+import { createHolding as createHoldingBase } from "@/test/factories"
 import { flattenColorValues, SectorTreemap, transformHoldingsToTreemap } from "./sector-treemap"
 
-const createHolding = (overrides: Partial<Holding>): Holding => ({
-  symbol: "TEST",
-  quantity: 100,
-  average_cost: 1000,
-  total_cost: 100000,
-  current_price: 1100,
-  market_value: 110000,
-  realized_pl: 0,
-  total_dividend: 0,
-  unrealized_pl: 10000,
-  unrealized_pl_percentage: 10,
-  total_pl: 10000,
-  total_pl_percentage: 10,
-  user_id: 1,
-  last_updated: "2024-01-01",
-  stock_name: "テスト",
-  security_type: "STOCK",
-  currency: "JPY",
-  country: "JP",
-  sector_name: "情報・通信業",
-  note: null,
-  ...overrides,
-})
+const createHolding = (overrides: Partial<Holding> = {}): Holding =>
+  createHoldingBase({ country: "JP", sector_name: "情報・通信業", ...overrides })
 
 describe("transformHoldingsToTreemap", () => {
   it("空配列を渡すと空配列を返す", () => {

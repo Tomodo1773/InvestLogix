@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Holding } from "@/lib/api/types"
 import { type ColorScale, computeColorScale, getColorForValue } from "@/lib/color-scale"
 import { formatCurrency, formatPercent } from "@/lib/format"
+import { SECURITY_TYPE_FILTERS, type SecurityTypeFilter } from "@/lib/security-type"
 
 type Country = "JP" | "US" | "OTHER"
 type CountryFilter = "ALL" | Country
-type SecurityTypeFilter = "ALL" | "STOCK" | "ETF" | "FUND" | "REIT"
 
 interface SectorTreemapProps {
   data: Holding[] | undefined
@@ -49,14 +49,6 @@ const COUNTRY_FILTERS: { value: CountryFilter; label: string }[] = [
   { value: "JP", label: COUNTRY_LABELS.JP },
   { value: "US", label: COUNTRY_LABELS.US },
   { value: "OTHER", label: COUNTRY_LABELS.OTHER },
-]
-
-const SECURITY_TYPE_FILTERS: { value: SecurityTypeFilter; label: string }[] = [
-  { value: "ALL", label: "すべて" },
-  { value: "STOCK", label: "株式" },
-  { value: "ETF", label: "ETF" },
-  { value: "FUND", label: "投信" },
-  { value: "REIT", label: "REIT" },
 ]
 
 function normalizeCountry(c: Holding["country"]): Country {
@@ -247,32 +239,18 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
       <CardHeader>
         <CardTitle>セクター別ツリーマップ</CardTitle>
         <div className="mt-3 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">国:</span>
-            {COUNTRY_FILTERS.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={countryFilter === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setCountryFilter(opt.value)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">種別:</span>
-            {SECURITY_TYPE_FILTERS.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={securityTypeFilter === opt.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSecurityTypeFilter(opt.value)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
+          <FilterRow
+            label="国:"
+            options={COUNTRY_FILTERS}
+            value={countryFilter}
+            onChange={setCountryFilter}
+          />
+          <FilterRow
+            label="種別:"
+            options={SECURITY_TYPE_FILTERS}
+            value={securityTypeFilter}
+            onChange={setSecurityTypeFilter}
+          />
         </div>
       </CardHeader>
       <CardContent>
@@ -340,6 +318,31 @@ function ColorLegend({ scale }: { scale: ColorScale }) {
           範囲外: 上限超過 {scale.outOfRangeAbove}銘柄 / 下限超過 {scale.outOfRangeBelow}銘柄
         </div>
       )}
+    </div>
+  )
+}
+
+interface FilterRowProps<T extends string> {
+  label: string
+  options: ReadonlyArray<{ value: T; label: string }>
+  value: T
+  onChange: (next: T) => void
+}
+
+function FilterRow<T extends string>({ label, options, value, onChange }: FilterRowProps<T>) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {options.map((opt) => (
+        <Button
+          key={opt.value}
+          variant={value === opt.value ? "default" : "outline"}
+          size="sm"
+          onClick={() => onChange(opt.value)}
+        >
+          {opt.label}
+        </Button>
+      ))}
     </div>
   )
 }

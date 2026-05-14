@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Holding } from "@/lib/api/types"
 import { formatCurrency } from "@/lib/format"
+import { SECURITY_TYPE_FILTERS, type SecurityTypeFilter } from "@/lib/security-type"
 
 interface HoldingAllocationChartProps {
   data: Holding[] | undefined
@@ -36,18 +37,6 @@ const COLORS = [
 
 // 「その他」用の色
 const OTHER_COLOR = "#BDBDBD"
-
-// フィルタータイプ
-type SecurityTypeFilter = "ALL" | "STOCK" | "ETF" | "FUND" | "REIT"
-
-// フィルタボタンの設定
-const FILTER_OPTIONS: { value: SecurityTypeFilter; label: string }[] = [
-  { value: "ALL", label: "すべて" },
-  { value: "STOCK", label: "株式" },
-  { value: "ETF", label: "ETF" },
-  { value: "FUND", label: "投信" },
-  { value: "REIT", label: "REIT" },
-]
 
 interface ChartDataItem {
   name: string
@@ -120,7 +109,7 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
 
   // フィルタに応じたタイトルを生成
   const chartTitle = useMemo(() => {
-    const filterLabel = FILTER_OPTIONS.find((option) => option.value === filter)?.label || "すべて"
+    const filterLabel = SECURITY_TYPE_FILTERS.find((option) => option.value === filter)?.label || "すべて"
     return filter === "ALL" ? "銘柄別保有割合" : `${filterLabel}の銘柄別保有割合`
   }, [filter])
 
@@ -142,7 +131,7 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
       <CardHeader>
         <CardTitle>{chartTitle}</CardTitle>
         <div className="mt-4 flex flex-wrap gap-2">
-          {FILTER_OPTIONS.map((option) => (
+          {SECURITY_TYPE_FILTERS.map((option) => (
             <Button
               key={option.value}
               variant={filter === option.value ? "default" : "outline"}

@@ -1,4 +1,4 @@
-"""週間騰落率通知APIのテスト"""
+"""週間騰落率および統合LINE通知のテスト"""
 
 import json
 from unittest.mock import AsyncMock, MagicMock
@@ -11,7 +11,7 @@ from stock.services.notification_service import (
     WEEKLY_PERFORMANCE_COLOR_GREEN,
     WEEKLY_PERFORMANCE_COLOR_RED,
     _build_ranking_row,
-    send_weekly_performance_notification,
+    send_weekly_summary_notification,
 )
 from stock.services.weekly_performance_service import get_top_bottom_performers
 
@@ -106,7 +106,7 @@ class TestBuildRankingRow:
 async def test_excludes_zero_quantity_holdings(
     client, auth_token, setup_japanese_stock_data, create_transaction, mocker
 ):
-    """保有数量が0の銘柄が除外されることを検証（API統合テスト）
+    """保有数量が0の銘柄が除外されることを検証（GET API統合テスト）
 
     setup_japanese_stock_dataフィクスチャで8058の買付取引が登録済み。
     全株売却後、週間パフォーマンスAPIが保有数量0の銘柄を除外することを確認する。
@@ -130,16 +130,7 @@ async def test_excludes_zero_quantity_holdings(
         new_callable=AsyncMock,
     )
 
-    # 週間パフォーマンス通知APIを呼び出す
-    mock_notification = mocker.patch(
-        "stock.routes.portfolio.send_weekly_performance_notification",
-        new_callable=AsyncMock,
-    )
-    mock_notification.return_value = True
-
-    response = await client.post(
-        "/api/v1/portfolio/weekly-performance-notify",
-    )
+    response = await client.get("/api/v1/portfolio/weekly-performance")
     assert response.status_code == 200
     data = response.json()
 
@@ -205,59 +196,6 @@ async def test_calculates_change_rate_correctly(
 
 
 @pytest.mark.asyncio
-async def test_weekly_performance_notify_endpoint(
-    client, auth_token, setup_japanese_stock_data, setup_us_stock_data, mocker
-):
-    """週間騰落率通知APIの統合テスト
-
-    setup_japanese_stock_dataとsetup_us_stock_dataフィクスチャで取引データが登録済み。
-    週間パフォーマンス通知APIが正しく動作することを確認する。
-
-    期待する動作:
-    - ステータスコード200
-    - 正しいレスポンス構造
-    - LINE通知が送信される
-    """
-    # 週間株価取得関数をモック化（外部APIへのアクセスを防ぐ）
-    mock_jp_prices = mocker.patch(
-        "stock.services.weekly_performance_service.get_japan_stock_weekly_prices",
-        new_callable=AsyncMock,
-    )
-    mock_jp_prices.return_value = (3100.0, 3000.0)
-
-    mock_us_prices = mocker.patch(
-        "stock.services.weekly_performance_service.get_us_stock_weekly_prices",
-        new_callable=AsyncMock,
-    )
-    mock_us_prices.return_value = (250.0, 240.0)
-
-    # LINE通知をモック化
-    mock_notification = mocker.patch(
-        "stock.routes.portfolio.send_weekly_performance_notification",
-        new_callable=AsyncMock,
-    )
-    mock_notification.return_value = True
-
-    # APIリクエスト実行
-    response = await client.post(
-        "/api/v1/portfolio/weekly-performance-notify",
-    )
-
-    # レスポンスの検証
-    assert response.status_code == 200
-    data = response.json()
-
-    # レスポンス構造のチェック
-    assert "top_performers" in data
-    assert "bottom_performers" in data
-    assert "notification_sent" in data
-    assert "timestamp" in data
-
-    # 通知が送信されたこと
-    assert data["notification_sent"] is True
-
-
-@pytest.mark.asyncio
 async def test_get_weekly_performance_endpoint(
     client, auth_token, setup_japanese_stock_data, setup_us_stock_data, mocker
 ):
@@ -265,12 +203,6 @@ async def test_get_weekly_performance_endpoint(
 
     setup_japanese_stock_dataとsetup_us_stock_dataフィクスチャで取引データが登録済み。
     画面表示用のGETエンドポイントが正しく動作することを確認する。
-
-    期待する動作:
-    - ステータスコード200
-    - top_performers / bottom_performers / timestamp を含むレスポンス
-    - notification_sent フィールドは含まれない
-    - LINE通知関数は呼び出されない
     """
     mock_jp_prices = mocker.patch(
         "stock.services.weekly_performance_service.get_japan_stock_weekly_prices",
@@ -283,11 +215,6 @@ async def test_get_weekly_performance_endpoint(
         new_callable=AsyncMock,
     )
     mock_us_prices.return_value = (216.324, 240.36)
-
-    mock_notification = mocker.patch(
-        "stock.routes.portfolio.send_weekly_performance_notification",
-        new_callable=AsyncMock,
-    )
 
     response = await client.get("/api/v1/portfolio/weekly-performance")
 
@@ -310,28 +237,16 @@ async def test_get_weekly_performance_endpoint(
     all_symbols = {p["symbol"] for p in data["all_performers"]}
     assert {"8058", "AAPL"}.issubset(all_symbols)
 
-    # LINE通知は呼び出されないこと
-    mock_notification.assert_not_called()
-
 
 @pytest.mark.asyncio
-async def test_send_weekly_performance_notification_embeds_sections_in_flex(monkeypatch, mocker):
-    """generate_change_reasons が ChangeReasonSections を返すとき、Flex 本文に各セクション文が含まれる"""
+async def test_send_weekly_summary_notification_combines_summary_and_rankings(monkeypatch, mocker):
+    """資産サマリ・ランキング・AI解説が単一Flex Messageにまとまって送信される"""
     monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
 
     mocker.patch(
         "stock.services.notification_service.NotificationService.get_line_user_id",
         new_callable=AsyncMock,
         return_value="U1234567890",
-    )
-    mocker.patch(
-        "stock.services.notification_service.generate_change_reasons",
-        new_callable=AsyncMock,
-        return_value=ChangeReasonSections(
-            market_overview="今週は地合い改善。",
-            top_commentary="トヨタ自動車は好決算で上昇。",
-            bottom_commentary="任天堂はガイダンス下方修正で下落。",
-        ),
     )
 
     mock_line_response = MagicMock()
@@ -342,6 +257,15 @@ async def test_send_weekly_performance_notification_embeds_sections_in_flex(monk
         return_value=mock_line_response,
     )
 
+    portfolio_data = {
+        "total_cost": 1_000_000,
+        "total_market_value": 1_200_000,
+        "total_pl": 200_000,
+        "total_pl_percentage": 20.0,
+        "total_realized_pl": 50_000,
+        "total_dividend": 30_000,
+        "weekly_change": 15_000,
+    }
     top = [
         StockWeeklyPerformance(
             symbol="7203", name="トヨタ自動車", latest_price=3300.0, old_price=3000.0, change_rate=10.0
@@ -352,37 +276,57 @@ async def test_send_weekly_performance_notification_embeds_sections_in_flex(monk
             symbol="7974", name="任天堂", latest_price=6500.0, old_price=7000.0, change_rate=-7.14
         )
     ]
+    sections = ChangeReasonSections(
+        market_overview="今週は地合い改善。",
+        top_commentary="トヨタ自動車は好決算で上昇。",
+        bottom_commentary="任天堂はガイダンス下方修正で下落。",
+    )
 
-    result = await send_weekly_performance_notification(
-        user_id=1, top_performers=top, bottom_performers=bottom, db=None
+    result = await send_weekly_summary_notification(
+        user_id=1,
+        portfolio_data=portfolio_data,
+        top_performers=top,
+        bottom_performers=bottom,
+        sections=sections,
+        db=None,
     )
 
     assert result is True
+
     posted = mock_post.call_args.kwargs["json"]
     assert len(posted["messages"]) == 1
     assert posted["messages"][0]["type"] == "flex"
 
     body_json = json.dumps(posted["messages"][0]["contents"], ensure_ascii=False)
+    # 資産サマリ
+    assert "資産サマリ" in body_json
+    assert "1,000,000円" in body_json
+    assert "1,200,000円" in body_json
+    assert "200,000円 (20.00%)" in body_json
+    assert "+15,000円" in body_json
+    # ランキング
+    assert "上昇トップ5" in body_json
+    assert "下落ワースト5" in body_json
+    assert "トヨタ自動車" in body_json
+    assert "任天堂" in body_json
+    # AI解説
     assert "マーケット概況" in body_json
     assert "今週は地合い改善。" in body_json
     assert "トヨタ自動車は好決算で上昇。" in body_json
     assert "任天堂はガイダンス下方修正で下落。" in body_json
+    # 旧固定コメントが含まれないこと
+    assert "アドバイザーコメント" not in body_json
 
 
 @pytest.mark.asyncio
-async def test_send_weekly_performance_notification_falls_back_without_reason(monkeypatch, mocker):
-    """generate_change_reasons が None を返すとき、LINE push は Flex のみ"""
+async def test_send_weekly_summary_notification_works_without_sections(monkeypatch, mocker):
+    """AI解説（sections=None）でも資産サマリとランキングだけで送信が成功する"""
     monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
 
     mocker.patch(
         "stock.services.notification_service.NotificationService.get_line_user_id",
         new_callable=AsyncMock,
         return_value="U1234567890",
-    )
-    mocker.patch(
-        "stock.services.notification_service.generate_change_reasons",
-        new_callable=AsyncMock,
-        return_value=None,
     )
 
     mock_line_response = MagicMock()
@@ -393,17 +337,40 @@ async def test_send_weekly_performance_notification_falls_back_without_reason(mo
         return_value=mock_line_response,
     )
 
+    portfolio_data = {
+        "total_cost": 500_000,
+        "total_market_value": 480_000,
+        "total_pl": -20_000,
+        "total_pl_percentage": -4.0,
+        "total_realized_pl": 0,
+        "total_dividend": 1_000,
+        "weekly_change": None,
+    }
     top = [
         StockWeeklyPerformance(
             symbol="7203", name="トヨタ自動車", latest_price=3300.0, old_price=3000.0, change_rate=10.0
         )
     ]
 
-    result = await send_weekly_performance_notification(
-        user_id=1, top_performers=top, bottom_performers=[], db=None
+    result = await send_weekly_summary_notification(
+        user_id=1,
+        portfolio_data=portfolio_data,
+        top_performers=top,
+        bottom_performers=[],
+        sections=None,
+        db=None,
     )
 
     assert result is True
     posted = mock_post.call_args.kwargs["json"]
     assert len(posted["messages"]) == 1
     assert posted["messages"][0]["type"] == "flex"
+
+    body_json = json.dumps(posted["messages"][0]["contents"], ensure_ascii=False)
+    assert "資産サマリ" in body_json
+    assert "上昇トップ5" in body_json
+    assert "下落ワースト5" in body_json
+    # AI解説セクションが含まれないこと
+    assert "マーケット概況" not in body_json
+    # 前週比なしの場合、行自体が出ない
+    assert "前週比" not in body_json

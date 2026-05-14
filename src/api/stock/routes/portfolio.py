@@ -8,10 +8,8 @@ from ..schemas import (
     PortfolioHistoryResponse,
     PortfolioSummary,
     User,
-    WeeklyPerformanceNotifyResponse,
     WeeklyPerformanceResponse,
 )
-from ..services.notification_service import send_weekly_performance_notification
 from ..services.portfolio_service import PortfolioService
 from ..services.weekly_performance_service import calculate_weekly_performance, get_top_bottom_performers
 from ..utils.datetime import now_jst
@@ -112,46 +110,5 @@ async def get_weekly_performance(
         top_performers=top_performers,
         bottom_performers=bottom_performers,
         all_performers=performances,
-        timestamp=timestamp,
-    )
-
-
-@router.post("/weekly-performance-notify", response_model=WeeklyPerformanceNotifyResponse)
-async def notify_weekly_performance(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
-):
-    """
-    週間騰落率を計算してLINE通知を送信する
-    - 保有銘柄の週間騰落率を計算（保有数量が0の銘柄は除外）
-    - 投資信託（FUND）は対象外
-    - 騰落率の上位・下位5位を抽出
-    - プレーンテキストでLINE通知
-    - 以下の情報を返却:
-        - 上位5銘柄の騰落率情報
-        - 下位5銘柄の騰落率情報
-        - 通知送信結果
-        - タイムスタンプ
-    """
-    # 週間パフォーマンスを計算
-    performances = await calculate_weekly_performance(db, current_user.user_id)
-
-    # 上位・下位5位を抽出
-    top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
-
-    # LINE通知を送信
-    notification_sent = await send_weekly_performance_notification(
-        user_id=current_user.user_id,
-        top_performers=top_performers,
-        bottom_performers=bottom_performers,
-        db=db,
-    )
-
-    # 日本時間でタイムスタンプを生成
-    timestamp = now_jst().isoformat()
-
-    return WeeklyPerformanceNotifyResponse(
-        top_performers=top_performers,
-        bottom_performers=bottom_performers,
-        notification_sent=notification_sent,
         timestamp=timestamp,
     )

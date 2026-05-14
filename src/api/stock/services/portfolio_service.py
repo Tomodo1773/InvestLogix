@@ -6,8 +6,13 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
+from ..services.change_reason_service import generate_change_reasons
 from ..services.holding_service import list_holdings, update_all_holdings_pl
-from ..services.notification_service import NotificationService
+from ..services.notification_service import send_weekly_summary_notification
+from ..services.weekly_performance_service import (
+    calculate_weekly_performance,
+    get_top_bottom_performers,
+)
 from ..utils.datetime import now_jst
 
 
@@ -148,13 +153,8 @@ class PortfolioService:
 
     async def update_and_notify(self, user_id: int) -> Dict:
         """
-        ポートフォリオの全銘柄を更新し、履歴を保存し、LINEに通知する
-
-        Args:
-            user_id (int): ユーザーID
-
-        Returns:
-            Dict: 処理結果とポートフォリオサマリー
+        ポートフォリオの全銘柄を更新し、履歴を保存し、
+        資産サマリ＋週間騰落ランキング＋AI解説を1通のLINE Flex Messageで通知する
         """
         # update_all_holdings_pl が holdings を in-place で書き換える前提で、
         # 同じリストを履歴保存・サマリー集計まで使い回し、再フェッチを避ける
@@ -177,7 +177,6 @@ class PortfolioService:
         prev_history = prev_result.scalar_one_or_none()
         weekly_change = portfolio_history.total_pl - prev_history.total_pl if prev_history else None
 
-        # SQLAlchemy modelをPythonの辞書に変換
         portfolio_data = {
             "total_cost": portfolio_history.total_cost,
             "total_market_value": portfolio_history.total_market_value,
@@ -188,8 +187,18 @@ class PortfolioService:
             "weekly_change": weekly_change,
         }
 
-        # LINE通知を送信（DBセッションも渡す）
-        notification_sent = await NotificationService.send_line_notification(user_id, portfolio_data, self.db)
+        performances = await calculate_weekly_performance(self.db, user_id)
+        top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
+        sections = await generate_change_reasons(top_performers, bottom_performers)
+
+        notification_sent = await send_weekly_summary_notification(
+            user_id=user_id,
+            portfolio_data=portfolio_data,
+            top_performers=top_performers,
+            bottom_performers=bottom_performers,
+            sections=sections,
+            db=self.db,
+        )
 
         summary = await self.get_portfolio_summary(user_id, holdings=holdings)
 

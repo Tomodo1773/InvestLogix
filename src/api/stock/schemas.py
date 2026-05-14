@@ -439,15 +439,6 @@ class StockWeeklyPerformance(BaseModel):
     change_rate: float  # 騰落率（%）
 
 
-class WeeklyPerformanceNotifyResponse(BaseModel):
-    """週間騰落率通知レスポンス"""
-
-    top_performers: List[StockWeeklyPerformance]
-    bottom_performers: List[StockWeeklyPerformance]
-    notification_sent: bool
-    timestamp: str
-
-
 class WeeklyPerformanceResponse(BaseModel):
     """週間騰落率取得レスポンス（画面表示用）"""
 

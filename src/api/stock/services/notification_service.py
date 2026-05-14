@@ -190,9 +190,13 @@ def _build_combined_flex(
     ]
 
     if sections:
-        body_contents.append(_section_heading("マーケット概況"))
-        body_contents.append(_section_body(sections.market_overview))
-        body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+        body_contents.extend(
+            [
+                _section_heading("マーケット概況"),
+                _section_body(sections.market_overview),
+                {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
+            ]
+        )
 
     body_contents.append(_section_heading("上昇トップ5"))
     body_contents.append(

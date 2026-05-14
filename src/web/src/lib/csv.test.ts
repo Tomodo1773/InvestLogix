@@ -22,6 +22,8 @@ const baseHolding: Holding = {
   stock_name: "トヨタ自動車",
   security_type: "stock",
   currency: "JPY",
+  country: null,
+  sector_name: null,
   note: null,
 }
 

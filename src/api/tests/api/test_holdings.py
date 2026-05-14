@@ -3,7 +3,7 @@ from httpx import AsyncClient
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.models import Holding, User
+from stock.models import Holding, StockJPXDetail, StockUSDetail, User
 from stock.services.holding_service import update_all_holdings_pl
 from ..conftest import MOCK_JAPAN_STOCK_PRICE_UPDATED, MOCK_US_STOCK_PRICE_UPDATED, MOCK_USD_JPY_RATE_RESPONSE
 
@@ -101,6 +101,60 @@ async def test_list_holdings(
     assert data[0]["stock_name"] == "三菱商事"
     assert data[0]["security_type"] == "STOCK"
     assert data[0]["currency"] == "JPY"
+    # JPY建ての日本株は country=="JP"。詳細レコードが無いため sector_name は None
+    assert data[0]["country"] == "JP"
+    assert data[0]["sector_name"] is None
+
+
+@pytest.mark.asyncio
+async def test_list_holdings_returns_sector_name_for_jp(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+):
+    """StockJPXDetail が存在する日本株は country=="JP" / sector_name に 17 業種名が入る"""
+    db_session.add(
+        StockJPXDetail(
+            symbol="8058",
+            sector_17_code="04",
+            sector_17_name="商社・卸売",
+            market_segment="プライム",
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/holdings/")
+
+    assert response.status_code == 200
+    data = response.json()
+    target = next(h for h in data if h["symbol"] == "8058")
+    assert target["country"] == "JP"
+    assert target["sector_name"] == "商社・卸売"
+
+
+@pytest.mark.asyncio
+async def test_list_holdings_returns_country_and_sector_for_us(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_us_stock_data,
+    mock_external_apis,
+):
+    """USD建ての米国株は country=="US"、StockUSDetail.gics_sector が sector_name に入る"""
+    db_session.add(
+        StockUSDetail(
+            symbol="AAPL",
+            gics_sector="Information Technology",
+            market="NASDAQ",
+        )
+    )
+    await db_session.commit()
+
+    response = await client.get("/api/v1/holdings/")
+
+    assert response.status_code == 200
+    data = response.json()
+    target = next(h for h in data if h["symbol"] == "AAPL")
+    assert target["country"] == "US"
+    assert target["sector_name"] == "Information Technology"
 
 
 @pytest.mark.asyncio

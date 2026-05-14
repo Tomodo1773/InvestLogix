@@ -3,6 +3,7 @@ import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import {
   getDividendsMonthly,
+  getHoldings,
   getPortfolioHistory,
   getPortfolioSummary,
   getTransactionsMonthlySummary,
@@ -11,6 +12,7 @@ import {
 import { AssetChart } from "./asset-chart"
 import { DividendChart } from "./dividend-chart"
 import { NisaLimitGauge } from "./nisa-limit-gauge"
+import { SectorTreemap } from "./sector-treemap"
 import { StatCards } from "./stat-cards"
 import { TradeChart } from "./trade-chart"
 import { WeeklyPerformanceCard } from "./weekly-performance-card"
@@ -46,8 +48,19 @@ export function Dashboard() {
     mutate: mutateWeeklyPerformance,
   } = useSWR("weekly-performance", getWeeklyPerformance)
 
+  const {
+    data: holdings,
+    isLoading: holdingsLoading,
+    mutate: mutateHoldings,
+  } = useSWR("holdings", getHoldings)
+
   const isRefreshing =
-    summaryLoading || historyLoading || tradesLoading || dividendsLoading || weeklyPerformanceLoading
+    summaryLoading ||
+    historyLoading ||
+    tradesLoading ||
+    dividendsLoading ||
+    weeklyPerformanceLoading ||
+    holdingsLoading
 
   const handleRefresh = () => {
     mutateSummary()
@@ -55,6 +68,7 @@ export function Dashboard() {
     mutateTrades()
     mutateDividends()
     mutateWeeklyPerformance()
+    mutateHoldings()
   }
 
   return (
@@ -69,6 +83,7 @@ export function Dashboard() {
       <StatCards summary={summary} isLoading={summaryLoading} />
       <NisaLimitGauge data={trades} isLoading={tradesLoading} />
       <AssetChart history={history} isLoading={historyLoading} />
+      <SectorTreemap data={holdings} isLoading={holdingsLoading} />
       <div className="grid gap-6 lg:grid-cols-2">
         <WeeklyPerformanceCard
           performers={weeklyPerformance?.top_performers}

@@ -26,6 +26,8 @@ describe("transformHoldingsToChartData", () => {
     stock_name: stockName,
     security_type: securityType,
     currency: "JPY",
+    country: null,
+    sector_name: null,
     note: null,
   })
 

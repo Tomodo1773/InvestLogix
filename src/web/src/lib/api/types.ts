@@ -57,6 +57,8 @@ export interface Holding {
   stock_name: string | null
   security_type: string | null
   currency: string | null
+  country: "JP" | "US" | "OTHER" | null
+  sector_name: string | null
   note: string | null
 }
 

@@ -3,7 +3,7 @@
 日本株はJ-Quants API、米国株はTiingoを使用
 """
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import List
 
 import pandas as pd
@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval
+from ..utils.datetime import now_jst
 from ..utils.cache import timed_cache
 from .jquants_service import get_jquants_client
 from .tiingo_service import fetch_us_daily_prices_from_tiingo
@@ -27,7 +28,7 @@ class PriceHistoryService:
     @staticmethod
     def _calculate_start_date(interval: PriceHistoryInterval, limit: int) -> str:
         """間隔と取得件数から開始日を計算する（十分な余裕を持たせる）"""
-        today = datetime.now()
+        today = now_jst()
         if interval == PriceHistoryInterval.DAILY:
             # 平日営業日を考慮して、limit * 1.5日分遡る
             days_back = int(limit * 1.5)
@@ -239,7 +240,7 @@ class PriceHistoryService:
             Exception: データ取得失敗時
         """
         start_date = self._calculate_start_date(interval, limit)
-        end_date = datetime.now().strftime("%Y-%m-%d")
+        end_date = now_jst().strftime("%Y-%m-%d")
 
         data = await self._fetch_stock_prices(symbol, start_date, end_date)
 

@@ -9,394 +9,87 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..utils.datetime import now_jst
-from .change_reason_service import ChangeReasonSections, generate_change_reasons
+from .change_reason_service import ChangeReasonSections
 
-# 環境変数のロード
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
+LINE_PUSH_URL = "https://api.line.me/v2/bot/message/push"
+
+# Flex Message 用カラー定数。損益・騰落率の方向色はバブル内で統一する。
+COLOR_PROFIT = "#1DB446"
+COLOR_LOSS = "#DB2C2C"
+COLOR_TEXT_PRIMARY = "#111111"
+COLOR_TEXT_SECONDARY = "#555555"
+COLOR_TEXT_MUTED = "#999999"
+COLOR_HEADING = "#333333"
+COLOR_SEPARATOR = "#E0E0E0"
+COLOR_BACKGROUND = "#FFFFFF"
+
 
 class NotificationService:
-    """LINE通知サービス"""
-
-    @staticmethod
-    async def send_line_notification(
-        user_id: int, portfolio_data: Dict[str, Any], db: AsyncSession = None
-    ) -> bool:
-        """
-        ポートフォリオ情報をLINEに通知する
-
-        Args:
-            user_id (int): ユーザーID
-            portfolio_data (Dict[str, Any]): 通知するポートフォリオデータ
-            db (AsyncSession, optional): データベースセッション。指定がない場合は環境変数のLINE_USER_IDを使用
-
-        Returns:
-            bool: 通知が成功したかどうか
-        """
-        try:
-            # LINE APIの設定
-            line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-
-            if not line_token:
-                logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
-                return False
-
-            # ユーザーのLINE UserIDを取得
-            line_user_id = await NotificationService.get_line_user_id(user_id, db)
-
-            if not line_user_id:
-                logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
-                return False
-
-            # 日本時間の現在時刻
-            current_time = now_jst()
-            today = current_time.strftime("%Y/%m/%d")
-
-            # ポートフォリオデータのフォーマット
-            total_cost = _format_currency(portfolio_data["total_cost"])
-            total_market_value = _format_currency(portfolio_data["total_market_value"])
-            total_pl = _format_currency(portfolio_data["total_pl"])
-            total_pl_percentage = _format_decimal(portfolio_data["total_pl_percentage"])
-            total_realized_pl = _format_currency(portfolio_data["total_realized_pl"])
-            total_dividend = _format_currency(portfolio_data["total_dividend"])
-
-            # 前週比の行（データがある場合のみ）
-            weekly_change = portfolio_data.get("weekly_change")
-            weekly_change_rows = []
-            if weekly_change is not None:
-                formatted_change = _format_currency(abs(weekly_change))
-                sign = "+" if weekly_change >= 0 else "-"
-                color = _get_profit_loss_color(weekly_change)
-                weekly_change_rows.append(
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {"type": "text", "text": "前週比", "size": "sm", "color": "#555555"},
-                            {
-                                "type": "text",
-                                "text": f"{sign}{formatted_change}円",
-                                "size": "sm",
-                                "color": color,
-                                "align": "end",
-                            },
-                        ],
-                    }
-                )
-
-            # 損益に応じたコメント
-            comment = _generate_comment(portfolio_data["total_pl_percentage"])
-
-            # LINEのFlex Message作成
-            flex_contents = {
-                "type": "bubble",
-                "body": {
-                    "type": "box",
-                    "layout": "vertical",
-                    "contents": [
-                        {
-                            "type": "box",
-                            "layout": "horizontal",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "InvestLogix",
-                                    "weight": "bold",
-                                    "color": "#1DB446",
-                                    "size": "sm",
-                                    "align": "start",
-                                }
-                            ],
-                        },
-                        {
-                            "type": "text",
-                            "text": "資産サマリ",
-                            "weight": "bold",
-                            "size": "xxl",
-                            "margin": "md",
-                        },
-                        {"type": "text", "text": today, "size": "xs", "color": "#aaaaaa", "wrap": True},
-                        {"type": "separator", "margin": "xxl"},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "margin": "xxl",
-                            "spacing": "sm",
-                            "contents": [
-                                {"type": "text", "text": "資産情報", "weight": "bold"},
-                                {
-                                    "type": "box",
-                                    "layout": "horizontal",
-                                    "margin": "sm",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "取得価格",
-                                            "size": "sm",
-                                            "color": "#555555",
-                                        },
-                                        {
-                                            "type": "text",
-                                            "size": "sm",
-                                            "color": "#111111",
-                                            "align": "end",
-                                            "text": f"{total_cost}円",
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "horizontal",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "時価総額",
-                                            "size": "sm",
-                                            "color": "#555555",
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": f"{total_market_value}円",
-                                            "size": "sm",
-                                            "color": "#111111",
-                                            "align": "end",
-                                        },
-                                    ],
-                                },
-                                *weekly_change_rows,
-                                {
-                                    "type": "box",
-                                    "layout": "horizontal",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "総損益",
-                                            "size": "sm",
-                                            "color": "#555555",
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": f"{total_pl}円 ({total_pl_percentage}%)",
-                                            "size": "sm",
-                                            "color": _get_profit_loss_color(
-                                                float(portfolio_data["total_pl_percentage"])
-                                            ),
-                                            "align": "end",
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "horizontal",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "実現損益",
-                                            "size": "sm",
-                                            "color": "#555555",
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": f"{total_realized_pl}円",
-                                            "size": "sm",
-                                            "color": "#111111",
-                                            "align": "end",
-                                        },
-                                    ],
-                                },
-                                {
-                                    "type": "box",
-                                    "layout": "horizontal",
-                                    "contents": [
-                                        {
-                                            "type": "text",
-                                            "text": "配当総額",
-                                            "size": "sm",
-                                            "color": "#555555",
-                                        },
-                                        {
-                                            "type": "text",
-                                            "text": f"{total_dividend}円",
-                                            "size": "sm",
-                                            "color": "#111111",
-                                            "align": "end",
-                                        },
-                                    ],
-                                },
-                            ],
-                        },
-                        {"type": "separator", "margin": "xxl"},
-                        {
-                            "type": "box",
-                            "layout": "vertical",
-                            "margin": "md",
-                            "contents": [
-                                {
-                                    "type": "text",
-                                    "text": "アドバイザーコメント",
-                                    "size": "xs",
-                                    "color": "#111111",
-                                    "flex": 0,
-                                    "weight": "bold",
-                                },
-                                {
-                                    "type": "text",
-                                    "text": comment,
-                                    "color": "#111111",
-                                    "size": "xs",
-                                    "align": "start",
-                                    "margin": "sm",
-                                    "wrap": True,
-                                },
-                            ],
-                        },
-                    ],
-                },
-                "styles": {"footer": {"separator": True}},
-            }
-
-            flex_message = {
-                "type": "flex",
-                "altText": "ポートフォリオの更新情報をお知らせします",
-                "contents": flex_contents,
-            }
-
-            headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
-
-            data = {"to": line_user_id, "messages": [flex_message]}
-
-            # LINE Message APIにリクエストを送信
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    "https://api.line.me/v2/bot/message/push", headers=headers, json=data
-                )
-
-            # レスポンス処理
-            if response.status_code == 200:
-                logger.info("LINE通知が正常に送信されました")
-                return True
-            else:
-                logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
-                logger.error(f"レスポンス: {response.text}")
-                return False
-
-        except Exception as e:
-            logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
-            return False
+    """LINE通知サービス（ユーザーIDの解決などの共通処理を提供）"""
 
     @staticmethod
     async def get_line_user_id(user_id: int, db: AsyncSession = None) -> Optional[str]:
-        """
-        指定されたユーザーIDに対応するLINE UserIDを取得する
-
-        Args:
-            user_id (int): ユーザーID
-            db (AsyncSession, optional): データベースセッション
-
-        Returns:
-            Optional[str]: LINE UserID。設定されていない場合はNone
-        """
-        # DBセッションが渡されていない場合はNoneを返す
+        """指定されたユーザーIDに対応するLINE UserIDを取得する"""
         if db is None:
             return None
 
-        # データベースからユーザー情報を取得
         query = select(models.User).where(models.User.user_id == user_id)
         result = await db.execute(query)
         user = result.scalar_one_or_none()
 
         if not user or not user.line_user_id:
-            # ユーザーが存在しないか、LINE UserIDが設定されていない場合
             return None
 
         return user.line_user_id
 
 
 def _format_currency(value: float) -> str:
-    """通貨表示用のフォーマット"""
     if value is None:
         return "0"
     return f"{int(value):,}"
 
 
 def _format_decimal(value: float) -> str:
-    """小数表示用のフォーマット"""
     if value is None:
         return "0.00"
     return f"{value:.2f}"
 
 
 def _get_profit_loss_color(percentage: float) -> str:
-    """損益率に応じた表示色を返す"""
     if percentage > 0:
-        return "#1DB446"  # 利益の場合は緑
-    elif percentage < 0:
-        return "#DB2C2C"  # 損失の場合は赤
-    else:
-        return "#111111"  # ゼロの場合は黒
-
-
-def _generate_comment(percentage: float) -> str:
-    """損益率に応じたコメントを生成"""
-    if percentage >= 40:
-        return "非常に高いリターンを達成しています！継続的な投資戦略が実を結んでいます"
-    elif percentage >= 35:
-        return "素晴らしい成績です！長期投資の効果が出ています"
-    elif percentage >= 30:
-        return "良好なパフォーマンスを維持しています。このまま継続しましょう"
-    elif percentage >= 25:
-        return "堅実な成長を続けています。投資方針は正しいようです"
-    elif percentage >= 20:
-        return "着実な成長を見せています。この調子で継続していきましょう"
-    elif percentage >= 10:
-        return "順調なリターンを維持しています。長期的な視点を忘れずに"
-    else:
-        return "市場環境に応じて慎重に判断し、投資方針を見直してみましょう"
-
-
-# 週間騰落ランキング用の色定義
-WEEKLY_PERFORMANCE_COLOR_GREEN = "#00A86B"
-WEEKLY_PERFORMANCE_COLOR_RED = "#E53935"
+        return COLOR_PROFIT
+    if percentage < 0:
+        return COLOR_LOSS
+    return COLOR_TEXT_PRIMARY
 
 
 def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: float) -> dict:
-    """
-    ランキングの1行分のFlex Boxを作成する
-
-    Args:
-        rank (int): 順位
-        name (str): 銘柄名
-        symbol (str): 銘柄コード
-        change_rate (float): 騰落率
-
-    Returns:
-        dict: Flex Box形式の辞書
-    """
-    is_positive = change_rate >= 0
-    sign = "+" if is_positive else ""
-    color = WEEKLY_PERFORMANCE_COLOR_GREEN if is_positive else WEEKLY_PERFORMANCE_COLOR_RED
+    """ランキングの1行分のFlex Boxを作成する"""
+    sign = "+" if change_rate >= 0 else ""
 
     return {
         "type": "box",
         "layout": "horizontal",
         "contents": [
-            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": "#666666"},
+            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": COLOR_TEXT_SECONDARY},
             {
                 "type": "text",
                 "text": f"{name}({symbol})",
                 "size": "sm",
                 "flex": 3,
                 "margin": "sm",
-                "color": "#333333",
+                "color": COLOR_HEADING,
             },
             {
                 "type": "text",
                 "text": f"{sign}{change_rate:.2f}%",
                 "size": "sm",
                 "align": "end",
-                "color": color,
+                "color": _get_profit_loss_color(change_rate),
                 "weight": "bold",
                 "flex": 1,
             },
@@ -412,7 +105,7 @@ def _section_heading(text: str) -> dict:
         "weight": "bold",
         "size": "md",
         "margin": "lg",
-        "color": "#333333",
+        "color": COLOR_HEADING,
     }
 
 
@@ -423,52 +116,120 @@ def _section_body(text: str, margin: str = "md") -> dict:
         "wrap": True,
         "size": "sm",
         "margin": margin,
-        "color": "#555555",
+        "color": COLOR_TEXT_SECONDARY,
     }
 
 
 def _ranking_contents(performers: list) -> list[dict]:
     if not performers:
-        return [{"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}]
+        return [
+            {
+                "type": "text",
+                "text": "データなし",
+                "size": "sm",
+                "color": COLOR_TEXT_SECONDARY,
+                "margin": "md",
+            }
+        ]
     return [_build_ranking_row(i, p.name, p.symbol, p.change_rate) for i, p in enumerate(performers, 1)]
 
 
-def _build_weekly_performance_flex_message(
+def _summary_row(label: str, value: str, value_color: str = COLOR_TEXT_PRIMARY) -> dict:
+    return {
+        "type": "box",
+        "layout": "horizontal",
+        "contents": [
+            {"type": "text", "text": label, "size": "sm", "color": COLOR_TEXT_SECONDARY},
+            {"type": "text", "text": value, "size": "sm", "color": value_color, "align": "end"},
+        ],
+    }
+
+
+def _build_summary_contents(portfolio_data: Dict[str, Any]) -> list[dict]:
+    """資産サマリ部分のFlexコンテンツを作成する"""
+    total_cost = _format_currency(portfolio_data["total_cost"])
+    total_market_value = _format_currency(portfolio_data["total_market_value"])
+    total_pl = _format_currency(portfolio_data["total_pl"])
+    total_pl_percentage = _format_decimal(portfolio_data["total_pl_percentage"])
+    total_realized_pl = _format_currency(portfolio_data["total_realized_pl"])
+    total_dividend = _format_currency(portfolio_data["total_dividend"])
+
+    rows: list[dict] = [
+        _summary_row("取得価格", f"{total_cost}円"),
+        _summary_row("時価総額", f"{total_market_value}円"),
+    ]
+
+    weekly_change = portfolio_data.get("weekly_change")
+    if weekly_change is not None:
+        formatted_change = _format_currency(abs(weekly_change))
+        sign = "+" if weekly_change >= 0 else "-"
+        rows.append(
+            _summary_row("前週比", f"{sign}{formatted_change}円", _get_profit_loss_color(weekly_change))
+        )
+
+    rows.append(
+        _summary_row(
+            "総損益",
+            f"{total_pl}円 ({total_pl_percentage}%)",
+            _get_profit_loss_color(float(portfolio_data["total_pl_percentage"])),
+        )
+    )
+    rows.append(_summary_row("実現損益", f"{total_realized_pl}円"))
+    rows.append(_summary_row("配当総額", f"{total_dividend}円"))
+
+    return rows
+
+
+def _build_combined_flex(
+    portfolio_data: Dict[str, Any],
     top_performers: list,
     bottom_performers: list,
-    sections: ChangeReasonSections | None = None,
+    sections: ChangeReasonSections | None,
 ) -> dict:
-    """
-    週間騰落率ランキングのFlex Messageを作成する
-
-    Args:
-        top_performers (list): 上昇トップのリスト
-        bottom_performers (list): 下落ワーストのリスト
-        sections: 変動理由セクション（概況/上昇解説/下落解説）。None ならランキングのみ表示。
-
-    Returns:
-        dict: LINE Flex Message形式の辞書
-    """
+    """資産サマリ・週間騰落ランキング・AI解説を単一バブルにまとめたFlex Messageを作成する"""
     today = now_jst().strftime("%Y/%m/%d")
-    top_contents = _ranking_contents(top_performers)
-    bottom_contents = _ranking_contents(bottom_performers)
 
-    body_contents: list[dict] = [{"type": "separator", "color": "#E0E0E0"}]
+    separator = {"type": "separator", "margin": "xl", "color": COLOR_SEPARATOR}
+
+    body_contents: list[dict] = [
+        _section_heading("資産サマリ"),
+        {
+            "type": "box",
+            "layout": "vertical",
+            "margin": "sm",
+            "spacing": "sm",
+            "contents": _build_summary_contents(portfolio_data),
+        },
+        separator,
+    ]
 
     if sections:
-        body_contents.append(_section_heading("マーケット概況"))
-        body_contents.append(_section_body(sections.market_overview))
-        body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+        body_contents.extend(
+            [
+                _section_heading("マーケット概況"),
+                _section_body(sections.market_overview),
+                separator,
+            ]
+        )
 
     body_contents.append(_section_heading("上昇トップ5"))
-    body_contents.append({"type": "box", "layout": "vertical", "contents": top_contents, "margin": "sm"})
+    body_contents.append(
+        {"type": "box", "layout": "vertical", "contents": _ranking_contents(top_performers), "margin": "sm"}
+    )
     if sections:
         body_contents.append(_section_body(sections.top_commentary, margin="lg"))
 
-    body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+    body_contents.append(separator)
 
     body_contents.append(_section_heading("下落ワースト5"))
-    body_contents.append({"type": "box", "layout": "vertical", "contents": bottom_contents, "margin": "sm"})
+    body_contents.append(
+        {
+            "type": "box",
+            "layout": "vertical",
+            "contents": _ranking_contents(bottom_performers),
+            "margin": "sm",
+        }
+    )
     if sections:
         body_contents.append(_section_body(sections.bottom_commentary, margin="lg"))
 
@@ -479,92 +240,75 @@ def _build_weekly_performance_flex_message(
             "type": "box",
             "layout": "vertical",
             "contents": [
-                {"type": "text", "text": "InvestLogix", "weight": "bold", "size": "sm", "color": "#00A86B"},
                 {
                     "type": "text",
-                    "text": "週間騰落ランキング",
+                    "text": "InvestLogix",
+                    "weight": "bold",
+                    "size": "sm",
+                    "color": COLOR_PROFIT,
+                },
+                {
+                    "type": "text",
+                    "text": "週次レポート",
                     "weight": "bold",
                     "size": "xl",
                     "margin": "sm",
-                    "color": "#333333",
+                    "color": COLOR_HEADING,
                 },
-                {"type": "text", "text": today, "size": "xs", "color": "#999999", "margin": "sm"},
+                {"type": "text", "text": today, "size": "xs", "color": COLOR_TEXT_MUTED, "margin": "sm"},
             ],
             "paddingAll": "20px",
-            "backgroundColor": "#FFFFFF",
+            "backgroundColor": COLOR_BACKGROUND,
         },
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": body_contents,
             "paddingAll": "20px",
-            "backgroundColor": "#FFFFFF",
+            "backgroundColor": COLOR_BACKGROUND,
         },
     }
 
 
-async def send_weekly_performance_notification(
+async def send_weekly_summary_notification(
     user_id: int,
+    portfolio_data: Dict[str, Any],
     top_performers: list,
     bottom_performers: list,
+    sections: ChangeReasonSections | None,
     db: AsyncSession = None,
 ) -> bool:
-    """
-    週間騰落率ランキングをLINEにFlex Messageで通知する
-
-    Args:
-        user_id (int): ユーザーID
-        top_performers (list): 上昇トップ5のリスト
-        bottom_performers (list): 下落ワースト5のリスト
-        db (AsyncSession, optional): データベースセッション
-
-    Returns:
-        bool: 通知が成功したかどうか
-    """
+    """資産サマリと週間騰落ランキングを単一Flex Messageで通知する"""
     try:
-        # LINE APIの設定
         line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
-
         if not line_token:
             logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
             return False
 
-        # ユーザーのLINE UserIDを取得
         line_user_id = await NotificationService.get_line_user_id(user_id, db)
-
         if not line_user_id:
             logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
             return False
 
-        sections = await generate_change_reasons(top_performers, bottom_performers)
-        flex_contents = _build_weekly_performance_flex_message(top_performers, bottom_performers, sections)
-
+        flex_contents = _build_combined_flex(portfolio_data, top_performers, bottom_performers, sections)
         flex_message = {
             "type": "flex",
-            "altText": "週間騰落ランキング",
+            "altText": "週次レポート（資産サマリと週間騰落ランキング）",
             "contents": flex_contents,
         }
 
-        messages: list[dict] = [flex_message]
-
         headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
+        data = {"to": line_user_id, "messages": [flex_message]}
 
-        data = {"to": line_user_id, "messages": messages}
-
-        # LINE Message APIにリクエストを送信
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.line.me/v2/bot/message/push", headers=headers, json=data
-            )
+            response = await client.post(LINE_PUSH_URL, headers=headers, json=data)
 
-        # レスポンス処理
         if response.status_code == 200:
-            logger.info("週間騰落率のLINE通知が正常に送信されました")
+            logger.info("週次レポートのLINE通知が正常に送信されました")
             return True
-        else:
-            logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
-            logger.error(f"レスポンス: {response.text}")
-            return False
+        logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
+        logger.error(f"レスポンス: {response.text}")
+        return False
 
     except Exception as e:
         logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")

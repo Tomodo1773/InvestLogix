@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Annotated, AsyncGenerator
 
 from fastapi import Cookie, Depends, HTTPException, status
@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import models, schemas
 from .database import get_db, set_rls_user_id, settings
+from .utils.datetime import now_jst
 
 password_hash = PasswordHash.recommended()
 
@@ -78,9 +79,9 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     """
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = now_jst() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = now_jst() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
 

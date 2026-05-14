@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest"
-import type { Holding } from "./api/types"
+import type { Holding } from "@/lib/api/types"
+import { createHolding } from "@/test/factories"
 import { escapeCsvField, holdingsToCsv } from "./csv"
 
 const BOM = "﻿"
 
-const baseHolding: Holding = {
+const baseHolding: Holding = createHolding({
   symbol: "7203",
   quantity: 100,
   average_cost: 2000,
@@ -17,13 +18,10 @@ const baseHolding: Holding = {
   unrealized_pl_percentage: 25,
   total_pl: 51500,
   total_pl_percentage: 25.75,
-  user_id: 1,
   last_updated: "2026-05-01T10:00:00+09:00",
   stock_name: "トヨタ自動車",
   security_type: "stock",
-  currency: "JPY",
-  note: null,
-}
+})
 
 describe("escapeCsvField", () => {
   it("通常の文字列はそのまま返す", () => {

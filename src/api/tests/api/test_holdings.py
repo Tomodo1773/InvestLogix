@@ -101,6 +101,23 @@ async def test_list_holdings(
     assert data[0]["stock_name"] == "三菱商事"
     assert data[0]["security_type"] == "STOCK"
     assert data[0]["currency"] == "JPY"
+    # JPY建ての日本株は country=="JP"、JQuants から取得した 17 業種名が sector_name に入る
+    assert data[0]["country"] == "JP"
+    assert data[0]["sector_name"] == "商社・卸売"
+
+
+@pytest.mark.asyncio
+async def test_list_holdings_returns_country_and_sector_for_us(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_us_stock_data
+):
+    """USD建ての米国株は country=="US"、AlphaVantage から取得した gics_sector が sector_name に入る"""
+    response = await client.get("/api/v1/holdings/")
+
+    assert response.status_code == 200
+    data = response.json()
+    target = next(h for h in data if h["symbol"] == "AAPL")
+    assert target["country"] == "US"
+    assert target["sector_name"] == "Technology"
 
 
 @pytest.mark.asyncio

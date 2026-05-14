@@ -446,9 +446,33 @@ async def update_all_holdings_pl(
     return updated_holdings, sorted(failed_symbols)
 
 
-async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> List[Holding]:
+def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[str]]:
+    """Stock から国 (JP/US/OTHER) とセクター名を導出する。
+
+    - 投信 (security_type=="FUND") は国際分散のため "OTHER" に集約
+    - JPY 建ては "JP"、USD 建ては "US"、その他は "OTHER"
+    - セクター名は JPX 17 業種または GICS セクター。詳細レコードが無い場合は None
     """
-    ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨と共に取得します。
+    if stock.security_type == "FUND":
+        country: Optional[str] = "OTHER"
+    elif stock.currency == "JPY":
+        country = "JP"
+    elif stock.currency == "USD":
+        country = "US"
+    else:
+        country = "OTHER"
+
+    sector_name: Optional[str] = None
+    if stock.jpx_detail is not None:
+        sector_name = stock.jpx_detail.sector_17_name
+    elif stock.us_detail is not None:
+        sector_name = stock.us_detail.gics_sector
+    return country, sector_name
+
+
+async def list_holdings(db: AsyncSession, user_id: int, symbol: Optional[str] = None) -> List[Holding]:
+    """
+    ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨、国、セクターと共に取得します。
     symbolが指定された場合は、その銘柄の情報のみを返します。
 
     Args:
@@ -457,9 +481,16 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
         symbol (str, optional): 銘柄コード。指定された場合はその銘柄の情報のみを返します。
 
     Returns:
-        List[Holding]: 銘柄名、証券種別、通貨を含む保有銘柄情報のリスト
+        List[Holding]: 銘柄名、証券種別、通貨、国、セクター名を含む保有銘柄情報のリスト
     """
-    query = select(Holding).options(selectinload(Holding.stock)).where(Holding.user_id == user_id)
+    query = (
+        select(Holding)
+        .options(
+            selectinload(Holding.stock).selectinload(Stock.jpx_detail),
+            selectinload(Holding.stock).selectinload(Stock.us_detail),
+        )
+        .where(Holding.user_id == user_id)
+    )
 
     # symbolが指定された場合は、条件を追加
     if symbol:
@@ -471,6 +502,7 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str = None) -> L
         holding.stock_name = holding.stock.name
         holding.security_type = holding.stock.security_type
         holding.currency = holding.stock.currency
+        holding.country, holding.sector_name = _derive_country_and_sector(holding.stock)
     logger.info(
         "Holdingsを取得しました action=select user_id={} symbol={} count={}",
         user_id,

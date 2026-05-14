@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { Holding } from "@/lib/api/types"
+import { createHolding as createHoldingBase } from "@/test/factories"
 import { transformHoldingsToChartData } from "./holding-allocation-chart"
 
 describe("transformHoldingsToChartData", () => {
@@ -8,26 +9,13 @@ describe("transformHoldingsToChartData", () => {
     marketValue: number,
     stockName: string | null = null,
     securityType: string | null = "STOCK"
-  ): Holding => ({
-    symbol,
-    quantity: 100,
-    average_cost: 1000,
-    total_cost: 100000,
-    current_price: 1100,
-    market_value: marketValue,
-    realized_pl: 0,
-    total_dividend: 0,
-    unrealized_pl: 10000,
-    unrealized_pl_percentage: 10,
-    total_pl: 10000,
-    total_pl_percentage: 10,
-    user_id: 1,
-    last_updated: "2024-01-01",
-    stock_name: stockName,
-    security_type: securityType,
-    currency: "JPY",
-    note: null,
-  })
+  ): Holding =>
+    createHoldingBase({
+      symbol,
+      market_value: marketValue,
+      stock_name: stockName,
+      security_type: securityType,
+    })
 
   it("上位20銘柄を個別に表示する", () => {
     const holdings: Holding[] = Array.from({ length: 15 }, (_, i) =>

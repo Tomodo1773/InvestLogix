@@ -8,8 +8,8 @@ import pytest
 from stock.schemas import StockWeeklyPerformance
 from stock.services.change_reason_service import ChangeReasonSections
 from stock.services.notification_service import (
-    WEEKLY_PERFORMANCE_COLOR_GREEN,
-    WEEKLY_PERFORMANCE_COLOR_RED,
+    COLOR_LOSS,
+    COLOR_PROFIT,
     _build_ranking_row,
     send_weekly_summary_notification,
 )
@@ -84,7 +84,7 @@ class TestBuildRankingRow:
 
         # 騰落率テキストが緑色であること
         change_rate_text = row["contents"][2]
-        assert change_rate_text["color"] == WEEKLY_PERFORMANCE_COLOR_GREEN
+        assert change_rate_text["color"] == COLOR_PROFIT
         assert change_rate_text["text"] == "+10.00%"
 
     def test_negative_change_rate_uses_red_color(self):
@@ -98,7 +98,7 @@ class TestBuildRankingRow:
 
         # 騰落率テキストが赤色であること
         change_rate_text = row["contents"][2]
-        assert change_rate_text["color"] == WEEKLY_PERFORMANCE_COLOR_RED
+        assert change_rate_text["color"] == COLOR_LOSS
         assert change_rate_text["text"] == "-5.50%"
 
 

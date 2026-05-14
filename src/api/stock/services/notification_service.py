@@ -17,8 +17,15 @@ logger = logging.getLogger(__name__)
 
 LINE_PUSH_URL = "https://api.line.me/v2/bot/message/push"
 
-WEEKLY_PERFORMANCE_COLOR_GREEN = "#00A86B"
-WEEKLY_PERFORMANCE_COLOR_RED = "#E53935"
+# Flex Message 用カラー定数。損益・騰落率の方向色はバブル内で統一する。
+COLOR_PROFIT = "#1DB446"
+COLOR_LOSS = "#DB2C2C"
+COLOR_TEXT_PRIMARY = "#111111"
+COLOR_TEXT_SECONDARY = "#555555"
+COLOR_TEXT_MUTED = "#999999"
+COLOR_HEADING = "#333333"
+COLOR_SEPARATOR = "#E0E0E0"
+COLOR_BACKGROUND = "#FFFFFF"
 
 
 class NotificationService:
@@ -54,38 +61,35 @@ def _format_decimal(value: float) -> str:
 
 def _get_profit_loss_color(percentage: float) -> str:
     if percentage > 0:
-        return "#1DB446"
-    elif percentage < 0:
-        return "#DB2C2C"
-    else:
-        return "#111111"
+        return COLOR_PROFIT
+    if percentage < 0:
+        return COLOR_LOSS
+    return COLOR_TEXT_PRIMARY
 
 
 def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: float) -> dict:
     """ランキングの1行分のFlex Boxを作成する"""
-    is_positive = change_rate >= 0
-    sign = "+" if is_positive else ""
-    color = WEEKLY_PERFORMANCE_COLOR_GREEN if is_positive else WEEKLY_PERFORMANCE_COLOR_RED
+    sign = "+" if change_rate >= 0 else ""
 
     return {
         "type": "box",
         "layout": "horizontal",
         "contents": [
-            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": "#666666"},
+            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": COLOR_TEXT_SECONDARY},
             {
                 "type": "text",
                 "text": f"{name}({symbol})",
                 "size": "sm",
                 "flex": 3,
                 "margin": "sm",
-                "color": "#333333",
+                "color": COLOR_HEADING,
             },
             {
                 "type": "text",
                 "text": f"{sign}{change_rate:.2f}%",
                 "size": "sm",
                 "align": "end",
-                "color": color,
+                "color": _get_profit_loss_color(change_rate),
                 "weight": "bold",
                 "flex": 1,
             },
@@ -101,7 +105,7 @@ def _section_heading(text: str) -> dict:
         "weight": "bold",
         "size": "md",
         "margin": "lg",
-        "color": "#333333",
+        "color": COLOR_HEADING,
     }
 
 
@@ -112,22 +116,30 @@ def _section_body(text: str, margin: str = "md") -> dict:
         "wrap": True,
         "size": "sm",
         "margin": margin,
-        "color": "#555555",
+        "color": COLOR_TEXT_SECONDARY,
     }
 
 
 def _ranking_contents(performers: list) -> list[dict]:
     if not performers:
-        return [{"type": "text", "text": "データなし", "size": "sm", "color": "#666666", "margin": "md"}]
+        return [
+            {
+                "type": "text",
+                "text": "データなし",
+                "size": "sm",
+                "color": COLOR_TEXT_SECONDARY,
+                "margin": "md",
+            }
+        ]
     return [_build_ranking_row(i, p.name, p.symbol, p.change_rate) for i, p in enumerate(performers, 1)]
 
 
-def _summary_row(label: str, value: str, value_color: str = "#111111") -> dict:
+def _summary_row(label: str, value: str, value_color: str = COLOR_TEXT_PRIMARY) -> dict:
     return {
         "type": "box",
         "layout": "horizontal",
         "contents": [
-            {"type": "text", "text": label, "size": "sm", "color": "#555555"},
+            {"type": "text", "text": label, "size": "sm", "color": COLOR_TEXT_SECONDARY},
             {"type": "text", "text": value, "size": "sm", "color": value_color, "align": "end"},
         ],
     }
@@ -177,6 +189,8 @@ def _build_combined_flex(
     """資産サマリ・週間騰落ランキング・AI解説を単一バブルにまとめたFlex Messageを作成する"""
     today = now_jst().strftime("%Y/%m/%d")
 
+    separator = {"type": "separator", "margin": "xl", "color": COLOR_SEPARATOR}
+
     body_contents: list[dict] = [
         _section_heading("資産サマリ"),
         {
@@ -186,7 +200,7 @@ def _build_combined_flex(
             "spacing": "sm",
             "contents": _build_summary_contents(portfolio_data),
         },
-        {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
+        separator,
     ]
 
     if sections:
@@ -194,7 +208,7 @@ def _build_combined_flex(
             [
                 _section_heading("マーケット概況"),
                 _section_body(sections.market_overview),
-                {"type": "separator", "margin": "xl", "color": "#E0E0E0"},
+                separator,
             ]
         )
 
@@ -205,7 +219,7 @@ def _build_combined_flex(
     if sections:
         body_contents.append(_section_body(sections.top_commentary, margin="lg"))
 
-    body_contents.append({"type": "separator", "margin": "xl", "color": "#E0E0E0"})
+    body_contents.append(separator)
 
     body_contents.append(_section_heading("下落ワースト5"))
     body_contents.append(
@@ -226,26 +240,32 @@ def _build_combined_flex(
             "type": "box",
             "layout": "vertical",
             "contents": [
-                {"type": "text", "text": "InvestLogix", "weight": "bold", "size": "sm", "color": "#00A86B"},
+                {
+                    "type": "text",
+                    "text": "InvestLogix",
+                    "weight": "bold",
+                    "size": "sm",
+                    "color": COLOR_PROFIT,
+                },
                 {
                     "type": "text",
                     "text": "週次レポート",
                     "weight": "bold",
                     "size": "xl",
                     "margin": "sm",
-                    "color": "#333333",
+                    "color": COLOR_HEADING,
                 },
-                {"type": "text", "text": today, "size": "xs", "color": "#999999", "margin": "sm"},
+                {"type": "text", "text": today, "size": "xs", "color": COLOR_TEXT_MUTED, "margin": "sm"},
             ],
             "paddingAll": "20px",
-            "backgroundColor": "#FFFFFF",
+            "backgroundColor": COLOR_BACKGROUND,
         },
         "body": {
             "type": "box",
             "layout": "vertical",
             "contents": body_contents,
             "paddingAll": "20px",
-            "backgroundColor": "#FFFFFF",
+            "backgroundColor": COLOR_BACKGROUND,
         },
     }
 

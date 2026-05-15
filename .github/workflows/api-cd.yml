@@ -16,7 +16,7 @@ env:
   REGION: ${{ vars.GCP_REGION }}
   SERVICE: ${{ vars.SERVICE_NAME }}
   # infra/locals.tf の jobs map と同期させること
-  JOBS: "recalc-holdings update-and-notify notify-weekly-performance"
+  JOBS: "recalc-holdings update-and-notify"
 
 jobs:
   deploy:

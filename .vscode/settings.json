@@ -1,20 +1,50 @@
 {
-	"python.testing.pytestArgs": ["tests"],
-	"python.testing.unittestEnabled": false,
-	"python.testing.pytestEnabled": true,
-	"python.testing.cwd": "${workspaceFolder}/src/api",
-	"python.testing.autoTestDiscoverOnSaveEnabled": true,
-	"terminal.integrated.env.windows": {
-		"PYTHONPATH": "${workspaceFolder}/src"
+	"editor.formatOnSave": true,
+
+	"files.exclude": {
+		"**/__pycache__": true,
+		"**/.venv": true,
+		"**/node_modules": true,
+		"**/dist": true
 	},
+	"search.exclude": {
+		"**/__pycache__": true,
+		"**/.venv": true,
+		"**/node_modules": true,
+		"**/dist": true,
+		"**/pnpm-lock.yaml": true,
+		"**/uv.lock": true
+	},
+
+	// Python / FastAPI (src/api)
+	"python.defaultInterpreterPath": "${workspaceFolder}/src/api/.venv/bin/python",
+	"python.testing.pytestEnabled": true,
+	"python.testing.unittestEnabled": false,
+	"python.testing.pytestArgs": ["tests"],
+	"python.testing.cwd": "${workspaceFolder}/src/api",
 	"[python]": {
-		"editor.formatOnSave": true,
-		"editor.formatOnPaste": true,
+		"editor.defaultFormatter": "charliermarsh.ruff",
 		"editor.codeActionsOnSave": {
 			"source.fixAll": "explicit",
 			"source.organizeImports": "explicit"
-		},
-		"editor.defaultFormatter": "charliermarsh.ruff"
+		}
 	},
-	"ruff.lineLength": 110
+	"ruff.lineLength": 110,
+
+	// TypeScript / React (src/web) — Biome
+	"[typescript]": { "editor.defaultFormatter": "biomejs.biome" },
+	"[typescriptreact]": { "editor.defaultFormatter": "biomejs.biome" },
+	"[javascript]": { "editor.defaultFormatter": "biomejs.biome" },
+	"[json]": { "editor.defaultFormatter": "biomejs.biome" },
+	"[jsonc]": { "editor.defaultFormatter": "biomejs.biome" },
+
+	// Tailwind CSS v4
+	"tailwindCSS.experimental.configFile": "src/web/src/index.css",
+
+	// WSL ターミナル
+	"terminal.integrated.env.linux": {
+		"PYTHONPATH": "${workspaceFolder}/src/api"
+	},
+
+	"azureTerraform.checkTerraformCmd": false
 }

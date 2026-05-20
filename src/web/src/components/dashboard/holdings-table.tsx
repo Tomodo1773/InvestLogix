@@ -175,10 +175,32 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                         </TableCell>
                         <TableCell className="text-right">{holding.quantity.toLocaleString()}</TableCell>
                         <TableCell className="text-right">
-                          {holding.current_price ? formatCurrency(holding.current_price) : "-"}
+                          <div>
+                            <div>
+                              {holding.current_price ? formatCurrency(holding.current_price, "JPY") : "-"}
+                            </div>
+                            {holding.currency === "USD" ? (
+                              <div className="text-xs text-muted-foreground">
+                                {holding.current_price_usd
+                                  ? formatCurrency(holding.current_price_usd, "USD")
+                                  : "-"}
+                              </div>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          {holding.market_value ? formatCurrency(holding.market_value) : "-"}
+                          <div>
+                            <div>
+                              {holding.market_value ? formatCurrency(holding.market_value, "JPY") : "-"}
+                            </div>
+                            {holding.currency === "USD" ? (
+                              <div className="text-xs text-muted-foreground">
+                                {holding.market_value_usd
+                                  ? formatCurrency(holding.market_value_usd, "USD")
+                                  : "-"}
+                              </div>
+                            ) : null}
+                          </div>
                         </TableCell>
                         <TableCell className={`text-right font-medium ${plColor}`}>
                           {holding.total_pl ? formatCurrency(holding.total_pl) : "-"}

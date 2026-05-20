@@ -158,7 +158,9 @@ class HoldingBase(BaseModel):
     average_cost: float
     total_cost: float
     current_price: Optional[float]
+    current_price_usd: Optional[float] = None
     market_value: Optional[float]
+    market_value_usd: Optional[float] = None
     realized_pl: Optional[float]
     total_dividend: Optional[float]
     unrealized_pl: Optional[float]

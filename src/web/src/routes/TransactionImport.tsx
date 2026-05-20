@@ -27,6 +27,14 @@ type Step = "upload" | "preview" | "complete"
 
 function TransactionImportContent() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const buildErrorItems = (errors: string[]) => {
+    const counts = new Map<string, number>()
+    return errors.map((message) => {
+      const occurrence = (counts.get(message) ?? 0) + 1
+      counts.set(message, occurrence)
+      return { key: `${message}-${occurrence}`, message }
+    })
+  }
 
   // 取引履歴インポート用ステート
   const [txStep, setTxStep] = useState<Step>("upload")
@@ -233,9 +241,9 @@ function TransactionImportContent() {
                       <AlertTitle>スキップした取引: {txPreviewData.skipped_count}件</AlertTitle>
                       <AlertDescription>
                         <ul className="list-disc list-inside space-y-1 mt-2">
-                          {txPreviewData.errors.slice(0, 5).map((err, i) => (
-                            <li key={`preview-error-${i}-${err.substring(0, 20)}`} className="text-sm">
-                              {err}
+                          {buildErrorItems(txPreviewData.errors.slice(0, 5)).map((item) => (
+                            <li key={item.key} className="text-sm">
+                              {item.message}
                             </li>
                           ))}
                           {txPreviewData.errors.length > 5 && (
@@ -289,9 +297,9 @@ function TransactionImportContent() {
                     <AlertTitle>登録に失敗した取引</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc list-inside space-y-1 mt-2">
-                        {txResult.errors.map((err, i) => (
-                          <li key={`result-error-${i}-${err.substring(0, 20)}`} className="text-sm">
-                            {err}
+                        {buildErrorItems(txResult.errors).map((item) => (
+                          <li key={item.key} className="text-sm">
+                            {item.message}
                           </li>
                         ))}
                       </ul>
@@ -379,9 +387,9 @@ function TransactionImportContent() {
                       <AlertTitle>スキップした配当: {divPreviewData.skipped_count}件</AlertTitle>
                       <AlertDescription>
                         <ul className="list-disc list-inside space-y-1 mt-2">
-                          {divPreviewData.errors.slice(0, 5).map((err, i) => (
-                            <li key={`div-preview-error-${i}-${err.substring(0, 20)}`} className="text-sm">
-                              {err}
+                          {buildErrorItems(divPreviewData.errors.slice(0, 5)).map((item) => (
+                            <li key={item.key} className="text-sm">
+                              {item.message}
                             </li>
                           ))}
                           {divPreviewData.errors.length > 5 && (
@@ -440,9 +448,9 @@ function TransactionImportContent() {
                     <AlertTitle>登録に失敗した配当</AlertTitle>
                     <AlertDescription>
                       <ul className="list-disc list-inside space-y-1 mt-2">
-                        {divResult.errors.map((err, i) => (
-                          <li key={`div-result-error-${i}-${err.substring(0, 20)}`} className="text-sm">
-                            {err}
+                        {buildErrorItems(divResult.errors).map((item) => (
+                          <li key={item.key} className="text-sm">
+                            {item.message}
                           </li>
                         ))}
                       </ul>

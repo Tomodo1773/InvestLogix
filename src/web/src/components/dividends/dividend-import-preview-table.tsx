@@ -41,8 +41,8 @@ export function DividendImportPreviewTable({
                 </TableCell>
               </TableRow>
             ) : (
-              dividends.map((div, index) => (
-                <TableRow key={`${div.symbol}-${div.payment_date}-${index}`}>
+              dividends.map((div) => (
+                <TableRow key={`${div.symbol}-${div.payment_date}-${div.shares_owned}-${div.total_amount}`}>
                   <TableCell>{formatDate(div.payment_date)}</TableCell>
                   <TableCell className="font-mono">{div.symbol}</TableCell>
                   <TableCell>{div.name}</TableCell>

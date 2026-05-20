@@ -166,8 +166,10 @@ class Holding(Base):
     total_cost = Column(Float, nullable=False)  # [AUTO_CALC] 取得価格合計（Transactionから取得）
 
     # 現在値情報
-    current_price = Column(Float)  # [API_FETCH] 現在価格
-    market_value = Column(Float)  # [AUTO_CALC] 時価評価額（現在価格 * 保有数量）
+    current_price = Column(Float)  # [API_FETCH] 現在価格（円建て）
+    current_price_usd = Column(Float)  # [API_FETCH] 現在価格（ドル建て、米国株のみ）
+    market_value = Column(Float)  # [AUTO_CALC] 時価評価額（円建て、現在価格 * 保有数量）
+    market_value_usd = Column(Float)  # [AUTO_CALC] 時価評価額（ドル建て、米国株のみ）
     realized_pl = Column(Float, default=0.0)  # [AUTO_CALC] 売却益（（平均取得単価 - 現在価格） * 保有数量）
     total_dividend = Column(Float, default=0.0)  # [AUTO_CALC] 配当総額
     unrealized_pl = Column(Float)  # [AUTO_CALC] 評価損益（時価評価額 - 取得価格合計）

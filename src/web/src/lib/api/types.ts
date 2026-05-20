@@ -45,7 +45,9 @@ export interface Holding {
   average_cost: number
   total_cost: number
   current_price: number | null
+  current_price_usd: number | null
   market_value: number | null
+  market_value_usd: number | null
   realized_pl: number | null
   total_dividend: number | null
   unrealized_pl: number | null

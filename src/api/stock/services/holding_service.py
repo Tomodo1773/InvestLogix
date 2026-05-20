@@ -47,9 +47,11 @@ async def get_japan_stock_price(
     return 0.0
 
 
-async def get_us_stock_price(symbol: str, db: AsyncSession, *, fallback_to_external: bool = False) -> float:
+async def get_us_stock_price(
+    symbol: str, db: AsyncSession, *, fallback_to_external: bool = False
+) -> tuple[float, float | None]:
     """
-    米国株・ETFの最新株価を円換算して取得します（price_history からの DB 引き）。
+    米国株・ETFの最新株価をドル建てと円建てで取得します（price_history からの DB 引き）。
 
     Args:
         symbol: ティッカーシンボル
@@ -57,32 +59,34 @@ async def get_us_stock_price(symbol: str, db: AsyncSession, *, fallback_to_exter
         fallback_to_external: DB に該当が無いとき外部APIへフォールバックするか
 
     Returns:
-        最新株価（円換算後）。取得できない場合は0
+        tuple[float, float | None]: (最新株価JPY, 最新株価USD)。取得できない場合は(0, None)
     """
     try:
         usdjpy_rate = await alphavantage_service.fetch_usdjpy_rate()
     except Exception as e:
         logger.warning("為替レート取得でエラーが発生しました symbol={} error={}", symbol, str(e))
-        return 0.0
+        return 0.0, None
 
     if not usdjpy_rate:
         logger.info("為替レートが取得できませんでした symbol={}", symbol)
-        return 0.0
+        return 0.0, None
 
     prices = await fetch_us_stock_prices(
         symbol, days_back=7, db=db, fallback_to_external=fallback_to_external
     )
-    price = get_latest_us_price(prices)
-    if price is not None:
-        price_jpy = price * float(usdjpy_rate)
-        logger.info("米国株株価を取得しました symbol={} price={}", symbol, price_jpy)
-        return price_jpy
+    price_usd = get_latest_us_price(prices)
+    if price_usd is not None:
+        price_jpy = price_usd * float(usdjpy_rate)
+        logger.info("米国株株価を取得しました symbol={} price_jpy={} price_usd={}", symbol, price_jpy, price_usd)
+        return price_jpy, price_usd
 
     logger.info("米国株株価を取得できませんでした symbol={}", symbol)
-    return 0.0
+    return 0.0, None
 
 
-async def get_current_price(stock: Stock, db: AsyncSession, *, fallback_to_external: bool = False) -> float:
+async def get_current_price(
+    stock: Stock, db: AsyncSession, *, fallback_to_external: bool = False
+) -> tuple[float, float | None]:
     """
     証券種別と通貨に基づいて最新株価を取得します。
     日本株、米国株、米国ETF、投資信託に対応します。
@@ -93,18 +97,18 @@ async def get_current_price(stock: Stock, db: AsyncSession, *, fallback_to_exter
         fallback_to_external: DB に該当が無いとき外部APIへフォールバックするか（投資信託は対象外）
 
     Returns:
-        最新株価
+        tuple[float, float | None]: (最新株価JPY, 最新株価USD)
     """
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
-            return await get_japan_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
+            return await get_japan_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external), None
         elif stock.currency == "USD":
             return await get_us_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
     elif stock.security_type == SecurityType.ETF and stock.currency == "USD":
         return await get_us_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
     elif stock.security_type == SecurityType.FUND:
-        return await investment_trust_service.get_fund_price(stock.symbol)
-    return 0.0
+        return await investment_trust_service.get_fund_price(stock.symbol), None
+    return 0.0, None
 
 
 async def calculate_holding_from_transactions(
@@ -285,14 +289,16 @@ async def calculate_holding_pl(
 
     # 現在値を取得（保有数ゼロの銘柄は売却済み・上場廃止扱いとして価格取得自体をスキップする）
     if holding.quantity > 0:
-        current_price = await get_current_price(stock, db, fallback_to_external=fallback_to_external)
+        current_price, current_price_usd = await get_current_price(stock, db, fallback_to_external=fallback_to_external)
         price_fetch_failed = current_price <= 0
     else:
         current_price = 0.0
+        current_price_usd = None
         price_fetch_failed = False
 
     if current_price > 0:
         holding.current_price = current_price
+        holding.current_price_usd = current_price_usd
     elif current_price == 0 and holding.current_price is None:
         # 上場廃止などで株価が取得できない場合は0を設定
         holding.current_price = 0.0
@@ -316,6 +322,9 @@ async def calculate_holding_pl(
 
     # 時価評価額の計算
     holding.market_value = holding.current_price * holding.quantity
+    holding.market_value_usd = (
+        holding.current_price_usd * holding.quantity if holding.current_price_usd is not None else None
+    )
 
     # 含み損益（純粋な含み益のみ）
     holding.unrealized_pl = holding.market_value - holding.total_cost

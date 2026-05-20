@@ -77,7 +77,9 @@ async def get_us_stock_price(
     price_usd = get_latest_us_price(prices)
     if price_usd is not None:
         price_jpy = price_usd * float(usdjpy_rate)
-        logger.info("米国株株価を取得しました symbol={} price_jpy={} price_usd={}", symbol, price_jpy, price_usd)
+        logger.info(
+            "米国株株価を取得しました symbol={} price_jpy={} price_usd={}", symbol, price_jpy, price_usd
+        )
         return price_jpy, price_usd
 
     logger.info("米国株株価を取得できませんでした symbol={}", symbol)
@@ -101,7 +103,9 @@ async def get_current_price(
     """
     if stock.security_type == SecurityType.STOCK:
         if stock.currency == "JPY":
-            return await get_japan_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external), None
+            return await get_japan_stock_price(
+                stock.symbol, db, fallback_to_external=fallback_to_external
+            ), None
         elif stock.currency == "USD":
             return await get_us_stock_price(stock.symbol, db, fallback_to_external=fallback_to_external)
     elif stock.security_type == SecurityType.ETF and stock.currency == "USD":
@@ -289,7 +293,9 @@ async def calculate_holding_pl(
 
     # 現在値を取得（保有数ゼロの銘柄は売却済み・上場廃止扱いとして価格取得自体をスキップする）
     if holding.quantity > 0:
-        current_price, current_price_usd = await get_current_price(stock, db, fallback_to_external=fallback_to_external)
+        current_price, current_price_usd = await get_current_price(
+            stock, db, fallback_to_external=fallback_to_external
+        )
         price_fetch_failed = current_price <= 0
     else:
         current_price = 0.0

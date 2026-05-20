@@ -360,8 +360,8 @@ async def mock_external_apis(mocker):
             1回目: MOCK_JAPAN_STOCK_PRICE_INITIAL (3000.0)
             2回目以降: MOCK_JAPAN_STOCK_PRICE_UPDATED (3100.0)
         - get_us_stock_price:
-            1回目: MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE (36000.0)
-            2回目以降: MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE (37500.0)
+            1回目: (MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE, MOCK_US_STOCK_PRICE_INITIAL)
+            2回目以降: (MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE, MOCK_US_STOCK_PRICE_UPDATED)
 
     Args:
         mocker: モッカーフィクスチャー
@@ -381,9 +381,9 @@ async def mock_external_apis(mocker):
     mock_japan_price.side_effect = [MOCK_JAPAN_STOCK_PRICE_INITIAL] + [MOCK_JAPAN_STOCK_PRICE_UPDATED] * 10
 
     mock_us_price = mocker.patch("stock.services.holding_service.get_us_stock_price", autospec=True)
-    mock_us_price.side_effect = [MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE] + [
-        MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE
-    ] * 10
+    mock_us_price.side_effect = [
+        (MOCK_US_STOCK_PRICE_INITIAL * MOCK_USD_JPY_RATE_RESPONSE, MOCK_US_STOCK_PRICE_INITIAL)
+    ] + [(MOCK_US_STOCK_PRICE_UPDATED * MOCK_USD_JPY_RATE_RESPONSE, MOCK_US_STOCK_PRICE_UPDATED)] * 10
 
     mock_usdjpy = mocker.patch("stock.services.alphavantage_service.fetch_usdjpy_rate", autospec=True)
     mock_usdjpy.return_value = MOCK_USD_JPY_RATE_RESPONSE

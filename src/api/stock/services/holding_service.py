@@ -299,7 +299,6 @@ async def calculate_holding_pl(
         price_fetch_failed = current_price <= 0
     else:
         current_price = 0.0
-        current_price_usd = None
         price_fetch_failed = False
 
     if current_price > 0:

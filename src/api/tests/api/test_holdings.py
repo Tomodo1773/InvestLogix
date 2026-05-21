@@ -416,7 +416,7 @@ async def test_update_all_holdings_pl_returns_failed_symbols(
     日本株(8058)はデフォルトのモックで取得成功するため失敗リストに含まれない。
     """
     # 米国株の価格取得を失敗させる
-    mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=0.0)
+    mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=(0.0, None))
 
     # auth_token フィクスチャで作成済みのテストユーザ ID を取得
     result = await db_session.execute(select(User).where(User.username == "testuser"))
@@ -459,7 +459,7 @@ async def test_update_all_holdings_pl_skips_zero_quantity(
     }
     await create_transaction(sell_transaction)
 
-    mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=0.0)
+    mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=(0.0, None))
 
     result = await db_session.execute(select(User).where(User.username == "testuser"))
     user_id = result.scalar_one().user_id

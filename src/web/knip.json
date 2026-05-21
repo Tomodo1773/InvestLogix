@@ -1,4 +1,3 @@
 {
-  "$schema": "./node_modules/knip/schema.json",
-  "ignore": ["dist/**"]
+  "$schema": "./node_modules/knip/schema.json"
 }

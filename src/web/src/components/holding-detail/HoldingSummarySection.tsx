@@ -36,9 +36,14 @@ export function HoldingSummarySection({ holding, isLoading }: HoldingSummarySect
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">評価額</p>
-              <p className="text-lg font-semibold">
-                {holding.market_value ? formatCurrency(holding.market_value) : "-"}
-              </p>
+              <div className="text-lg font-semibold">
+                <p>{holding.market_value ? formatCurrency(holding.market_value, "JPY") : "-"}</p>
+                {holding.currency === "USD" ? (
+                  <p className="text-sm text-muted-foreground">
+                    {holding.market_value_usd ? formatCurrency(holding.market_value_usd, "USD") : "-"}
+                  </p>
+                ) : null}
+              </div>
             </div>
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">損益</p>

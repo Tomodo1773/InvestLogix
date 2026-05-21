@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest"
-import { formatCurrency, formatDate, formatPercent, formatYearMonth } from "./format"
+import {
+  formatCurrency,
+  formatCurrencyWithDecimals,
+  formatDate,
+  formatPercent,
+  formatYearMonth,
+} from "./format"
 
 describe("formatCurrency", () => {
   it("正の数を正しくフォーマットできる (JPY)", () => {
@@ -25,6 +31,16 @@ describe("formatCurrency", () => {
   it("JPYとUSDで小数点以下の桁数が0であること", () => {
     expect(formatCurrency(1234.89, "JPY")).toBe("￥1,235")
     expect(formatCurrency(1234.89, "USD")).toBe("$1,235")
+  })
+})
+
+describe("formatCurrencyWithDecimals", () => {
+  it("小数点以下2桁でフォーマットできる", () => {
+    expect(formatCurrencyWithDecimals(1234.5, "USD")).toBe("$1,234.50")
+  })
+
+  it("NaNの場合は0.00を返す", () => {
+    expect(formatCurrencyWithDecimals(Number.NaN, "USD")).toBe("$0.00")
   })
 })
 

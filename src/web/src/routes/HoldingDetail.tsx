@@ -17,7 +17,7 @@ import {
   getStockSplits,
   getTransactionsBySymbol,
 } from "@/lib/api/client"
-import { formatCurrency } from "@/lib/format"
+import { formatCurrency, formatCurrencyWithDecimals } from "@/lib/format"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 function HoldingDetailContent() {
@@ -88,9 +88,18 @@ function HoldingDetailContent() {
                 <h1 className="text-2xl font-bold">
                   {holding.stock_name || symbol} ({symbol})
                 </h1>
-                <p className="text-xl text-muted-foreground">
-                  現在価格: {holding.current_price ? formatCurrency(holding.current_price) : "取得中..."}
-                </p>
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-muted-foreground">
+                  <p className="text-xl">
+                    現在価格: {holding.current_price ? formatCurrency(holding.current_price) : "取得中..."}
+                  </p>
+                  {holding.currency === "USD" ? (
+                    <p className="text-base">
+                      {holding.current_price_usd
+                        ? formatCurrencyWithDecimals(holding.current_price_usd, "USD")
+                        : "-"}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             ) : (
               <div className="space-y-2">

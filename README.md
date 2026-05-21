@@ -73,7 +73,21 @@ cd src
 docker compose down
 ```
 
-### 2) Web を起動
+### 2) 定時ジョブを手動実行（Docker）
+
+Docker Compose で API コンテナを起動した状態で、必要なジョブだけ実行します。
+
+```bash
+cd src
+
+# 保有銘柄の株価履歴を更新し、損益を再計算
+docker compose exec api uv run python -m stock.jobs.recalc_holdings
+
+# ポートフォリオ履歴を保存し、LINE通知を送信
+docker compose exec api uv run python -m stock.jobs.update_and_notify
+```
+
+### 3) Web を起動
 
 ```bash
 cd src/web

@@ -216,7 +216,13 @@ Cookie(httponly) ベースの認証に一本化。`/api/v1/token` がログイ�
 |--------|------|
 | `recalc_holdings` | 保有銘柄の最新価格を取得して `price_history` に upsert し、全 holdings の損益を再計算 |
 | `update_and_notify` | ポートフォリオ全体を更新して履歴に保存し、LINE 通知を送信 |
-| `notify_weekly_performance` | 週次パフォーマンスを LINE 通知 |
+
+ローカルで Docker Compose 起動中に手動実行する場合は、`src` ディレクトリで以下を実行します。
+
+```bash
+docker compose exec api uv run python -m stock.jobs.recalc_holdings
+docker compose exec api uv run python -m stock.jobs.update_and_notify
+```
 
 株価は `price_history` テーブル（直近21日分を保持）から読み込みます。外部 API への問い合わせは原則として日次バッチに集約しているため、API ハンドラ側からは外部呼び出しを行わずに DB を引く設計です。
 

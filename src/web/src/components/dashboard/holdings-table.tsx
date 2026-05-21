@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
-import { formatCurrency, formatPercent, getPLColorClass } from "@/lib/format"
+import { formatCurrency, formatCurrencyWithDecimals, formatPercent, getPLColorClass } from "@/lib/format"
 
 interface HoldingsTableProps {
   holdings: Holding[] | undefined
@@ -182,7 +182,7 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                             {holding.currency === "USD" ? (
                               <div className="text-xs text-muted-foreground">
                                 {holding.current_price_usd
-                                  ? formatCurrency(holding.current_price_usd, "USD")
+                                  ? formatCurrencyWithDecimals(holding.current_price_usd, "USD")
                                   : "-"}
                               </div>
                             ) : null}

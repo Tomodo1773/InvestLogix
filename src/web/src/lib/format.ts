@@ -16,6 +16,24 @@ export function formatCurrency(value: number | string, currency: string = "JPY")
   }).format(numValue)
 }
 
+export function formatCurrencyWithDecimals(value: number | string, currency: string = "JPY"): string {
+  const numValue = typeof value === "string" ? parseFloat(value) : value
+  if (Number.isNaN(numValue)) {
+    return new Intl.NumberFormat("ja-JP", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(0)
+  }
+  return new Intl.NumberFormat("ja-JP", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numValue)
+}
+
 export function formatPercent(value: number | string | null | undefined): string {
   if (value === null || value === undefined) {
     return "0.0%"

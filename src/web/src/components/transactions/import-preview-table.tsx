@@ -45,7 +45,7 @@ export function ImportPreviewTable({ transactions, onConfirm, isLoading }: Impor
             ) : (
               transactions.map((tx) => (
                 <TableRow
-                  key={`${tx.symbol}-${tx.transaction_date}-${tx.transaction_type}-${tx.quantity}-${tx.price}-${tx.account_type}`}
+                  key={`${tx.symbol}-${tx.transaction_date}-${tx.transaction_type}-${tx.quantity}-${tx.price}-${tx.usd_price ?? "jpy"}-${tx.account_type}`}
                 >
                   <TableCell>{formatDate(tx.transaction_date)}</TableCell>
                   <TableCell className="font-mono">{tx.symbol}</TableCell>

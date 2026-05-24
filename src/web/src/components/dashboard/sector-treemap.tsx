@@ -137,21 +137,32 @@ interface CellRenderProps {
   symbol?: string
 }
 
+function canRenderSectorLabel(width: number, height: number): boolean {
+  return width >= 96 && height >= 28
+}
+
 function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClick: (symbol: string) => void) {
   const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, plPercentage, symbol } = props
   const isLeaf = depth >= 2 && !!symbol
+  const isSectorGroup = depth === 1
+
+  if (isSectorGroup) {
+    const showSectorLabel = canRenderSectorLabel(width, height)
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={height} fill="transparent" stroke="#334155" strokeWidth={2} />
+        {showSectorLabel && (
+          <text x={x + 6} y={y + 16} fill="#334155" fontSize={11} fontWeight={700}>
+            {name}
+          </text>
+        )}
+      </g>
+    )
+  }
 
   if (!isLeaf) {
     return (
-      <rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        fill="transparent"
-        stroke={depth === 1 ? "#1f2937" : "#ffffff"}
-        strokeWidth={depth === 1 ? 2 : 1}
-      />
+      <rect x={x} y={y} width={width} height={height} fill="transparent" stroke="#cbd5e1" strokeWidth={1} />
     )
   }
 
@@ -238,6 +249,7 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
     <Card>
       <CardHeader>
         <CardTitle>セクター別ツリーマップ</CardTitle>
+        <p className="text-xs text-muted-foreground">面積: 評価額 / 色: 損益率</p>
         <div className="mt-3 space-y-2">
           <FilterRow
             label="国:"

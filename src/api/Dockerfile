@@ -7,8 +7,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# 依存解決にuvを利用
+# 依存解決にuvを利用し、取得時はSocket Firewallを通す
 RUN pip install --no-cache-dir uv==0.9.21
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && curl -fsSL -o /usr/local/bin/sfw \
+        https://github.com/SocketDev/sfw-free/releases/latest/download/sfw-free-linux-x86_64 \
+    && chmod +x /usr/local/bin/sfw \
+    && rm -rf /var/lib/apt/lists/*
 
 # 依存解決に必要なファイルを先にコピーしてキャッシュ効率を上げる
 COPY pyproject.toml uv.lock README.md ./
@@ -16,7 +22,7 @@ COPY stock ./stock/
 COPY alembic ./alembic/
 
 # 本番用依存のみインストール（/app/.venv に作成され、上の PATH で `python` から参照される）
-RUN uv sync --frozen --no-dev
+RUN sfw uv sync --frozen --no-dev
 
 EXPOSE 8080
 

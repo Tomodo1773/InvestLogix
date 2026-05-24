@@ -26,10 +26,15 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Setup Socket Firewall
+        uses: socketdev/action@937f824ec476dfd164d4a4d9995751427b0be143 # v1
+        with:
+          mode: firewall
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install ruff==0.9.1
+          sfw pip install --upgrade pip
+          sfw pip install ruff==0.9.1
 
       - name: Run Ruff Check
         working-directory: src/api

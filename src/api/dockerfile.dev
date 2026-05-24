@@ -6,8 +6,14 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /src
 
-# pipを使ってuvをインストール
+# pipを使ってuvをインストールし、取得時はSocket Firewallを通す
 RUN pip install uv==0.9.21
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl \
+    && curl -fsSL -o /usr/local/bin/sfw \
+        https://github.com/SocketDev/sfw-free/releases/latest/download/sfw-free-linux-x86_64 \
+    && chmod +x /usr/local/bin/sfw \
+    && rm -rf /var/lib/apt/lists/*
 
 # 必要なファイルのみをコピー
 COPY pyproject.toml uv.lock ./
@@ -16,7 +22,7 @@ COPY alembic ./alembic/
 COPY README.md ./
 
 # uvでライブラリをインストール
-RUN if [ -f pyproject.toml ]; then uv sync; fi
+RUN if [ -f pyproject.toml ]; then sfw uv sync; fi
 
 # uvicornのサーバーを立ち上げる
 ENTRYPOINT ["uv", "run", "uvicorn", "stock.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--log-level", "info"]

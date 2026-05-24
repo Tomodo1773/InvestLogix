@@ -90,7 +90,7 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. `pnpm install` で依存関係を更新する
+3. `sfw pnpm install` でSocket Firewallを通して依存関係を更新する
 4. テストコードを実装する（`src/web/docs/testing-guide.md`を参照）
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
 6. `pnpm test`でテストを実行する
@@ -125,6 +125,9 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 # 開発サーバーの起動
 pnpm dev
 
+# 依存関係のインストール（Socket Firewall経由）
+sfw pnpm install
+
 # ビルド
 pnpm build
 
@@ -146,7 +149,7 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 
 1. 実装計画を立てる。セッション内ですでにプランニングが終わっている場合は不要
 2. コードを実装する
-3. `uv sync` で依存関係をインストールし、仮想環境を有効化する
+3. `sfw uv sync` でSocket Firewallを通して依存関係をインストールし、仮想環境を有効化する
 4. テストコードを実装する（`src/api/docs/testing-guide.md`を参照）
 5. `uv run ruff format` でコードを整形する
 6. `uv run ruff check --fix` でコードスタイルを整える
@@ -165,6 +168,9 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 ```bash
 # 開発サーバ起動
 uv run uvicorn stock.app:app --reload --port 8000
+
+# 依存関係のインストール（Socket Firewall経由）
+sfw uv sync
 
 # テスト実行（api-test-runnerサブエージェントに任せることを推奨）
 uv run pytest

@@ -40,6 +40,9 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - Cloud Run Jobs のイメージ更新: main マージ後に `scripts/update-cloud-run-jobs.sh`
 - 株価データは `price_history` テーブルから読み込む。日次バッチ `recalc-holdings` が冒頭で直近2週間分を upsert する。新規環境やマイグレーション直後はテーブルが空でダッシュボードに評価額が出ないため、`gcloud run jobs execute recalc-holdings` で手動実行するか翌朝のスケジュール実行を待つ
 
+### 依存関係の防御
+サプライチェーン攻撃対策として [Socket Firewall Free](https://docs.socket.dev/docs/socket-firewall-free) を導入しています。依存関係を取得するときは `sfw` 経由で実行します。
+
 ## リポジトリ構成
 
 ```
@@ -91,7 +94,7 @@ docker compose exec api uv run python -m stock.jobs.update_and_notify
 
 ```bash
 cd src/web
-pnpm install
+sfw pnpm install
 cp .env.local.example .env.local
 pnpm dev
 ```
@@ -103,12 +106,12 @@ pnpm dev
 
 ### Backend（`src/api`）
 
-前提: Python（3.13+）、`uv`、DB（Docker or 別途用意）
+前提: Python（3.13+）、`uv`、`sfw`、DB（Docker or 別途用意）
 
 ```bash
 cd src/api
 cp .env.sample .env
-uv sync
+sfw uv sync
 uv run alembic upgrade head
 uv run uvicorn stock.app:app --reload --port 8000
 ```

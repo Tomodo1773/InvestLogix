@@ -14,7 +14,7 @@ const MIN_HALF_RANGE = 5
 const NEUTRAL_COLOR = "#9CA3AF"
 const POSITIVE_HUE = 142
 const NEGATIVE_HUE = 0
-const SATURATION = 65
+const SATURATION = 52
 
 export interface ColorScale {
   minValue: number
@@ -100,6 +100,6 @@ export function getColorForValue(value: number | null | undefined, scale: ColorS
   if (range <= 0) return NEUTRAL_COLOR
   const distance = isPositive ? value - scale.centerValue : scale.centerValue - value
   const ratio = Math.max(0, Math.min(1, distance / range))
-  const lightness = 85 - ratio * 40
+  const lightness = 88 - ratio * 36
   return `hsl(${hue}, ${SATURATION}%, ${lightness}%)`
 }

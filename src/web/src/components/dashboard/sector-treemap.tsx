@@ -135,31 +135,143 @@ interface CellRenderProps {
   name?: string
   plPercentage?: number | null
   symbol?: string
+  stockName?: string
+  children?: CellRenderProps[] | null
+  tooltipIndex?: string
 }
 
-function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClick: (symbol: string) => void) {
-  const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, plPercentage, symbol } = props
-  const isLeaf = depth >= 2 && !!symbol
+function canRenderGroupLabel(width: number, height: number): boolean {
+  return width >= 96 && height >= 28
+}
 
-  if (!isLeaf) {
-    return (
+const SECTOR_PADDING = 5
+const SECTOR_HEADER_HEIGHT = 20
+const LEAF_LABEL_FONT_SIZE = 9.5
+
+type CellRect = Required<Pick<CellRenderProps, "x" | "y" | "width" | "height">>
+
+function getLeafKey(props: CellRenderProps): string | null {
+  return props.tooltipIndex ?? props.symbol ?? null
+}
+
+function scaleLeafIntoSector(child: CellRenderProps, sector: CellRect): CellRenderProps {
+  const childX = child.x ?? 0
+  const childY = child.y ?? 0
+  const innerX = sector.x + SECTOR_PADDING
+  const innerY = sector.y + SECTOR_HEADER_HEIGHT
+  const innerWidth = Math.max(sector.width - SECTOR_PADDING * 2, 0)
+  const innerHeight = Math.max(sector.height - SECTOR_HEADER_HEIGHT - SECTOR_PADDING, 0)
+
+  return {
+    ...child,
+    x: innerX + ((childX - sector.x) / Math.max(sector.width, 1)) * innerWidth,
+    y: innerY + ((childY - sector.y) / Math.max(sector.height, 1)) * innerHeight,
+    width: ((child.width ?? 0) / Math.max(sector.width, 1)) * innerWidth,
+    height: ((child.height ?? 0) / Math.max(sector.height, 1)) * innerHeight,
+  }
+}
+
+function truncateLabel(label: string, maxLength: number): string {
+  if (label.length <= maxLength) return label
+  return `${label.slice(0, Math.max(maxLength - 1, 1))}...`
+}
+
+function renderLeafVisual(props: CellRenderProps, scale: ColorScale) {
+  const { x = 0, y = 0, width = 0, height = 0, name } = props
+  const showLabel = width >= 34 && height >= 18
+  const label = truncateLabel(name || "", Math.floor((width - 8) / LEAF_LABEL_FONT_SIZE))
+
+  return (
+    <g key={`${x}-${y}-${name ?? ""}`}>
       <rect
         x={x}
         y={y}
         width={width}
         height={height}
-        fill="transparent"
-        stroke={depth === 1 ? "#1f2937" : "#ffffff"}
-        strokeWidth={depth === 1 ? 2 : 1}
+        rx={2}
+        ry={2}
+        fill={getColorForValue(props.plPercentage ?? null, scale)}
+        stroke="#ffffff"
+        strokeWidth={1}
       />
+      {showLabel && (
+        <text
+          x={x + 4}
+          y={y + 13}
+          fill="#0f172a"
+          fontSize={LEAF_LABEL_FONT_SIZE}
+          fontWeight={700}
+          pointerEvents="none"
+        >
+          {label}
+        </text>
+      )}
+    </g>
+  )
+}
+
+function renderTreemapCell(
+  props: CellRenderProps,
+  scale: ColorScale,
+  leafLayout: Map<string, CellRect>,
+  onLeafClick: (symbol: string) => void
+) {
+  const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, symbol, children } = props
+  const isLeaf = depth >= 3 && !!symbol
+  const isSectorGroup = depth === 2 && !!children?.length
+
+  if (isSectorGroup) {
+    const sector = { x, y, width, height }
+    const scaledChildren = children.map((child) => scaleLeafIntoSector(child, sector))
+    for (const child of scaledChildren) {
+      const key = getLeafKey(child)
+      if (key) {
+        leafLayout.set(key, {
+          x: child.x ?? 0,
+          y: child.y ?? 0,
+          width: child.width ?? 0,
+          height: child.height ?? 0,
+        })
+      }
+    }
+
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={height} rx={3} ry={3} fill="#f8fafc" stroke="none" />
+        {scaledChildren.map((child) => renderLeafVisual(child, scale))}
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          rx={3}
+          ry={3}
+          fill="transparent"
+          stroke="#e2e8f0"
+          strokeWidth={1.5}
+        />
+        {canRenderGroupLabel(width, height) && (
+          <text x={x + 6} y={y + 14} fill="#475569" fontSize={9.5} fontWeight={700} pointerEvents="none">
+            {name}
+          </text>
+        )}
+      </g>
     )
   }
 
-  const fill = getColorForValue(plPercentage ?? null, scale)
-  const showLabel = width > 60 && height > 24
+  if (!isLeaf) {
+    return (
+      <rect x={x} y={y} width={width} height={height} fill="transparent" stroke="#cbd5e1" strokeWidth={1} />
+    )
+  }
+
+  const leafKey = getLeafKey(props)
+  const leafRect = leafKey ? leafLayout.get(leafKey) : undefined
+
   return (
     <g
       role="button"
+      aria-label={name}
       tabIndex={0}
       style={{ cursor: "pointer" }}
       onClick={() => onLeafClick(symbol)}
@@ -167,12 +279,14 @@ function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClic
         if (e.key === "Enter" || e.key === " ") onLeafClick(symbol)
       }}
     >
-      <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#ffffff" strokeWidth={1} />
-      {showLabel && (
-        <text x={x + 4} y={y + 14} fill="#111827" fontSize={11} fontWeight={500}>
-          {name}
-        </text>
-      )}
+      <rect
+        x={leafRect?.x ?? x}
+        y={leafRect?.y ?? y}
+        width={leafRect?.width ?? width}
+        height={leafRect?.height ?? height}
+        fill="transparent"
+        stroke="none"
+      />
     </g>
   )
 }
@@ -221,6 +335,8 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
     navigate(`/holdings/${encodeURIComponent(symbol)}`)
   }
 
+  const leafLayout = new Map<string, CellRect>()
+
   if (isLoading) {
     return (
       <Card>
@@ -238,6 +354,7 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
     <Card>
       <CardHeader>
         <CardTitle>セクター別ツリーマップ</CardTitle>
+        <p className="text-xs text-muted-foreground">面積: 評価額 / 色: 損益率</p>
         <div className="mt-3 space-y-2">
           <FilterRow
             label="国:"
@@ -270,7 +387,12 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
                   isAnimationActive={false}
                   content={
                     ((props: CellRenderProps) =>
-                      renderTreemapCell(props, colorScale, handleLeafClick)) as unknown as React.ReactElement
+                      renderTreemapCell(
+                        props,
+                        colorScale,
+                        leafLayout,
+                        handleLeafClick
+                      )) as unknown as React.ReactElement
                   }
                 >
                   <Tooltip content={<TreemapTooltip />} />

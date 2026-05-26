@@ -135,24 +135,192 @@ interface CellRenderProps {
   name?: string
   plPercentage?: number | null
   symbol?: string
+  stockName?: string
+  children?: CellRenderProps[] | null
+  tooltipIndex?: string
 }
 
 function canRenderSectorLabel(width: number, height: number): boolean {
   return width >= 96 && height >= 28
 }
 
-function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClick: (symbol: string) => void) {
-  const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, plPercentage, symbol } = props
-  const isLeaf = depth >= 2 && !!symbol
-  const isSectorGroup = depth === 1
+const SECTOR_PADDING = 5
+const SECTOR_HEADER_HEIGHT = 20
+const LEAF_LABEL_FONT_SIZE = 9.5
+const LEAF_LABEL_LINE_HEIGHT = 11
 
-  if (isSectorGroup) {
-    const showSectorLabel = canRenderSectorLabel(width, height)
+function getLeafKey(props: CellRenderProps): string | null {
+  return props.tooltipIndex ?? props.symbol ?? null
+}
+
+function scaleLeafIntoSector(
+  child: CellRenderProps,
+  sector: Required<Pick<CellRenderProps, "x" | "y" | "width" | "height">>
+) {
+  const childX = child.x ?? 0
+  const childY = child.y ?? 0
+  const childWidth = child.width ?? 0
+  const childHeight = child.height ?? 0
+  const sectorWidth = Math.max(sector.width, 1)
+  const sectorHeight = Math.max(sector.height, 1)
+  const innerX = sector.x + SECTOR_PADDING
+  const innerY = sector.y + SECTOR_HEADER_HEIGHT
+  const innerWidth = Math.max(sector.width - SECTOR_PADDING * 2, 0)
+  const innerHeight = Math.max(sector.height - SECTOR_HEADER_HEIGHT - SECTOR_PADDING, 0)
+
+  return {
+    ...child,
+    x: innerX + ((childX - sector.x) / sectorWidth) * innerWidth,
+    y: innerY + ((childY - sector.y) / sectorHeight) * innerHeight,
+    width: (childWidth / sectorWidth) * innerWidth,
+    height: (childHeight / sectorHeight) * innerHeight,
+  }
+}
+
+function splitLabelByCell(label: string, width: number, height: number): string[] {
+  if (width < 34 || height < 18 || label.length === 0) return []
+
+  const maxLines = Math.min(3, Math.max(1, Math.floor((height - 8) / LEAF_LABEL_LINE_HEIGHT)))
+  const charsPerLine = Math.max(2, Math.floor((width - 10) / LEAF_LABEL_FONT_SIZE))
+  const chunks = label.includes(" ") ? splitByWords(label, charsPerLine) : splitByLength(label, charsPerLine)
+  if (chunks.length <= maxLines) return chunks
+
+  const lines = chunks.slice(0, maxLines)
+  const lastLine = lines[lines.length - 1]
+  lines[lines.length - 1] = `${lastLine.slice(0, Math.max(charsPerLine - 1, 1))}...`
+  return lines
+}
+
+function splitByLength(label: string, charsPerLine: number): string[] {
+  const lines: string[] = []
+  for (let i = 0; i < label.length; i += charsPerLine) {
+    lines.push(label.slice(i, i + charsPerLine))
+  }
+  return lines
+}
+
+function splitByWords(label: string, charsPerLine: number): string[] {
+  const lines: string[] = []
+  let current = ""
+
+  for (const word of label.split(/\s+/)) {
+    if (word.length > charsPerLine) {
+      if (current) {
+        lines.push(current)
+        current = ""
+      }
+      lines.push(...splitByLength(word, charsPerLine))
+      continue
+    }
+
+    const next = current ? `${current} ${word}` : word
+    if (next.length <= charsPerLine) {
+      current = next
+    } else {
+      if (current) lines.push(current)
+      current = word
+    }
+  }
+
+  if (current) lines.push(current)
+
+  return lines
+}
+
+function renderVisibleLeafCell(props: CellRenderProps, scale: ColorScale) {
+  const { x = 0, y = 0, width = 0, height = 0, name, plPercentage } = props
+  const fill = getColorForValue(plPercentage ?? null, scale)
+  const labelLines = splitLabelByCell(name || "", width, height)
+  const showLabel = labelLines.length > 0
+  const clipId = `treemap-leaf-${Math.round(x)}-${Math.round(y)}-${Math.round(width)}-${Math.round(height)}`
+
+  return (
+    <g key={`leaf-${x}-${y}-${name ?? ""}`}>
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={2}
+        ry={2}
+        fill={fill}
+        stroke="#ffffff"
+        strokeWidth={1.5}
+      />
+      {showLabel && (
+        <>
+          <clipPath id={clipId}>
+            <rect x={x + 5} y={y + 4} width={Math.max(width - 10, 0)} height={Math.max(height - 8, 0)} />
+          </clipPath>
+          <text
+            x={x + 6}
+            y={y + 14}
+            fill="#0f172a"
+            fontSize={LEAF_LABEL_FONT_SIZE}
+            fontWeight={700}
+            pointerEvents="none"
+            clipPath={`url(#${clipId})`}
+          >
+            {labelLines.map((line, index) => (
+              <tspan key={`${clipId}-${line}`} x={x + 6} dy={index === 0 ? 0 : LEAF_LABEL_LINE_HEIGHT}>
+                {line}
+              </tspan>
+            ))}
+          </text>
+        </>
+      )}
+    </g>
+  )
+}
+
+function renderTreemapCell(
+  props: CellRenderProps,
+  scale: ColorScale,
+  leafLayout: Map<string, CellRenderProps>,
+  onLeafClick: (symbol: string) => void
+) {
+  const { x = 0, y = 0, width = 0, height = 0, depth = 0, name, symbol, children } = props
+  const isLeaf = depth >= 3 && !!symbol
+  const isCountryGroup = depth === 1
+  const isSectorGroup = depth === 2 && !!children?.length
+
+  if (isCountryGroup) {
     return (
       <g>
-        <rect x={x} y={y} width={width} height={height} fill="transparent" stroke="#334155" strokeWidth={2} />
-        {showSectorLabel && (
-          <text x={x + 6} y={y + 16} fill="#334155" fontSize={11} fontWeight={700}>
+        <rect x={x} y={y} width={width} height={height} fill="transparent" stroke="#e2e8f0" strokeWidth={1} />
+        {canRenderSectorLabel(width, height) && (
+          <text x={x + 7} y={y + 16} fill="#64748b" fontSize={10.5} fontWeight={700}>
+            {name}
+          </text>
+        )}
+      </g>
+    )
+  }
+
+  if (isSectorGroup) {
+    const sector = { x, y, width, height }
+    const scaledChildren = children.map((child) => scaleLeafIntoSector(child, sector))
+    for (const child of scaledChildren) {
+      const key = getLeafKey(child)
+      if (key) leafLayout.set(key, child)
+    }
+
+    return (
+      <g>
+        <rect x={x} y={y} width={width} height={height} rx={3} ry={3} fill="#f8fafc" stroke="none" />
+        {scaledChildren.map((child) => renderVisibleLeafCell(child, scale))}
+        <rect
+          x={x}
+          y={y}
+          width={width}
+          height={height}
+          fill="transparent"
+          stroke="#e2e8f0"
+          strokeWidth={1}
+          pointerEvents="none"
+        />
+        {canRenderSectorLabel(width, height) && (
+          <text x={x + 6} y={y + 14} fill="#475569" fontSize={9.5} fontWeight={700} pointerEvents="none">
             {name}
           </text>
         )}
@@ -166,11 +334,17 @@ function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClic
     )
   }
 
-  const fill = getColorForValue(plPercentage ?? null, scale)
-  const showLabel = width > 60 && height > 24
+  const leafKey = getLeafKey(props)
+  const visualProps = leafKey ? leafLayout.get(leafKey) : undefined
+  const leafX = visualProps?.x ?? x
+  const leafY = visualProps?.y ?? y
+  const leafWidth = visualProps?.width ?? width
+  const leafHeight = visualProps?.height ?? height
+
   return (
     <g
       role="button"
+      aria-label={name}
       tabIndex={0}
       style={{ cursor: "pointer" }}
       onClick={() => onLeafClick(symbol)}
@@ -178,12 +352,7 @@ function renderTreemapCell(props: CellRenderProps, scale: ColorScale, onLeafClic
         if (e.key === "Enter" || e.key === " ") onLeafClick(symbol)
       }}
     >
-      <rect x={x} y={y} width={width} height={height} fill={fill} stroke="#ffffff" strokeWidth={1} />
-      {showLabel && (
-        <text x={x + 4} y={y + 14} fill="#111827" fontSize={11} fontWeight={500}>
-          {name}
-        </text>
-      )}
+      <rect x={leafX} y={leafY} width={leafWidth} height={leafHeight} fill="transparent" stroke="none" />
     </g>
   )
 }
@@ -231,6 +400,8 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
   const handleLeafClick = (symbol: string) => {
     navigate(`/holdings/${encodeURIComponent(symbol)}`)
   }
+
+  const leafLayout = new Map<string, CellRenderProps>()
 
   if (isLoading) {
     return (
@@ -282,7 +453,12 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
                   isAnimationActive={false}
                   content={
                     ((props: CellRenderProps) =>
-                      renderTreemapCell(props, colorScale, handleLeafClick)) as unknown as React.ReactElement
+                      renderTreemapCell(
+                        props,
+                        colorScale,
+                        leafLayout,
+                        handleLeafClick
+                      )) as unknown as React.ReactElement
                   }
                 >
                   <Tooltip content={<TreemapTooltip />} />

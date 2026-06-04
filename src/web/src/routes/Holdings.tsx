@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { getHoldings, getWeeklyPerformance, recalculateAllHoldings } from "@/lib/api/client"
 import { downloadCsv, holdingsToCsv } from "@/lib/csv"
 import { useAuthStore } from "@/lib/stores/auth-store"
+import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 
 export default function Holdings() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -25,10 +26,7 @@ export default function Holdings() {
     getWeeklyPerformance
   )
 
-  const weeklyChangeMap = useMemo(() => {
-    if (!weeklyPerformance?.all_performers) return undefined
-    return new Map(weeklyPerformance.all_performers.map((p) => [p.symbol, p.change_rate]))
-  }, [weeklyPerformance])
+  const weeklyChangeMap = useMemo(() => buildWeeklyChangeMap(weeklyPerformance), [weeklyPerformance])
 
   const [isRecalculating, setIsRecalculating] = useState(false)
   const [recalcError, setRecalcError] = useState<string | null>(null)

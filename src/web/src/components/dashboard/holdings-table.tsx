@@ -3,12 +3,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
-import { formatCurrency, formatCurrencyWithDecimals, formatPercent, getPLColorClass } from "@/lib/format"
+import {
+  formatCurrency,
+  formatCurrencyWithDecimals,
+  formatPercent,
+  formatPercentOrDash,
+  getPLColorClass,
+} from "@/lib/format"
 
 interface HoldingsTableProps {
   holdings: Holding[] | undefined
   isLoading: boolean
-  weeklyChangeMap?: Map<string, number>
+  weeklyChangeMap?: ReadonlyMap<string, number>
 }
 
 type SortKey =
@@ -158,7 +164,7 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                     const plValue = holding.total_pl ?? 0
                     const plColor = getPLColorClass(plValue)
                     const weeklyChange = weeklyChangeMap?.get(holding.symbol)
-                    const weeklyChangeText = weeklyChange !== undefined ? formatPercent(weeklyChange) : "-"
+                    const weeklyChangeText = formatPercentOrDash(weeklyChange)
                     const weeklyChangeColor = weeklyChange !== undefined ? getPLColorClass(weeklyChange) : ""
 
                     return (

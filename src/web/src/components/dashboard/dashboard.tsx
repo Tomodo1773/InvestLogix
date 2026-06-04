@@ -1,4 +1,5 @@
 import { RefreshCw } from "lucide-react"
+import { useMemo } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,6 +10,7 @@ import {
   getTransactionsMonthlySummary,
   getWeeklyPerformance,
 } from "@/lib/api/client"
+import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 import { AssetChart } from "./asset-chart"
 import { DividendChart } from "./dividend-chart"
 import { NisaLimitGauge } from "./nisa-limit-gauge"
@@ -54,6 +56,8 @@ export function Dashboard() {
     mutate: mutateHoldings,
   } = useSWR("/api/v1/holdings/", getHoldings)
 
+  const weeklyChangeMap = useMemo(() => buildWeeklyChangeMap(weeklyPerformance), [weeklyPerformance])
+
   const isRefreshing =
     summaryLoading ||
     historyLoading ||
@@ -84,7 +88,7 @@ export function Dashboard() {
       <NisaLimitGauge data={trades} isLoading={tradesLoading} />
       <AssetChart history={history} isLoading={historyLoading} />
       <div className="hidden md:block">
-        <SectorTreemap data={holdings} isLoading={holdingsLoading} />
+        <SectorTreemap data={holdings} isLoading={holdingsLoading} weeklyChangeMap={weeklyChangeMap} />
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <WeeklyPerformanceCard

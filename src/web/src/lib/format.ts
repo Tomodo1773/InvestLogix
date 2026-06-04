@@ -45,6 +45,13 @@ export function formatPercent(value: number | string | null | undefined): string
   return `${numValue >= 0 ? "+" : ""}${numValue.toFixed(1)}%`
 }
 
+export function formatPercentOrDash(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "-"
+  }
+  return formatPercent(value)
+}
+
 export function formatYearMonth(year: number, month: number): string {
   return `${year}/${month.toString().padStart(2, "0")}`
 }

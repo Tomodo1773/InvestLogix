@@ -4,6 +4,7 @@ import {
   formatCurrencyWithDecimals,
   formatDate,
   formatPercent,
+  formatPercentOrDash,
   formatYearMonth,
 } from "./format"
 
@@ -67,6 +68,17 @@ describe("formatPercent", () => {
 
   it("0の場合も+符号が付与される", () => {
     expect(formatPercent(0)).toBe("+0.0%")
+  })
+})
+
+describe("formatPercentOrDash", () => {
+  it("数値はformatPercentと同じ形式で返す", () => {
+    expect(formatPercentOrDash(5)).toBe("+5.0%")
+  })
+
+  it("nullishはハイフンで返す", () => {
+    expect(formatPercentOrDash(null)).toBe("-")
+    expect(formatPercentOrDash(undefined)).toBe("-")
   })
 })
 

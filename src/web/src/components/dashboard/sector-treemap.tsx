@@ -5,15 +5,16 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Holding } from "@/lib/api/types"
 import { type ColorScale, computeColorScale, getColorForValue } from "@/lib/color-scale"
-import { formatCurrency, formatPercent } from "@/lib/format"
-import { SECURITY_TYPE_FILTERS, type SecurityTypeFilter } from "@/lib/security-type"
+import { formatCurrency, formatPercent, formatPercentOrDash } from "@/lib/format"
 
 type Country = "JP" | "US" | "OTHER"
 type CountryFilter = "ALL" | Country
+type ColorMetric = "weekly_change" | "unrealized_pl_percentage"
 
 interface SectorTreemapProps {
   data: Holding[] | undefined
   isLoading: boolean
+  weeklyChangeMap?: ReadonlyMap<string, number>
 }
 
 interface TreemapLeaf {
@@ -23,6 +24,8 @@ interface TreemapLeaf {
   stockName: string
   country: Country
   sectorName: string
+  colorValue: number | null
+  weeklyChangeRate: number | null
   plPercentage: number | null
 }
 
@@ -51,6 +54,16 @@ const COUNTRY_FILTERS: { value: CountryFilter; label: string }[] = [
   { value: "OTHER", label: COUNTRY_LABELS.OTHER },
 ]
 
+const COLOR_METRIC_LABELS: Record<ColorMetric, string> = {
+  weekly_change: "1週間騰落率",
+  unrealized_pl_percentage: "損益率",
+}
+
+const COLOR_METRIC_OPTIONS: { value: ColorMetric; label: string }[] = [
+  { value: "weekly_change", label: COLOR_METRIC_LABELS.weekly_change },
+  { value: "unrealized_pl_percentage", label: COLOR_METRIC_LABELS.unrealized_pl_percentage },
+]
+
 function normalizeCountry(c: Holding["country"]): Country {
   if (c === "JP" || c === "US") return c
   return "OTHER"
@@ -63,18 +76,26 @@ function normalizeCountry(c: Holding["country"]): Country {
  */
 export function transformHoldingsToTreemap(
   holdings: Holding[] | undefined,
-  filters: { country: CountryFilter; securityType: SecurityTypeFilter }
+  filters: {
+    country: CountryFilter
+    colorMetric: ColorMetric
+    weeklyChangeMap?: ReadonlyMap<string, number>
+  }
 ): TreemapCountry[] {
   if (!holdings || holdings.length === 0) return []
 
   const byCountry = new Map<Country, Map<string, TreemapLeaf[]>>()
   for (const h of holdings) {
     if ((h.market_value ?? 0) <= 0) continue
+    if (h.security_type !== "STOCK") continue
     const country = normalizeCountry(h.country)
     if (filters.country !== "ALL" && country !== filters.country) continue
-    if (filters.securityType !== "ALL" && h.security_type !== filters.securityType) continue
 
     const sectorKey = h.sector_name ?? "その他"
+    const weeklyChangeRate = filters.weeklyChangeMap?.get(h.symbol) ?? null
+    const plPercentage = h.unrealized_pl_percentage
+    const colorValue = filters.colorMetric === "weekly_change" ? weeklyChangeRate : plPercentage
+
     let sectors = byCountry.get(country)
     if (!sectors) {
       sectors = new Map()
@@ -92,7 +113,9 @@ export function transformHoldingsToTreemap(
       stockName: h.stock_name || h.symbol,
       country,
       sectorName: sectorKey,
-      plPercentage: h.unrealized_pl_percentage,
+      colorValue,
+      weeklyChangeRate,
+      plPercentage,
     })
   }
 
@@ -113,13 +136,13 @@ export function transformHoldingsToTreemap(
   return result
 }
 
-/** カラースケール計算用に leaf の損益率を平らな配列で取り出す */
+/** カラースケール計算用に leaf の色指標値を平らな配列で取り出す */
 export function flattenColorValues(data: TreemapCountry[]): Array<number | null> {
   const out: Array<number | null> = []
   for (const country of data) {
     for (const sector of country.children) {
       for (const leaf of sector.children) {
-        out.push(leaf.plPercentage)
+        out.push(leaf.colorValue)
       }
     }
   }
@@ -133,6 +156,8 @@ interface CellRenderProps {
   height?: number
   depth?: number
   name?: string
+  colorValue?: number | null
+  weeklyChangeRate?: number | null
   plPercentage?: number | null
   symbol?: string
   stockName?: string
@@ -190,7 +215,7 @@ function renderLeafVisual(props: CellRenderProps, scale: ColorScale) {
         height={height}
         rx={2}
         ry={2}
-        fill={getColorForValue(props.plPercentage ?? null, scale)}
+        fill={getColorForValue(props.colorValue ?? null, scale)}
         stroke="#ffffff"
         strokeWidth={1}
       />
@@ -298,12 +323,21 @@ interface TooltipPayload {
     stockName?: string
     country?: Country
     sectorName?: string
+    weeklyChangeRate?: number | null
     plPercentage?: number | null
     symbol?: string
   }
 }
 
-function TreemapTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayload[] }) {
+function TreemapTooltip({
+  active,
+  payload,
+  colorMetric,
+}: {
+  active?: boolean
+  payload?: TooltipPayload[]
+  colorMetric: ColorMetric
+}) {
   if (!active || !payload?.length) return null
   const data = payload[0].payload
   if (!data?.symbol) return null
@@ -314,22 +348,26 @@ function TreemapTooltip({ active, payload }: { active?: boolean; payload?: Toolt
         {data.country ? COUNTRY_LABELS[data.country] : ""} / {data.sectorName}
       </div>
       <div className="mt-1">評価額: {formatCurrency(data.value ?? 0)}</div>
-      <div>損益率: {formatPercent(data.plPercentage ?? null)}</div>
+      <div>
+        {COLOR_METRIC_LABELS[colorMetric]}:{" "}
+        {formatPercentOrDash(colorMetric === "weekly_change" ? data.weeklyChangeRate : data.plPercentage)}
+      </div>
     </div>
   )
 }
 
-export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
+export function SectorTreemap({ data, isLoading, weeklyChangeMap }: SectorTreemapProps) {
   const navigate = useNavigate()
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("ALL")
-  const [securityTypeFilter, setSecurityTypeFilter] = useState<SecurityTypeFilter>("ALL")
+  const [colorMetric, setColorMetric] = useState<ColorMetric>("weekly_change")
 
   const treemapData = useMemo(
-    () => transformHoldingsToTreemap(data, { country: countryFilter, securityType: securityTypeFilter }),
-    [data, countryFilter, securityTypeFilter]
+    () => transformHoldingsToTreemap(data, { country: countryFilter, colorMetric, weeklyChangeMap }),
+    [data, countryFilter, colorMetric, weeklyChangeMap]
   )
 
   const colorScale = useMemo(() => computeColorScale(flattenColorValues(treemapData)), [treemapData])
+  const colorMetricLabel = COLOR_METRIC_LABELS[colorMetric]
 
   const handleLeafClick = (symbol: string) => {
     navigate(`/holdings/${encodeURIComponent(symbol)}`)
@@ -354,7 +392,7 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
     <Card>
       <CardHeader>
         <CardTitle>セクター別ツリーマップ</CardTitle>
-        <p className="text-xs text-muted-foreground">面積: 評価額 / 色: 損益率</p>
+        <p className="text-xs text-muted-foreground">面積: 評価額 / 色: {colorMetricLabel}</p>
         <div className="mt-3 space-y-2">
           <FilterRow
             label="国:"
@@ -363,10 +401,10 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
             onChange={setCountryFilter}
           />
           <FilterRow
-            label="種別:"
-            options={SECURITY_TYPE_FILTERS}
-            value={securityTypeFilter}
-            onChange={setSecurityTypeFilter}
+            label="色:"
+            options={COLOR_METRIC_OPTIONS}
+            value={colorMetric}
+            onChange={setColorMetric}
           />
         </div>
       </CardHeader>
@@ -395,11 +433,11 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
                       )) as unknown as React.ReactElement
                   }
                 >
-                  <Tooltip content={<TreemapTooltip />} />
+                  <Tooltip content={<TreemapTooltip colorMetric={colorMetric} />} />
                 </Treemap>
               </ResponsiveContainer>
             </div>
-            <ColorLegend scale={colorScale} />
+            <ColorLegend scale={colorScale} label={colorMetricLabel} />
           </>
         )}
       </CardContent>
@@ -407,7 +445,7 @@ export function SectorTreemap({ data, isLoading }: SectorTreemapProps) {
   )
 }
 
-function ColorLegend({ scale }: { scale: ColorScale }) {
+function ColorLegend({ scale, label }: { scale: ColorScale; label: string }) {
   const stops = useMemo(() => {
     const samples: number[] = []
     const steps = 7
@@ -421,7 +459,7 @@ function ColorLegend({ scale }: { scale: ColorScale }) {
   return (
     <div className="mt-3 flex flex-col gap-1 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
-        <span>損益率</span>
+        <span>{label}</span>
         <div className="flex h-3 flex-1 overflow-hidden rounded">
           {stops.map((v) => (
             <div

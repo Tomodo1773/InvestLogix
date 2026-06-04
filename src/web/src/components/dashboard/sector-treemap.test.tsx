@@ -10,8 +10,10 @@ const createHolding = (overrides: Partial<Holding> = {}): Holding =>
 
 describe("transformHoldingsToTreemap", () => {
   it("空配列を渡すと空配列を返す", () => {
-    expect(transformHoldingsToTreemap([], { country: "ALL", securityType: "ALL" })).toEqual([])
-    expect(transformHoldingsToTreemap(undefined, { country: "ALL", securityType: "ALL" })).toEqual([])
+    expect(transformHoldingsToTreemap([], { country: "ALL", colorMetric: "weekly_change" })).toEqual([])
+    expect(transformHoldingsToTreemap(undefined, { country: "ALL", colorMetric: "weekly_change" })).toEqual(
+      []
+    )
   })
 
   it("国 → セクター → 銘柄の3階層構造に集約される", () => {
@@ -39,7 +41,7 @@ describe("transformHoldingsToTreemap", () => {
         market_value: 800000,
       }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ALL" })
+    const result = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
 
     // 評価額降順なので US が先
     expect(result).toHaveLength(2)
@@ -53,7 +55,7 @@ describe("transformHoldingsToTreemap", () => {
     const holdings: Holding[] = [
       createHolding({ symbol: "X1", country: null, sector_name: null, market_value: 100000 }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ALL" })
+    const result = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe("その他")
     expect(result[0].children[0].name).toBe("その他")
@@ -66,7 +68,7 @@ describe("transformHoldingsToTreemap", () => {
       createHolding({ symbol: "NULL", market_value: null }),
       createHolding({ symbol: "OK", market_value: 100000 }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ALL" })
+    const result = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
     const leaves = result.flatMap((c) => c.children.flatMap((s) => s.children))
     expect(leaves).toHaveLength(1)
   })
@@ -76,20 +78,22 @@ describe("transformHoldingsToTreemap", () => {
       createHolding({ symbol: "JP1", country: "JP" }),
       createHolding({ symbol: "US1", country: "US" }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "JP", securityType: "ALL" })
+    const result = transformHoldingsToTreemap(holdings, { country: "JP", colorMetric: "weekly_change" })
     expect(result).toHaveLength(1)
     expect(result[0].name).toBe("日本")
   })
 
-  it("証券種別フィルタが効く", () => {
+  it("株式以外は除外される", () => {
     const holdings: Holding[] = [
       createHolding({ symbol: "S", security_type: "STOCK" }),
       createHolding({ symbol: "E", security_type: "ETF" }),
+      createHolding({ symbol: "F", security_type: "FUND" }),
+      createHolding({ symbol: "R", security_type: "REIT" }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ETF" })
+    const result = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
     const leaves = result.flatMap((c) => c.children.flatMap((s) => s.children))
     expect(leaves).toHaveLength(1)
-    expect(leaves[0].symbol).toBe("E")
+    expect(leaves[0].symbol).toBe("S")
   })
 
   it("セクター内の銘柄が評価額降順でソートされる", () => {
@@ -98,19 +102,57 @@ describe("transformHoldingsToTreemap", () => {
       createHolding({ symbol: "LARGE", market_value: 500000, sector_name: "情報・通信業" }),
       createHolding({ symbol: "MID", market_value: 300000, sector_name: "情報・通信業" }),
     ]
-    const result = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ALL" })
+    const result = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
     const leaves = result[0].children[0].children
     expect(leaves.map((l) => l.symbol)).toEqual(["LARGE", "MID", "SMALL"])
+  })
+
+  it("週次騰落率モードではweeklyChangeMapの値を色指標に使う", () => {
+    const holdings: Holding[] = [createHolding({ symbol: "A", unrealized_pl_percentage: 10 })]
+    const data = transformHoldingsToTreemap(holdings, {
+      country: "ALL",
+      colorMetric: "weekly_change",
+      weeklyChangeMap: new Map([["A", 3.2]]),
+    })
+    const leaf = data[0].children[0].children[0]
+
+    expect(leaf.colorValue).toBe(3.2)
+    expect(leaf.weeklyChangeRate).toBe(3.2)
+    expect(leaf.plPercentage).toBe(10)
+  })
+
+  it("週次騰落率が無い株式は残し、色指標はnullにする", () => {
+    const holdings: Holding[] = [createHolding({ symbol: "A" })]
+    const data = transformHoldingsToTreemap(holdings, { country: "ALL", colorMetric: "weekly_change" })
+    const leaves = data.flatMap((c) => c.children.flatMap((s) => s.children))
+
+    expect(leaves).toHaveLength(1)
+    expect(leaves[0].colorValue).toBeNull()
+  })
+
+  it("損益率モードではunrealized_pl_percentageを色指標に使う", () => {
+    const holdings: Holding[] = [createHolding({ symbol: "A", unrealized_pl_percentage: -4.5 })]
+    const data = transformHoldingsToTreemap(holdings, {
+      country: "ALL",
+      colorMetric: "unrealized_pl_percentage",
+      weeklyChangeMap: new Map([["A", 3.2]]),
+    })
+    const leaf = data[0].children[0].children[0]
+
+    expect(leaf.colorValue).toBe(-4.5)
   })
 })
 
 describe("flattenColorValues", () => {
-  it("葉のplPercentageを平らに取り出す", () => {
+  it("葉のcolorValueを平らに取り出す", () => {
     const holdings: Holding[] = [
       createHolding({ symbol: "A", unrealized_pl_percentage: 10 }),
       createHolding({ symbol: "B", unrealized_pl_percentage: -5, country: "US", sector_name: "X" }),
     ]
-    const data = transformHoldingsToTreemap(holdings, { country: "ALL", securityType: "ALL" })
+    const data = transformHoldingsToTreemap(holdings, {
+      country: "ALL",
+      colorMetric: "unrealized_pl_percentage",
+    })
     const values = flattenColorValues(data)
     expect(values.sort()).toEqual([-5, 10])
   })
@@ -135,5 +177,14 @@ describe("SectorTreemap (rendering)", () => {
     renderWithRouter(<SectorTreemap data={[createHolding({ symbol: "T" })]} isLoading={false} />)
     expect(screen.getByRole("button", { name: "日本" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "米国" })).toBeInTheDocument()
+  })
+
+  it("色指標の切替を表示し、種別フィルタは表示しない", () => {
+    renderWithRouter(<SectorTreemap data={[createHolding({ symbol: "T" })]} isLoading={false} />)
+    expect(screen.getByText("色:")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "1週間騰落率" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "損益率" })).toBeInTheDocument()
+    expect(screen.queryByText("種別:")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "投信" })).not.toBeInTheDocument()
   })
 })

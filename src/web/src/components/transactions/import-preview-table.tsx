@@ -31,14 +31,15 @@ export function ImportPreviewTable({ transactions, onConfirm, isLoading }: Impor
               <TableHead>銘柄名</TableHead>
               <TableHead>取引種別</TableHead>
               <TableHead className="text-right">数量</TableHead>
-              <TableHead className="text-right">単価</TableHead>
+              <TableHead className="text-right">円単価</TableHead>
+              <TableHead className="text-right">USD単価</TableHead>
               <TableHead>口座種別</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
                   新規登録する取引はありません
                 </TableCell>
               </TableRow>
@@ -53,6 +54,9 @@ export function ImportPreviewTable({ transactions, onConfirm, isLoading }: Impor
                   <TableCell>{formatTransactionType(tx.transaction_type)}</TableCell>
                   <TableCell className="text-right">{formatNumber(tx.quantity)}</TableCell>
                   <TableCell className="text-right">¥{formatNumber(tx.price)}</TableCell>
+                  <TableCell className="text-right">
+                    {tx.usd_price === null ? "-" : `$${formatNumber(tx.usd_price)}`}
+                  </TableCell>
                   <TableCell>{tx.account_type}</TableCell>
                 </TableRow>
               ))

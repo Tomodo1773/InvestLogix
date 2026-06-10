@@ -19,7 +19,8 @@ from ..schemas import (
     User,
     YearlySummary,
 )
-from ..services.csv_import_service import detect_new_transactions, parse_csv_content
+from ..services.alphavantage_service import fetch_usdjpy_daily_rates
+from ..services.csv_import_service import apply_usdjpy_rates, detect_new_transactions, parse_csv_content
 from ..services.stock_service import StockNotFoundError
 from ..services.transaction_service import TransactionService
 
@@ -127,6 +128,19 @@ async def preview_csv_import(
     # CSVパース
     try:
         parsed_transactions, parse_errors = parse_csv_content(content)
+        csv_total_count = len(parsed_transactions)
+        if any(tx.price is None for tx in parsed_transactions):
+            try:
+                daily_rates = await fetch_usdjpy_daily_rates()
+            except Exception as e:
+                logger.warning(
+                    "USD/JPY日次レート取得に失敗しました action=csv_preview user_id={} error={}",
+                    current_user.user_id,
+                    str(e),
+                )
+                daily_rates = {}
+            parsed_transactions, rate_errors = apply_usdjpy_rates(parsed_transactions, daily_rates)
+            parse_errors.extend(rate_errors)
         logger.info(
             "CSVをパースしました action=csv_preview user_id={} parsed_count={} error_count={}",
             current_user.user_id,
@@ -171,7 +185,7 @@ async def preview_csv_import(
     return ImportPreviewResponse(
         new_transactions=preview_list,
         existing_count=len(existing_transactions),
-        csv_total_count=len(parsed_transactions),
+        csv_total_count=csv_total_count,
         skipped_count=len(parse_errors),
         errors=parse_errors,
     )

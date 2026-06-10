@@ -7,7 +7,7 @@ SBI証券からエクスポートした約定履歴CSVをパースし、
 import io
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
 import pandas as pd
 from loguru import logger
@@ -23,12 +23,13 @@ class ParsedTransaction:
     name: str
     transaction_type: str  # "買付" or "売却"
     quantity: float
-    price: float
+    price: float | None
     usd_price: float | None
     account_type: str
     fee: float
     tax: float
     transaction_date: datetime
+    settlement_currency: str | None = None
 
     def __key(self):
         """差分検出用のハッシュキー"""
@@ -89,9 +90,6 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
     df_raw = pd.read_csv(io.StringIO("".join(lines[header_index:])), dtype=str)
 
     if is_foreign:
-        # 外貨建てCSV: 「通貨」=「日本円」のみ抽出
-        df_raw = df_raw[df_raw["通貨"] == "日本円"]
-
         # カラム名を統一
         rename_map = {
             "国内約定日": "約定日",
@@ -108,6 +106,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         df_raw["is_foreign"] = True
     else:
         df_raw["is_foreign"] = False
+        df_raw["通貨"] = "日本円"
 
     # 銘柄コードの抽出・正規化
     if is_foreign:
@@ -159,7 +158,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
     df_raw["約定数量"] = df_raw.apply(parse_amount, axis=1)
 
-    # 外貨建ての場合、約定単価をドル価格として保存し、円建て単価を計算
+    # 外貨建ての場合、約定単価をドル価格として保存する。
     if is_foreign:
         df_raw["約定単価_dollar"] = df_raw["約定単価"]
 
@@ -174,7 +173,15 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
         # 約定数量が0でない行のみ、円建て単価を計算
         df_raw = df_raw[non_zero_qty_mask].copy()
-        df_raw["約定単価"] = df_raw["受渡金額/決済損益"] / df_raw["約定数量"]
+
+        def calculate_jpy_price(row):
+            if row["通貨"] == "日本円":
+                return row["受渡金額/決済損益"] / row["約定数量"]
+            if row["通貨"] == "米国ドル":
+                return None
+            return row["約定単価"]
+
+        df_raw["約定単価"] = df_raw.apply(calculate_jpy_price, axis=1)
     else:
         df_raw["約定単価_dollar"] = None
 
@@ -205,6 +212,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
             "約定単価_dollar",
             "手数料/諸経費等",
             "税額",
+            "通貨",
         ]
     ].copy()
     sbi_data.columns = [
@@ -218,6 +226,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         "price_dollar",
         "fee",
         "tax",
+        "settlement_currency",
     ]
 
     # 預り区分の表記統一
@@ -227,9 +236,9 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
     # 数値の丸め
     sbi_data["amount"] = sbi_data["amount"].astype(float).round(4)
-    sbi_data["price"] = sbi_data["price"].astype(float).round(2)
+    sbi_data["price"] = sbi_data["price"].apply(lambda x: round(float(x), 2) if pd.notnull(x) else None)
     sbi_data["price_dollar"] = sbi_data["price_dollar"].apply(
-        lambda x: round(x, 2) if pd.notnull(x) else None
+        lambda x: round(float(x), 4) if pd.notnull(x) else None
     )
 
     # 日付をdatetimeに変換
@@ -252,12 +261,13 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
                 name=str(row["name"]),
                 transaction_type=row["type"],
                 quantity=float(row["amount"]),
-                price=float(row["price"]),
+                price=float(row["price"]) if pd.notnull(row["price"]) else None,
                 usd_price=float(row["price_dollar"]) if pd.notnull(row["price_dollar"]) else None,
                 account_type=row["custody_type"],
                 fee=float(row["fee"]),
                 tax=float(row["tax"]),
                 transaction_date=row["trade_date"],
+                settlement_currency=str(row["settlement_currency"]),
             )
         )
 
@@ -268,6 +278,41 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
     )
 
     return transactions, errors
+
+
+def apply_usdjpy_rates(
+    parsed_transactions: list[ParsedTransaction], rates_by_date: dict[date, float]
+) -> tuple[list[ParsedTransaction], list[str]]:
+    """USD決済の外貨建て取引に円建て単価を補完する。"""
+    converted_transactions = []
+    errors = []
+
+    for tx in parsed_transactions:
+        if tx.price is not None:
+            converted_transactions.append(tx)
+            continue
+
+        if tx.settlement_currency != "米国ドル" or tx.usd_price is None:
+            errors.append(f"スキップ: 円建て単価を計算できません - {tx.name}")
+            continue
+
+        rate = _find_rate_on_or_before(tx.transaction_date.date(), rates_by_date)
+        if rate is None:
+            errors.append(f"スキップ: 為替レート不明 - {tx.name} ({date_key(tx.transaction_date)})")
+            continue
+
+        tx.price = round(tx.usd_price * rate, 2)
+        converted_transactions.append(tx)
+
+    return converted_transactions, errors
+
+
+def _find_rate_on_or_before(target_date: date, rates_by_date: dict[date, float]) -> float | None:
+    for days_back in range(8):
+        rate = rates_by_date.get(target_date - timedelta(days=days_back))
+        if rate is not None:
+            return rate
+    return None
 
 
 def detect_new_transactions(

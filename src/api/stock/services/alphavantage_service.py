@@ -75,10 +75,10 @@ async def fetch_usdjpy_daily_rates() -> dict[date, float]:
     Alpha Vantage APIを使用してUSD/JPYの日次終値を取得します。
 
     Returns:
-        dict[date, float]: 日付をキー、USD/JPY終値を値とする辞書。APIエラーの場合は空辞書。
+        dict[date, float]: 日付をキー、USD/JPY終値を値とする辞書。
 
     Raises:
-        Exception: レート制限に達した場合
+        Exception: レート制限やAPI応答不正など、レートを取得できない場合
     """
     api_key = settings.ALPHAVANTAGE_API_KEY
     url = (
@@ -96,8 +96,9 @@ async def fetch_usdjpy_daily_rates() -> dict[date, float]:
             date.fromisoformat(rate_date): float(values["4. close"])
             for rate_date, values in time_series.items()
         }
-    except (KeyError, ValueError, httpx.HTTPError):
-        return {}
+    except (KeyError, ValueError, httpx.HTTPError) as e:
+        logger.warning("USD/JPY日次レート取得に失敗しました action=fetch_usdjpy_daily_rates error={}", str(e))
+        raise
 
 
 if __name__ == "__main__":

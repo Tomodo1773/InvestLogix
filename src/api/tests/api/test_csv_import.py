@@ -144,6 +144,19 @@ class TestParseCsvContent:
         assert len(errors) == 1
         assert "為替レート不明" in errors[0]
 
+    def test_unsupported_foreign_currency_is_not_treated_as_jpy_price(self):
+        """未対応通貨の外貨建てCSVは約定単価を円単価として扱わない"""
+        csv_content = """国内約定日,通貨,銘柄名,取引,預り区分,約定数量,約定単価,国内受渡日,受渡金額
+"2024年01月30日",ユーロ,テスト株式 TEST / NASDAQ,買付,NISA,10,100,24/02/01,1000"""
+
+        transactions, errors = parse_csv_content(csv_content.encode("utf-8"))
+        converted, rate_errors = apply_usdjpy_rates(transactions, {})
+
+        assert len(errors) == 0
+        assert converted == []
+        assert len(rate_errors) == 1
+        assert "円建て単価を計算できません" in rate_errors[0]
+
     def test_parse_sample_foreign_csv(self):
         """サンプルの外貨建てCSVを標準CSVとしてパースできる"""
         sample_path = Path(__file__).parents[4] / "samples" / "sbi_export_file" / "yakujo20260201135112.csv"

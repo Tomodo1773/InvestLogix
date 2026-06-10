@@ -179,7 +179,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
                 return row["受渡金額/決済損益"] / row["約定数量"]
             if row["通貨"] == "米国ドル":
                 return None
-            return row["約定単価"]
+            return None
 
         df_raw["約定単価"] = df_raw.apply(calculate_jpy_price, axis=1)
     else:

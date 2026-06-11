@@ -1,11 +1,19 @@
 """CSVインポート機能のテスト"""
 
+from datetime import date
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
 from stock.schemas import AccountType, TransactionType
-from stock.services.csv_import_service import ParsedTransaction, detect_new_transactions, parse_csv_content
+from stock.utils.datetime import JST
+from stock.services.csv_import_service import (
+    ParsedTransaction,
+    apply_usdjpy_rates,
+    detect_new_transactions,
+    parse_csv_content,
+)
 
 
 class TestParseCsvContent:
@@ -31,6 +39,7 @@ class TestParseCsvContent:
         assert tx.account_type == "NISA(成長投資枠)"
         assert tx.fee == 0.0
         assert tx.tax == 0.0
+        assert tx.transaction_date == datetime(2024, 1, 30, tzinfo=JST)
 
     def test_parse_foreign_csv(self):
         """外貨建てCSVのパーステスト（実際のSBI証券フォーマット: YYYY年MM月DD日形式）"""
@@ -46,8 +55,120 @@ class TestParseCsvContent:
         assert tx.symbol == "TEST"
         assert tx.transaction_type == "買付"
         assert tx.quantity == 10.0
+        assert tx.price == 1500.0
         assert tx.usd_price == 100.0
         assert tx.account_type == "NISA(成長投資枠)"
+        assert tx.transaction_date == datetime(2024, 1, 30, tzinfo=JST)
+
+    def test_parse_foreign_usd_settlement_csv(self):
+        """外貨決済の米国株CSVはUSD単価を保持し、円建て単価は未補完にする"""
+        csv_content = """国内約定日,通貨,銘柄名,取引,預り区分,約定数量,約定単価,国内受渡日,受渡金額
+"2024年01月30日",米国ドル,テスト株式 TEST / NASDAQ,買付,NISA,10,100,24/02/01,1000"""
+
+        transactions, errors = parse_csv_content(csv_content.encode("utf-8"))
+
+        assert len(transactions) == 1
+        assert len(errors) == 0
+
+        tx = transactions[0]
+        assert tx.symbol == "TEST"
+        assert tx.quantity == 10.0
+        assert tx.price is None
+        assert tx.usd_price == 100.0
+        assert tx.settlement_currency == "米国ドル"
+
+    def test_apply_usdjpy_rates(self):
+        """外貨決済の米国株取引に約定日の為替で円建て単価を補完する"""
+        transactions = [
+            ParsedTransaction(
+                symbol="TEST",
+                name="テスト株式 TEST / NASDAQ",
+                transaction_type="買付",
+                quantity=10.0,
+                price=None,
+                usd_price=100.0,
+                account_type="NISA(成長投資枠)",
+                fee=0.0,
+                tax=0.0,
+                transaction_date=datetime(2024, 1, 30),
+                settlement_currency="米国ドル",
+            )
+        ]
+
+        converted, errors = apply_usdjpy_rates(transactions, {date(2024, 1, 30): 150.25})
+
+        assert len(errors) == 0
+        assert converted[0].price == 15025.0
+
+    def test_apply_usdjpy_rates_uses_previous_rate(self):
+        """約定日の為替がない場合は直前日の為替で円建て単価を補完する"""
+        transactions = [
+            ParsedTransaction(
+                symbol="TEST",
+                name="テスト株式 TEST / NASDAQ",
+                transaction_type="買付",
+                quantity=10.0,
+                price=None,
+                usd_price=100.0,
+                account_type="NISA(成長投資枠)",
+                fee=0.0,
+                tax=0.0,
+                transaction_date=datetime(2024, 1, 30),
+                settlement_currency="米国ドル",
+            )
+        ]
+
+        converted, errors = apply_usdjpy_rates(transactions, {date(2024, 1, 29): 149.5})
+
+        assert len(errors) == 0
+        assert converted[0].price == 14950.0
+
+    def test_apply_usdjpy_rates_skips_when_rate_missing(self):
+        """為替が取れない外貨決済行はスキップする"""
+        transactions = [
+            ParsedTransaction(
+                symbol="TEST",
+                name="テスト株式 TEST / NASDAQ",
+                transaction_type="買付",
+                quantity=10.0,
+                price=None,
+                usd_price=100.0,
+                account_type="NISA(成長投資枠)",
+                fee=0.0,
+                tax=0.0,
+                transaction_date=datetime(2024, 1, 30),
+                settlement_currency="米国ドル",
+            )
+        ]
+
+        converted, errors = apply_usdjpy_rates(transactions, {})
+
+        assert converted == []
+        assert len(errors) == 1
+        assert "為替レート不明" in errors[0]
+
+    def test_unsupported_foreign_currency_is_not_treated_as_jpy_price(self):
+        """未対応通貨の外貨建てCSVは約定単価を円単価として扱わない"""
+        csv_content = """国内約定日,通貨,銘柄名,取引,預り区分,約定数量,約定単価,国内受渡日,受渡金額
+"2024年01月30日",ユーロ,テスト株式 TEST / NASDAQ,買付,NISA,10,100,24/02/01,1000"""
+
+        transactions, errors = parse_csv_content(csv_content.encode("utf-8"))
+        converted, rate_errors = apply_usdjpy_rates(transactions, {})
+
+        assert len(errors) == 0
+        assert converted == []
+        assert len(rate_errors) == 1
+        assert "円建て単価を計算できません" in rate_errors[0]
+
+    def test_parse_sample_foreign_csv(self):
+        """サンプルの外貨建てCSVを標準CSVとしてパースできる"""
+        sample_path = Path(__file__).parents[4] / "samples" / "sbi_export_file" / "yakujo20260201135112.csv"
+
+        transactions, errors = parse_csv_content(sample_path.read_bytes())
+
+        assert len(errors) == 0
+        assert len(transactions) == 13
+        assert any(tx.settlement_currency == "米国ドル" for tx in transactions)
 
     def test_parse_investment_trust(self):
         """投資信託CSVのパーステスト"""

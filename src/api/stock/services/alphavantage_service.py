@@ -1,3 +1,5 @@
+from datetime import date
+
 import httpx
 from loguru import logger
 
@@ -65,6 +67,38 @@ async def fetch_usdjpy_rate() -> float | None:
         return float(data["Realtime Currency Exchange Rate"]["5. Exchange Rate"])
     except (KeyError, ValueError, httpx.HTTPError):
         return None
+
+
+@timed_cache(seconds=86400)
+async def fetch_usdjpy_daily_rates() -> dict[date, float]:
+    """
+    Alpha Vantage APIを使用してUSD/JPYの日次終値を取得します。
+
+    Returns:
+        dict[date, float]: 日付をキー、USD/JPY終値を値とする辞書。
+
+    Raises:
+        Exception: レート制限やAPI応答不正など、レートを取得できない場合
+    """
+    api_key = settings.ALPHAVANTAGE_API_KEY
+    url = (
+        "https://www.alphavantage.co/query"
+        f"?function=FX_DAILY&from_symbol=USD&to_symbol=JPY&outputsize=full&apikey={api_key}"
+    )
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.get(url)
+        data = response.json()
+        if _is_error_response(data):
+            raise Exception("Alpha Vantage API rate limit exceeded")
+        time_series = data["Time Series FX (Daily)"]
+        return {
+            date.fromisoformat(rate_date): float(values["4. close"])
+            for rate_date, values in time_series.items()
+        }
+    except (KeyError, ValueError, httpx.HTTPError) as e:
+        logger.warning("USD/JPY日次レート取得に失敗しました action=fetch_usdjpy_daily_rates error={}", str(e))
+        raise
 
 
 if __name__ == "__main__":

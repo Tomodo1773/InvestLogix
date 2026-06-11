@@ -9,6 +9,7 @@ from stock.services.dividend_csv_import_service import (
     detect_new_dividends,
     parse_dividend_csv_content,
 )
+from stock.utils.datetime import JST
 
 
 class TestParseDividendCsvContent:
@@ -29,6 +30,7 @@ class TestParseDividendCsvContent:
         assert div.name == "三菱商事 8058"
         assert div.shares_owned == 100.0
         assert div.total_amount == 25000.0
+        assert div.payment_date == datetime(2024, 3, 15, tzinfo=JST)
 
     def test_parse_dividend_csv_fund(self):
         """投資信託分配金CSVのパーステスト"""
@@ -43,6 +45,7 @@ class TestParseDividendCsvContent:
         div = dividends[0]
         assert div.symbol == "JP90C000H1T1"
         assert div.shares_owned == 5.0  # 50000万口 / 10000 = 5口
+        assert div.payment_date == datetime(2024, 6, 15, tzinfo=JST)
 
     def test_skip_nomura_mrf(self):
         """野村MRFを除外するテスト"""

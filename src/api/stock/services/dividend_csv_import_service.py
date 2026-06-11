@@ -12,6 +12,7 @@ from datetime import datetime
 import pandas as pd
 from loguru import logger
 
+from ..utils.datetime import JST
 from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, to_number
 
 
@@ -108,8 +109,8 @@ def parse_dividend_csv_content(content: bytes) -> tuple[list[ParsedDividend], li
     # 受取額（税引後・円）を数値に変換
     df["total_amount"] = df["受取額(税引後・円)"].apply(lambda x: int(to_number(x)))
 
-    # 受渡日を日付に変換
-    df["payment_date"] = pd.to_datetime(df["受渡日"], format="%Y/%m/%d")
+    # SBI CSVの日付は日本時間の日付として扱う
+    df["payment_date"] = pd.to_datetime(df["受渡日"], format="%Y/%m/%d").dt.tz_localize(JST)
 
     # ParsedDividendオブジェクトのリストに変換
     dividends = []

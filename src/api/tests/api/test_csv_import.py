@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from stock.schemas import AccountType, TransactionType
+from stock.utils.datetime import JST
 from stock.services.csv_import_service import (
     ParsedTransaction,
     apply_usdjpy_rates,
@@ -38,6 +39,7 @@ class TestParseCsvContent:
         assert tx.account_type == "NISA(成長投資枠)"
         assert tx.fee == 0.0
         assert tx.tax == 0.0
+        assert tx.transaction_date == datetime(2024, 1, 30, tzinfo=JST)
 
     def test_parse_foreign_csv(self):
         """外貨建てCSVのパーステスト（実際のSBI証券フォーマット: YYYY年MM月DD日形式）"""
@@ -56,6 +58,7 @@ class TestParseCsvContent:
         assert tx.price == 1500.0
         assert tx.usd_price == 100.0
         assert tx.account_type == "NISA(成長投資枠)"
+        assert tx.transaction_date == datetime(2024, 1, 30, tzinfo=JST)
 
     def test_parse_foreign_usd_settlement_csv(self):
         """外貨決済の米国株CSVはUSD単価を保持し、円建て単価は未補完にする"""

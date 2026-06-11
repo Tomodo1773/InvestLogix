@@ -12,6 +12,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 from loguru import logger
 
+from ..utils.datetime import JST
 from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, parse_date, to_number
 
 
@@ -241,8 +242,8 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
         lambda x: round(float(x), 4) if pd.notnull(x) else None
     )
 
-    # 日付をdatetimeに変換
-    sbi_data["trade_date"] = pd.to_datetime(sbi_data["trade_date"], format="%Y/%m/%d")
+    # SBI CSVの日付は日本時間の日付として扱う
+    sbi_data["trade_date"] = pd.to_datetime(sbi_data["trade_date"], format="%Y/%m/%d").dt.tz_localize(JST)
 
     # ParsedTransactionオブジェクトのリストに変換
     transactions = []

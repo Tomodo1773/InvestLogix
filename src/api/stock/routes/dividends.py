@@ -8,6 +8,7 @@ from ..auth import get_current_user, get_db_for_user
 from ..schemas import (
     CsvDividendPreview,
     Dividend,
+    DividendBySymbol,
     DividendCreate,
     DividendImportConfirmRequest,
     DividendImportConfirmResponse,
@@ -67,6 +68,18 @@ async def get_monthly_dividends(
     """
     dividend_service = DividendService(db)
     return await dividend_service.get_monthly_dividends(current_user.user_id)
+
+
+@router.get("/by-symbol", response_model=List[DividendBySymbol])
+async def get_dividends_by_symbol(
+    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
+):
+    """
+    銘柄別の配当金集計を取得する
+    - 成功時: 銘柄ごとの配当金集計のリスト（銘柄コード・銘柄名・配当金額）を金額降順で返却
+    """
+    dividend_service = DividendService(db)
+    return await dividend_service.get_dividends_by_symbol(current_user.user_id)
 
 
 @router.post("/import/preview", response_model=DividendImportPreviewResponse)

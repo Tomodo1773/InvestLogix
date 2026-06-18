@@ -3,6 +3,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Holding } from "@/lib/api/types"
+import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
 import { formatCurrency } from "@/lib/format"
 import { SECURITY_TYPE_FILTERS, type SecurityTypeFilter } from "@/lib/security-type"
 
@@ -10,33 +11,6 @@ interface HoldingAllocationChartProps {
   data: Holding[] | undefined
   isLoading: boolean
 }
-
-// 上位20銘柄用の色パレット（区別しやすい色を選定）
-const COLORS = [
-  "#2196F3", // Blue
-  "#FF9800", // Orange
-  "#4CAF50", // Green
-  "#9C27B0", // Purple
-  "#F44336", // Red
-  "#00BCD4", // Cyan
-  "#FFEB3B", // Yellow
-  "#795548", // Brown
-  "#E91E63", // Pink
-  "#3F51B5", // Indigo
-  "#009688", // Teal
-  "#FF5722", // Deep Orange
-  "#8BC34A", // Light Green
-  "#673AB7", // Deep Purple
-  "#FFC107", // Amber
-  "#607D8B", // Blue Grey
-  "#CDDC39", // Lime
-  "#9E9E9E", // Grey
-  "#00E676", // Green A400
-  "#FF6F00", // Orange 900
-]
-
-// 「その他」用の色
-const OTHER_COLOR = "#BDBDBD"
 
 interface ChartDataItem {
   name: string
@@ -170,7 +144,11 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${entry.symbol}`}
-                      fill={entry.symbol === "OTHER" ? OTHER_COLOR : COLORS[index % COLORS.length]}
+                      fill={
+                        entry.symbol === "OTHER"
+                          ? CHART_OTHER_COLOR
+                          : CHART_COLORS[index % CHART_COLORS.length]
+                      }
                     />
                   ))}
                 </Pie>

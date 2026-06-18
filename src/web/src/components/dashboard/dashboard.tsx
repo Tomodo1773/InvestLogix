@@ -3,6 +3,7 @@ import { useMemo } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import {
+  getDividendAllocation,
   getDividendsMonthly,
   getHoldings,
   getPortfolioHistory,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/api/client"
 import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 import { AssetChart } from "./asset-chart"
+import { DividendAllocationChart } from "./dividend-allocation-chart"
 import { DividendChart } from "./dividend-chart"
 import { NisaLimitGauge } from "./nisa-limit-gauge"
 import { SectorTreemap } from "./sector-treemap"
@@ -45,6 +47,12 @@ export function Dashboard() {
   } = useSWR("dividends-monthly", getDividendsMonthly)
 
   const {
+    data: dividendsBySymbol,
+    isLoading: dividendsBySymbolLoading,
+    mutate: mutateDividendsBySymbol,
+  } = useSWR("dividends-by-symbol", getDividendAllocation)
+
+  const {
     data: weeklyPerformance,
     isLoading: weeklyPerformanceLoading,
     mutate: mutateWeeklyPerformance,
@@ -63,6 +71,7 @@ export function Dashboard() {
     historyLoading ||
     tradesLoading ||
     dividendsLoading ||
+    dividendsBySymbolLoading ||
     weeklyPerformanceLoading ||
     holdingsLoading
 
@@ -71,6 +80,7 @@ export function Dashboard() {
     mutateHistory()
     mutateTrades()
     mutateDividends()
+    mutateDividendsBySymbol()
     mutateWeeklyPerformance()
     mutateHoldings()
   }
@@ -106,6 +116,7 @@ export function Dashboard() {
         <TradeChart data={trades} isLoading={tradesLoading} />
         <DividendChart data={dividends} isLoading={dividendsLoading} />
       </div>
+      <DividendAllocationChart data={dividendsBySymbol} isLoading={dividendsBySymbolLoading} />
     </div>
   )
 }

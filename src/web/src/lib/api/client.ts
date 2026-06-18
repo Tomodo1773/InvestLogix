@@ -1,5 +1,6 @@
 import type {
   Dividend,
+  DividendBySymbolItem,
   DividendImportConfirmRequest,
   DividendImportConfirmResponse,
   DividendImportPreviewResponse,
@@ -111,6 +112,10 @@ export async function getDividends(): Promise<Dividend[]> {
 
 export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
   return fetchWithAuth<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
+}
+
+export async function getDividendAllocation(): Promise<DividendBySymbolItem[]> {
+  return fetchWithAuth<DividendBySymbolItem[]>("/api/v1/dividends/by-symbol")
 }
 
 // Symbol-specific APIs

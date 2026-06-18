@@ -156,3 +156,44 @@ class DividendService:
         logger.info("月次配当集計を取得しました user_id={} months={}", user_id, len(monthly_dividends))
 
         return monthly_dividends
+
+    async def get_dividends_by_symbol(self, user_id: int) -> List[dict]:
+        """銘柄別の配当金集計を取得する（税・手数料控除後の純額、金額降順）
+
+        Args:
+            user_id: ユーザーID
+
+        Returns:
+            List[dict]: 銘柄ごとの配当金集計のリスト（銘柄コード・銘柄名・配当金額）
+        """
+        total_dividend = func.sum(
+            models.Dividend.total_amount
+            - func.coalesce(models.Dividend.tax, 0)
+            - func.coalesce(models.Dividend.fee, 0)
+        ).label("total_dividend")
+
+        query = (
+            select(
+                models.Dividend.symbol,
+                models.Stock.name.label("stock_name"),
+                total_dividend,
+            )
+            .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
+            .where(models.Dividend.user_id == user_id)
+            .group_by(models.Dividend.symbol, models.Stock.name)
+            .order_by(total_dividend.desc())
+        )
+
+        result = await self.db.execute(query)
+        dividends_by_symbol = [
+            {
+                "symbol": row.symbol,
+                "stock_name": row.stock_name,
+                "total_dividend": float(row.total_dividend),
+            }
+            for row in result
+        ]
+
+        logger.info("銘柄別配当集計を取得しました user_id={} symbols={}", user_id, len(dividends_by_symbol))
+
+        return dividends_by_symbol

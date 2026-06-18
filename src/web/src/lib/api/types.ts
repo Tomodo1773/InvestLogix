@@ -116,6 +116,12 @@ export interface MonthlyDividendItem {
   total_dividend: number
 }
 
+export interface DividendBySymbolItem {
+  symbol: string
+  stock_name: string
+  total_dividend: number
+}
+
 // Stocks
 type SecurityType = "STOCK" | "ETF" | "REIT" | "FUND"
 

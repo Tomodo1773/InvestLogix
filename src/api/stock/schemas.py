@@ -331,6 +331,14 @@ class MonthlyDividend(BaseModel):
     total_dividend: float
 
 
+class DividendBySymbol(BaseModel):
+    """銘柄別配当集計のレスポンスモデル"""
+
+    symbol: str
+    stock_name: str
+    total_dividend: float
+
+
 # レスポンスモデル
 class StockWithRelations(Stock):
     jpx_detail: Optional[StockJPXDetail] = None

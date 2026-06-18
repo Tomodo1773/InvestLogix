@@ -2,39 +2,13 @@ import { useMemo } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { DividendBySymbolItem } from "@/lib/api/types"
+import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
 import { formatCurrency } from "@/lib/format"
 
 interface DividendAllocationChartProps {
   data: DividendBySymbolItem[] | undefined
   isLoading: boolean
 }
-
-// 銘柄識別用の色パレット（銘柄数が多い場合は循環して使用する）
-const COLORS = [
-  "#2196F3", // Blue
-  "#FF9800", // Orange
-  "#4CAF50", // Green
-  "#9C27B0", // Purple
-  "#F44336", // Red
-  "#00BCD4", // Cyan
-  "#FFEB3B", // Yellow
-  "#795548", // Brown
-  "#E91E63", // Pink
-  "#3F51B5", // Indigo
-  "#009688", // Teal
-  "#FF5722", // Deep Orange
-  "#8BC34A", // Light Green
-  "#673AB7", // Deep Purple
-  "#FFC107", // Amber
-  "#607D8B", // Blue Grey
-  "#CDDC39", // Lime
-  "#9E9E9E", // Grey
-  "#00E676", // Green A400
-  "#FF6F00", // Orange 900
-]
-
-// 「その他」用の色
-const OTHER_COLOR = "#BDBDBD"
 
 // 累計配当に占める割合がこの値未満の銘柄を「その他」に集約する
 const OTHER_THRESHOLD_RATIO = 0.01
@@ -139,7 +113,11 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                   {chartData.map((entry, index) => (
                     <Cell
                       key={`cell-${entry.symbol}`}
-                      fill={entry.symbol === "OTHER" ? OTHER_COLOR : COLORS[index % COLORS.length]}
+                      fill={
+                        entry.symbol === "OTHER"
+                          ? CHART_OTHER_COLOR
+                          : CHART_COLORS[index % CHART_COLORS.length]
+                      }
                     />
                   ))}
                 </Pie>

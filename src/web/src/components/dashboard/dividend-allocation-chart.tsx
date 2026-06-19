@@ -104,7 +104,8 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                   label={({ name, value }) => {
                     const percent = ((value / total) * 100).toFixed(1)
                     if (parseFloat(percent) < 3) return ""
-                    const label = (name ?? "").length > 20 ? `${(name ?? "").slice(0, 20)}…` : (name ?? "")
+                    const n = name ?? ""
+                    const label = n.length > 20 ? `${n.slice(0, 20)}…` : n
                     return `${label} ${percent}%`
                   }}
                   innerRadius={70}

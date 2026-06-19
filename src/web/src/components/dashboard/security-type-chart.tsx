@@ -93,7 +93,8 @@ export function SecurityTypeChart({ data, isLoading }: SecurityTypeChartProps) {
                   endAngle={-270}
                   labelLine={false}
                   label={({ name, percent, value }) => {
-                    const label = (name ?? "").length > 20 ? `${(name ?? "").slice(0, 20)}…` : (name ?? "")
+                    const n = name ?? ""
+                    const label = n.length > 20 ? `${n.slice(0, 20)}…` : n
                     return `${label} ${formatCurrency(Math.round(value))} (${((percent ?? 0) * 100).toFixed(0)}%)`
                   }}
                   outerRadius={80}

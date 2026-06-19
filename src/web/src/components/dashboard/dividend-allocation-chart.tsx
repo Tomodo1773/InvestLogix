@@ -103,9 +103,9 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                   labelLine={false}
                   label={({ name, value }) => {
                     const percent = ((value / total) * 100).toFixed(1)
-                    // 小さいセクター（3%未満）はラベルを省略
                     if (parseFloat(percent) < 3) return ""
-                    return `${name} ${percent}%`
+                    const label = (name ?? "").length > 20 ? `${(name ?? "").slice(0, 20)}…` : (name ?? "")
+                    return `${label} ${percent}%`
                   }}
                   innerRadius={70}
                   outerRadius={110}

@@ -135,9 +135,9 @@ export function HoldingAllocationChart({ data, isLoading }: HoldingAllocationCha
                   labelLine={false}
                   label={({ name, value }) => {
                     const percent = ((value / total) * 100).toFixed(1)
-                    // 小さいセクター（2%未満）はラベルを省略
                     if (parseFloat(percent) < 2) return ""
-                    return `${name} ${percent}%`
+                    const label = (name ?? "").length > 20 ? `${(name ?? "").slice(0, 20)}…` : (name ?? "")
+                    return `${label} ${percent}%`
                   }}
                   outerRadius={120}
                   fill="#8884d8"

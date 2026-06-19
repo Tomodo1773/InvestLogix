@@ -26,14 +26,14 @@ const VIEW_CONFIG: Record<
     label: "種別",
     title: "種別保有割合",
     getKey: (h) => h.security_type || "UNKNOWN",
-    colors: { STOCK: "#2196F3", ETF: "#FF9800", REIT: "#9C27B0", FUND: "#4CAF50" },
+    colors: { STOCK: "#2D9B81", ETF: "#D49A5A", REIT: "#9272A8", FUND: "#6DAA7C" },
     labels: { STOCK: "株式", ETF: "ETF", REIT: "REIT", FUND: "投資信託" },
   },
   currency: {
     label: "通貨",
     title: "通貨別保有割合",
     getKey: (h) => h.currency || "UNKNOWN",
-    colors: { JPY: "#2196F3", USD: "#FF9800" },
+    colors: { JPY: "#2D9B81", USD: "#D49A5A" },
     labels: { JPY: "円建て", USD: "ドル建て" },
   },
 }
@@ -89,10 +89,14 @@ export function SecurityTypeChart({ data, isLoading }: SecurityTypeChartProps) {
                   data={chartData}
                   cx="50%"
                   cy="50%"
+                  startAngle={90}
+                  endAngle={-270}
                   labelLine={false}
-                  label={({ name, percent, value }) =>
-                    `${name} ${formatCurrency(Math.round(value))} (${((percent ?? 0) * 100).toFixed(0)}%)`
-                  }
+                  label={({ name, percent, value }) => {
+                    const n = name ?? ""
+                    const label = n.length > 20 ? `${n.slice(0, 20)}…` : n
+                    return `${label} ${formatCurrency(Math.round(value))} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                  }}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

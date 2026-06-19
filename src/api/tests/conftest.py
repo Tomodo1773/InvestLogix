@@ -399,6 +399,17 @@ async def mock_external_apis(mocker):
     mocker.patch("stock.services.stock_price_fetcher.get_jquants_client", return_value=mock_jquants_client)
     mocker.patch("stock.services.price_history_service.get_jquants_client", return_value=mock_jquants_client)
 
+    # 投資信託情報取得のモック化
+    mock_investment_trust = mocker.patch(
+        "stock.services.stock_service.fetch_investment_trust_details",
+        autospec=True,
+    )
+    mock_investment_trust.return_value = {
+        "name": "テスト投資信託",
+        "market": None,
+        "industry": None,
+    }
+
     # Tiingo APIのモック化（recalc_holdings ジョブや新規銘柄フォールバック経路で利用）
     mock_tiingo = mocker.patch(
         "stock.services.stock_price_fetcher.fetch_us_daily_prices_from_tiingo",
@@ -419,6 +430,7 @@ async def mock_external_apis(mocker):
         "us_price": mock_us_price,
         "usdjpy": mock_usdjpy,
         "jquants_client": mock_jquants_client,
+        "investment_trust": mock_investment_trust,
         "tiingo": mock_tiingo,
         "classify_currency": mock_classify,
     }

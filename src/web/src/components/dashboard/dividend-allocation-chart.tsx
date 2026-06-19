@@ -98,6 +98,8 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                   data={chartData}
                   cx="50%"
                   cy="50%"
+                  startAngle={90}
+                  endAngle={-270}
                   labelLine={false}
                   label={({ name, value }) => {
                     const percent = ((value / total) * 100).toFixed(1)

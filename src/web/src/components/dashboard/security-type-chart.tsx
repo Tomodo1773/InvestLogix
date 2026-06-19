@@ -89,6 +89,8 @@ export function SecurityTypeChart({ data, isLoading }: SecurityTypeChartProps) {
                   data={chartData}
                   cx="50%"
                   cy="50%"
+                  startAngle={90}
+                  endAngle={-270}
                   labelLine={false}
                   label={({ name, percent, value }) =>
                     `${name} ${formatCurrency(Math.round(value))} (${((percent ?? 0) * 100).toFixed(0)}%)`

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getDividendAllocation } from "@/lib/api/client"
 import type { DividendBySymbolItem, MonthlyDividendItem } from "@/lib/api/types"
 import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
@@ -96,18 +97,19 @@ export function DividendAllocationChart({ monthlyDividends, refreshSignal }: Div
       : (periodOptions.find((o) => o.value === selectedPeriod)?.label ?? "")
 
   const periodSelect = (
-    <select
-      value={selectedPeriod}
-      onChange={(e) => setSelectedPeriod(e.target.value)}
-      className="rounded-md border border-input bg-background px-2 py-1 text-sm"
-    >
-      <option value="all">通算</option>
-      {periodOptions.map((opt) => (
-        <option key={opt.value} value={opt.value}>
-          {opt.label}
-        </option>
-      ))}
-    </select>
+    <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+      <SelectTrigger className="w-[140px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">通算</SelectItem>
+        {periodOptions.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 
   if (isLoading) {

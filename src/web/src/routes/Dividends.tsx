@@ -1,15 +1,17 @@
 import { RefreshCw } from "lucide-react"
+import { useState } from "react"
 import useSWR from "swr"
 import { DividendAllocationChart } from "@/components/dashboard/dividend-allocation-chart"
 import { DividendChart } from "@/components/dashboard/dividend-chart"
 import { DividendsTable } from "@/components/dividends/dividends-table"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Button } from "@/components/ui/button"
-import { getDividendAllocation, getDividends, getDividendsMonthly } from "@/lib/api/client"
+import { getDividends, getDividendsMonthly } from "@/lib/api/client"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Dividends() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   const {
     data: dividends,
@@ -23,18 +25,12 @@ export default function Dividends() {
     mutate: mutateMonthly,
   } = useSWR(isAuthenticated ? "dividends-monthly" : null, getDividendsMonthly)
 
-  const {
-    data: dividendsBySymbol,
-    isLoading: bySymbolLoading,
-    mutate: mutateBySymbol,
-  } = useSWR(isAuthenticated ? "dividends-by-symbol" : null, getDividendAllocation)
-
-  const isRefreshing = isLoading || monthlyLoading || bySymbolLoading
+  const isRefreshing = isLoading || monthlyLoading
 
   const handleRefresh = () => {
     mutate()
     mutateMonthly()
-    mutateBySymbol()
+    setRefreshCount((c) => c + 1)
   }
 
   return (
@@ -49,7 +45,7 @@ export default function Dividends() {
         </div>
         <div className="grid gap-6 lg:grid-cols-2">
           <DividendChart data={dividendsMonthly} isLoading={monthlyLoading} />
-          <DividendAllocationChart data={dividendsBySymbol} isLoading={bySymbolLoading} />
+          <DividendAllocationChart monthlyDividends={dividendsMonthly} refreshSignal={refreshCount} />
         </div>
         <DividendsTable dividends={dividends} isLoading={isLoading} />
       </div>

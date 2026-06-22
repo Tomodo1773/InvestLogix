@@ -1,9 +1,8 @@
 import { RefreshCw } from "lucide-react"
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import useSWR from "swr"
 import { Button } from "@/components/ui/button"
 import {
-  getDividendAllocation,
   getDividendsMonthly,
   getHoldings,
   getPortfolioHistory,
@@ -46,11 +45,7 @@ export function Dashboard() {
     mutate: mutateDividends,
   } = useSWR("dividends-monthly", getDividendsMonthly)
 
-  const {
-    data: dividendsBySymbol,
-    isLoading: dividendsBySymbolLoading,
-    mutate: mutateDividendsBySymbol,
-  } = useSWR("dividends-by-symbol", getDividendAllocation)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   const {
     data: weeklyPerformance,
@@ -71,7 +66,6 @@ export function Dashboard() {
     historyLoading ||
     tradesLoading ||
     dividendsLoading ||
-    dividendsBySymbolLoading ||
     weeklyPerformanceLoading ||
     holdingsLoading
 
@@ -80,9 +74,9 @@ export function Dashboard() {
     mutateHistory()
     mutateTrades()
     mutateDividends()
-    mutateDividendsBySymbol()
     mutateWeeklyPerformance()
     mutateHoldings()
+    setRefreshCount((c) => c + 1)
   }
 
   return (
@@ -116,7 +110,7 @@ export function Dashboard() {
         <TradeChart data={trades} isLoading={tradesLoading} />
         <DividendChart data={dividends} isLoading={dividendsLoading} />
       </div>
-      <DividendAllocationChart data={dividendsBySymbol} isLoading={dividendsBySymbolLoading} />
+      <DividendAllocationChart monthlyDividends={dividends} refreshSignal={refreshCount} />
     </div>
   )
 }

@@ -314,6 +314,113 @@ async def test_get_monthly_dividends_respects_jst_boundary(
 
 
 @pytest.mark.asyncio
+async def test_get_dividends_by_symbol_with_year_month(
+    client: AsyncClient, auth_token: str, setup_japanese_stock_data, create_dividend
+):
+    """year/month パラメータで特定月の銘柄別集計を取得できること"""
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-01-15T00:00:00+09:00",
+            "shares_owned": "100.0",
+            "total_amount": "1000.0",
+            "tax": "100.0",
+            "fee": "0.0",
+        }
+    )
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-06-15T00:00:00+09:00",
+            "shares_owned": "100.0",
+            "total_amount": "2000.0",
+            "tax": "200.0",
+            "fee": "0.0",
+        }
+    )
+
+    # 1月のみ取得
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024&month=1")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["symbol"] == "8058"
+    assert abs(data[0]["total_dividend"] - 900.0) < 0.01  # 1000-100
+
+    # 6月のみ取得
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024&month=6")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert abs(data[0]["total_dividend"] - 1800.0) < 0.01  # 2000-200
+
+
+@pytest.mark.asyncio
+async def test_get_dividends_by_symbol_with_year_month_no_data(
+    client: AsyncClient, auth_token: str, setup_japanese_stock_data, create_dividend
+):
+    """配当がない月を指定すると空配列が返ること"""
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-01-15T00:00:00+09:00",
+            "shares_owned": "100.0",
+            "total_amount": "1000.0",
+            "tax": "100.0",
+            "fee": "0.0",
+        }
+    )
+
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024&month=3")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
+async def test_get_dividends_by_symbol_year_only_returns_422(client: AsyncClient, auth_token: str):
+    """year のみ指定で 422 エラーが返ること"""
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_dividends_by_symbol_month_only_returns_422(client: AsyncClient, auth_token: str):
+    """month のみ指定で 422 エラーが返ること"""
+    response = await client.get("/api/v1/dividends/by-symbol?month=1")
+    assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_get_dividends_by_symbol_filters_by_jst_month(
+    client: AsyncClient, auth_token: str, create_dividend
+):
+    """JST月境界でby-symbolフィルタが正しく動作すること"""
+    # JST 2024-12-01 00:00:00 = UTC 2024-11-30 15:00:00
+    await create_dividend(
+        {
+            "symbol": "8058",
+            "payment_date": "2024-12-01T00:00:00+09:00",
+            "shares_owned": "50.0",
+            "total_amount": "3000.0",
+            "tax": "300.0",
+            "fee": "0.0",
+        }
+    )
+
+    # JST基準で12月に集計されること
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024&month=12")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert abs(data[0]["total_dividend"] - 2700.0) < 0.01
+
+    # UTC基準だと11月になるが、JSTでは12月なので11月は空
+    response = await client.get("/api/v1/dividends/by-symbol?year=2024&month=11")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+@pytest.mark.asyncio
 async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_token: str, create_dividend):
     """配当がない月も total_dividend: 0 で補完されることを確認する"""
     # 2024年1月と3月にデータを登録（2月は欠落）

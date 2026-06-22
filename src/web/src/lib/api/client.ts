@@ -114,8 +114,12 @@ export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
   return fetchWithAuth<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
 }
 
-export async function getDividendAllocation(): Promise<DividendBySymbolItem[]> {
-  return fetchWithAuth<DividendBySymbolItem[]>("/api/v1/dividends/by-symbol")
+export async function getDividendAllocation(params?: {
+  year: number
+  month: number
+}): Promise<DividendBySymbolItem[]> {
+  const query = params ? `?year=${params.year}&month=${params.month}` : ""
+  return fetchWithAuth<DividendBySymbolItem[]>(`/api/v1/dividends/by-symbol${query}`)
 }
 
 // Symbol-specific APIs

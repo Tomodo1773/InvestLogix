@@ -1,13 +1,15 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { DividendBySymbolItem } from "@/lib/api/types"
+import { getDividendAllocation } from "@/lib/api/client"
+import type { DividendBySymbolItem, MonthlyDividendItem } from "@/lib/api/types"
 import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
 import { formatCurrency } from "@/lib/format"
 
 interface DividendAllocationChartProps {
-  data: DividendBySymbolItem[] | undefined
-  isLoading: boolean
+  monthlyDividends: MonthlyDividendItem[] | undefined
+  refreshSignal: number
 }
 
 // 累計配当に占める割合がこの値未満の銘柄を「その他」に集約する
@@ -61,17 +63,59 @@ export function transformDividendsToChartData(
   return result
 }
 
-export function DividendAllocationChart({ data, isLoading }: DividendAllocationChartProps) {
-  const chartData = useMemo(() => transformDividendsToChartData(data), [data])
+export function DividendAllocationChart({ monthlyDividends, refreshSignal }: DividendAllocationChartProps) {
+  const [selectedPeriod, setSelectedPeriod] = useState("all")
 
-  // 累計配当（ドーナツ中央およびパーセンテージ表示用）
+  const periodOptions = useMemo(() => {
+    if (!monthlyDividends) return []
+    return monthlyDividends
+      .filter((d) => d.total_dividend > 0)
+      .sort((a, b) => b.year - a.year || b.month - a.month)
+      .map((d) => ({
+        value: `${d.year}-${String(d.month).padStart(2, "0")}`,
+        label: `${d.year}年${d.month}月`,
+      }))
+  }, [monthlyDividends])
+
+  const params = useMemo(() => {
+    if (selectedPeriod === "all") return undefined
+    const [y, m] = selectedPeriod.split("-")
+    return { year: Number(y), month: Number(m) }
+  }, [selectedPeriod])
+
+  const { data, isLoading } = useSWR(["dividends-by-symbol", selectedPeriod, refreshSignal], () =>
+    getDividendAllocation(params)
+  )
+
+  const chartData = useMemo(() => transformDividendsToChartData(data), [data])
   const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData])
+
+  const centerLabel =
+    selectedPeriod === "all"
+      ? "累計配当"
+      : (periodOptions.find((o) => o.value === selectedPeriod)?.label ?? "")
+
+  const periodSelect = (
+    <select
+      value={selectedPeriod}
+      onChange={(e) => setSelectedPeriod(e.target.value)}
+      className="rounded-md border border-input bg-background px-2 py-1 text-sm"
+    >
+      <option value="all">通算</option>
+      {periodOptions.map((opt) => (
+        <option key={opt.value} value={opt.value}>
+          {opt.label}
+        </option>
+      ))}
+    </select>
+  )
 
   if (isLoading) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>銘柄別配当割合</CardTitle>
+          {periodSelect}
         </CardHeader>
         <CardContent>
           <div className="h-80 animate-pulse rounded bg-muted" />
@@ -82,8 +126,9 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>銘柄別配当割合</CardTitle>
+        {periodSelect}
       </CardHeader>
       <CardContent>
         {!chartData.length ? (
@@ -140,9 +185,8 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* ドーナツ中央に累計配当金額を表示 */}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xs text-muted-foreground">累計配当</span>
+              <span className="text-xs text-muted-foreground">{centerLabel}</span>
               <span className="text-xl font-bold">{formatCurrency(total)}</span>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { DividendBySymbolItem } from "@/lib/api/types"
-import { transformDividendsToChartData } from "./dividend-allocation-chart"
+import type { DividendBySymbolItem, MonthlyDividendItem } from "@/lib/api/types"
+import { buildPeriodOptions, transformDividendsToChartData } from "./dividend-allocation-chart"
 
 describe("transformDividendsToChartData", () => {
   const createItem = (symbol: string, total: number, name = symbol): DividendBySymbolItem => ({
@@ -26,23 +26,20 @@ describe("transformDividendsToChartData", () => {
   })
 
   it("累計の1%未満の銘柄を「その他」に集約する", () => {
-    // 大口2件 + 小口3件（それぞれ全体の1%未満）
     const data: DividendBySymbolItem[] = [
       createItem("BIG1", 50000),
       createItem("BIG2", 49000),
-      createItem("SMALL1", 5), // 全体(約99060)の0.005%
+      createItem("SMALL1", 5),
       createItem("SMALL2", 30),
       createItem("SMALL3", 25),
     ]
 
     const result = transformDividendsToChartData(data)
 
-    // 大口2件 + その他 = 3件
     expect(result).toHaveLength(3)
     const other = result[result.length - 1]
     expect(other.symbol).toBe("OTHER")
     expect(other.name).toBe("その他")
-    // 5 + 30 + 25 = 60
     expect(other.value).toBe(60)
   })
 
@@ -56,7 +53,6 @@ describe("transformDividendsToChartData", () => {
   })
 
   it("件数が多くても1%以上の銘柄はすべて個別表示する", () => {
-    // 均等な50銘柄（各2% > 1%）はすべて個別表示される
     const data: DividendBySymbolItem[] = Array.from({ length: 50 }, (_, i) =>
       createItem(`STOCK${i + 1}`, 1000)
     )
@@ -91,5 +87,49 @@ describe("transformDividendsToChartData", () => {
 
   it("undefinedが渡された場合に空配列を返す", () => {
     expect(transformDividendsToChartData(undefined)).toEqual([])
+  })
+})
+
+describe("buildPeriodOptions", () => {
+  it("配当がある月のみを降順で返す", () => {
+    const data: MonthlyDividendItem[] = [
+      { year: 2024, month: 1, total_dividend: 1000 },
+      { year: 2024, month: 2, total_dividend: 0 },
+      { year: 2024, month: 3, total_dividend: 500 },
+    ]
+
+    const result = buildPeriodOptions(data)
+
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ value: "2024-03", label: "2024年3月" })
+    expect(result[1]).toEqual({ value: "2024-01", label: "2024年1月" })
+  })
+
+  it("undefinedが渡された場合に空配列を返す", () => {
+    expect(buildPeriodOptions(undefined)).toEqual([])
+  })
+
+  it("全ての月の配当が0の場合に空配列を返す", () => {
+    const data: MonthlyDividendItem[] = [
+      { year: 2024, month: 1, total_dividend: 0 },
+      { year: 2024, month: 2, total_dividend: 0 },
+    ]
+
+    expect(buildPeriodOptions(data)).toEqual([])
+  })
+
+  it("年をまたいで降順でソートされる", () => {
+    const data: MonthlyDividendItem[] = [
+      { year: 2023, month: 12, total_dividend: 100 },
+      { year: 2024, month: 6, total_dividend: 200 },
+      { year: 2024, month: 1, total_dividend: 300 },
+    ]
+
+    const result = buildPeriodOptions(data)
+
+    expect(result).toHaveLength(3)
+    expect(result[0].value).toBe("2024-06")
+    expect(result[1].value).toBe("2024-01")
+    expect(result[2].value).toBe("2023-12")
   })
 })

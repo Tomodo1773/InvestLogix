@@ -1,16 +1,18 @@
-import { useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"
+import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import type { DividendBySymbolItem } from "@/lib/api/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { getDividendAllocation } from "@/lib/api/client"
+import type { DividendBySymbolItem, MonthlyDividendItem } from "@/lib/api/types"
 import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
 import { formatCurrency } from "@/lib/format"
 
 interface DividendAllocationChartProps {
-  data: DividendBySymbolItem[] | undefined
-  isLoading: boolean
+  monthlyDividends: MonthlyDividendItem[] | undefined
+  refreshSignal: number
 }
 
-// 累計配当に占める割合がこの値未満の銘柄を「その他」に集約する
 const OTHER_THRESHOLD_RATIO = 0.01
 
 interface ChartDataItem {
@@ -19,18 +21,11 @@ interface ChartDataItem {
   value: number
 }
 
-/**
- * 銘柄別配当データをドーナツグラフ用に変換する
- * 累計配当に占める割合が OTHER_THRESHOLD_RATIO 未満の銘柄を「その他」に集約し、
- * しきい値以上の銘柄はすべて金額降順で個別表示する。
- * @param dividends 銘柄別配当データ
- */
 export function transformDividendsToChartData(
   dividends: DividendBySymbolItem[] | undefined
 ): ChartDataItem[] {
   if (!dividends || dividends.length === 0) return []
 
-  // 配当額が正の銘柄のみを金額降順でソート
   const sorted = dividends
     .map((item) => ({
       symbol: item.symbol,
@@ -43,7 +38,6 @@ export function transformDividendsToChartData(
   const total = sorted.reduce((sum, item) => sum + item.value, 0)
   if (total === 0) return []
 
-  // しきい値以上は個別表示、しきい値未満は「その他」に集約
   const result: ChartDataItem[] = []
   let othersTotal = 0
   for (const item of sorted) {
@@ -61,11 +55,42 @@ export function transformDividendsToChartData(
   return result
 }
 
-export function DividendAllocationChart({ data, isLoading }: DividendAllocationChartProps) {
-  const chartData = useMemo(() => transformDividendsToChartData(data), [data])
+export function buildPeriodOptions(
+  monthlyDividends: MonthlyDividendItem[] | undefined
+): { value: string; label: string }[] {
+  if (!monthlyDividends) return []
+  return monthlyDividends
+    .filter((m) => m.total_dividend > 0)
+    .sort((a, b) => (b.year !== a.year ? b.year - a.year : b.month - a.month))
+    .map((m) => ({
+      value: `${m.year}-${String(m.month).padStart(2, "0")}`,
+      label: `${m.year}年${m.month}月`,
+    }))
+}
 
-  // 累計配当（ドーナツ中央およびパーセンテージ表示用）
+export function DividendAllocationChart({ monthlyDividends, refreshSignal }: DividendAllocationChartProps) {
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all")
+
+  const swrParams = useMemo(() => {
+    if (selectedPeriod === "all") return undefined
+    const [y, m] = selectedPeriod.split("-")
+    return { year: Number(y), month: Number(m) }
+  }, [selectedPeriod])
+
+  const fetcher = useCallback(() => getDividendAllocation(swrParams), [swrParams])
+
+  const { data, isLoading } = useSWR(["dividends-by-symbol", selectedPeriod, refreshSignal], fetcher)
+
+  const chartData = useMemo(() => transformDividendsToChartData(data), [data])
   const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData])
+
+  const periodOptions = useMemo(() => buildPeriodOptions(monthlyDividends), [monthlyDividends])
+
+  const centerLabel = useMemo(() => {
+    if (selectedPeriod === "all") return "累計配当"
+    const [y, m] = selectedPeriod.split("-")
+    return `${Number(y)}年${Number(m)}月`
+  }, [selectedPeriod])
 
   if (isLoading) {
     return (
@@ -82,8 +107,21 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle>銘柄別配当割合</CardTitle>
+        <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">通算</SelectItem>
+            {periodOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </CardHeader>
       <CardContent>
         {!chartData.length ? (
@@ -140,9 +178,8 @@ export function DividendAllocationChart({ data, isLoading }: DividendAllocationC
                 />
               </PieChart>
             </ResponsiveContainer>
-            {/* ドーナツ中央に累計配当金額を表示 */}
             <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-xs text-muted-foreground">累計配当</span>
+              <span className="text-xs text-muted-foreground">{centerLabel}</span>
               <span className="text-xl font-bold">{formatCurrency(total)}</span>
             </div>
           </div>

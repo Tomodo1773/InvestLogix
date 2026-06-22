@@ -157,11 +157,15 @@ class DividendService:
 
         return monthly_dividends
 
-    async def get_dividends_by_symbol(self, user_id: int) -> List[dict]:
+    async def get_dividends_by_symbol(
+        self, user_id: int, year: int | None = None, month: int | None = None
+    ) -> List[dict]:
         """銘柄別の配当金集計を取得する（税・手数料控除後の純額、金額降順）
 
         Args:
             user_id: ユーザーID
+            year: 集計対象の年（monthと同時指定必須）
+            month: 集計対象の月（yearと同時指定必須）
 
         Returns:
             List[dict]: 銘柄ごとの配当金集計のリスト（銘柄コード・銘柄名・配当金額）
@@ -180,9 +184,13 @@ class DividendService:
             )
             .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
             .where(models.Dividend.user_id == user_id)
-            .group_by(models.Dividend.symbol, models.Stock.name)
-            .order_by(total_dividend.desc())
         )
+
+        if year is not None and month is not None:
+            jst_year, jst_month = get_jst_extract_columns(models.Dividend.payment_date)
+            query = query.where(jst_year == year, jst_month == month)
+
+        query = query.group_by(models.Dividend.symbol, models.Stock.name).order_by(total_dividend.desc())
 
         result = await self.db.execute(query)
         dividends_by_symbol = [

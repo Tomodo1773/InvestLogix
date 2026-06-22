@@ -72,14 +72,20 @@ async def get_monthly_dividends(
 
 @router.get("/by-symbol", response_model=List[DividendBySymbol])
 async def get_dividends_by_symbol(
-    current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
+    current_user: Annotated[User, Depends(get_current_user)],
+    year: Optional[int] = Query(None, ge=2000, le=2100),
+    month: Optional[int] = Query(None, ge=1, le=12),
+    db: AsyncSession = Depends(get_db_for_user),
 ):
     """
     銘柄別の配当金集計を取得する
     - 成功時: 銘柄ごとの配当金集計のリスト（銘柄コード・銘柄名・配当金額）を金額降順で返却
+    - year/monthを指定すると特定月のみ集計（両方同時指定が必須）
     """
+    if (year is None) != (month is None):
+        raise HTTPException(status_code=422, detail="year and month must be specified together")
     dividend_service = DividendService(db)
-    return await dividend_service.get_dividends_by_symbol(current_user.user_id)
+    return await dividend_service.get_dividends_by_symbol(current_user.user_id, year, month)
 
 
 @router.post("/import/preview", response_model=DividendImportPreviewResponse)

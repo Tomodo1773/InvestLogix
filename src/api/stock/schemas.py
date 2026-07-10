@@ -174,6 +174,11 @@ class HoldingNoteUpdate(BaseModel):
     note: Optional[str] = Field(None, max_length=2000)
 
 
+class AccountHolding(BaseModel):
+    account_type: AccountType
+    quantity: float
+
+
 class Holding(HoldingBase):
     user_id: int
     last_updated: datetime
@@ -182,6 +187,7 @@ class Holding(HoldingBase):
     currency: Optional[str] = None
     country: Optional[str] = None
     sector_name: Optional[str] = None
+    account_holdings: List[AccountHolding] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("last_updated")

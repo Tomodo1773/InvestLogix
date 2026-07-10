@@ -1,6 +1,8 @@
+import { CircleCheck, CircleMinus } from "lucide-react"
 import { Link } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
 import {
@@ -10,6 +12,7 @@ import {
   formatPercentOrDash,
   getPLColorClass,
 } from "@/lib/format"
+import { getLotStatusSortValue, getUnitLotGroups, hasUnitLot, isJapaneseStock } from "@/lib/holding-lot"
 
 interface HoldingsTableProps {
   holdings: Holding[] | undefined
@@ -20,11 +23,47 @@ interface HoldingsTableProps {
 type SortKey =
   | "symbol"
   | "quantity"
+  | "lot_status"
   | "current_price"
   | "market_value"
   | "total_pl"
   | "total_pl_percentage"
   | "weekly_change"
+
+function UnitLotIndicator({ holding }: { holding: Holding }) {
+  if (!isJapaneseStock(holding)) {
+    return <span className="text-muted-foreground">-</span>
+  }
+
+  const hasUnit = hasUnitLot(holding)
+  const unitLotGroups = getUnitLotGroups(holding)
+  const accountBreakdown =
+    unitLotGroups.length > 0
+      ? unitLotGroups.map((group) => `${group.label}: ${group.quantity.toLocaleString()}株`).join(" / ")
+      : "口座別数量なし"
+  const label = hasUnit ? `単元あり。${accountBreakdown}` : `単元未満。${accountBreakdown}`
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          aria-label={label}
+          role="img"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground"
+        >
+          {hasUnit ? (
+            <CircleCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+          ) : (
+            <CircleMinus className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          )}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top">
+        <p>{label}</p>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
 
 export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: HoldingsTableProps) {
   const { sortKey, sortDirection, handleSort, getSortIcon } = useTableSort<SortKey>({
@@ -46,6 +85,10 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
         case "quantity":
           aValue = a.quantity
           bValue = b.quantity
+          break
+        case "lot_status":
+          aValue = getLotStatusSortValue(a)
+          bValue = getLotStatusSortValue(b)
           break
         case "current_price":
           aValue = a.current_price ?? 0
@@ -109,6 +152,15 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                     <div className="flex items-center justify-end">
                       株数
                       {getSortIcon("quantity")}
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="w-16 cursor-pointer select-none text-center"
+                    onClick={() => handleSort("lot_status")}
+                  >
+                    <div className="flex items-center justify-center">
+                      単元
+                      {getSortIcon("lot_status")}
                     </div>
                   </TableHead>
                   <TableHead
@@ -180,6 +232,9 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                           </Link>
                         </TableCell>
                         <TableCell className="text-right">{holding.quantity.toLocaleString()}</TableCell>
+                        <TableCell className="text-center">
+                          <UnitLotIndicator holding={holding} />
+                        </TableCell>
                         <TableCell className="text-right">
                           <div>
                             <div>
@@ -222,7 +277,7 @@ export function HoldingsTable({ holdings, isLoading, weeklyChangeMap }: Holdings
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       保有銘柄がありません
                     </TableCell>
                   </TableRow>

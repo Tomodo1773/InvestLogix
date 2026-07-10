@@ -37,6 +37,7 @@ async def test_recalculate_holding_pl_japanese_stock(
     assert data["unrealized_pl_percentage"] is not None
     assert data["total_pl"] is not None
     assert data["total_pl_percentage"] is not None
+    assert data["account_holdings"] == [{"account_type": "NISA(成長投資枠)", "quantity": 100.0}]
 
 
 @pytest.mark.asyncio
@@ -77,7 +78,11 @@ async def test_recalculate_holding_pl_us_stock(
 
 @pytest.mark.asyncio
 async def test_list_holdings(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient,
+    db_session: AsyncSession,
+    auth_token: str,
+    setup_japanese_stock_data,
+    create_transaction,
 ):
     """保有銘柄一覧取得を確認するテスト
 
@@ -91,6 +96,31 @@ async def test_list_holdings(
         auth_token: 認証トークン
         setup_japanese_stock_data: 日本株のテストデータ
     """
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "buy",
+            "quantity": "30.0",
+            "price": "3000.0",
+            "account_type": "特定",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-01-02T00:00:00",
+        }
+    )
+    await create_transaction(
+        {
+            "symbol": "8058",
+            "transaction_type": "sell",
+            "quantity": "10.0",
+            "price": "3200.0",
+            "account_type": "特定",
+            "fee": "0.0",
+            "tax": "0.0",
+            "transaction_date": "2024-01-03T00:00:00",
+        }
+    )
+
     # 保有銘柄一覧を取得
     response = await client.get("/api/v1/holdings/")
 
@@ -98,12 +128,17 @@ async def test_list_holdings(
     assert response.status_code == 200
     data = response.json()
     assert len(data) > 0
-    assert data[0]["stock_name"] == "三菱商事"
-    assert data[0]["security_type"] == "STOCK"
-    assert data[0]["currency"] == "JPY"
+    target = next(h for h in data if h["symbol"] == "8058")
+    assert target["stock_name"] == "三菱商事"
+    assert target["security_type"] == "STOCK"
+    assert target["currency"] == "JPY"
     # JPY建ての日本株は country=="JP"、JQuants から取得した 17 業種名が sector_name に入る
-    assert data[0]["country"] == "JP"
-    assert data[0]["sector_name"] == "商社・卸売"
+    assert target["country"] == "JP"
+    assert target["sector_name"] == "商社・卸売"
+    assert target["account_holdings"] == [
+        {"account_type": "NISA(成長投資枠)", "quantity": 100.0},
+        {"account_type": "特定", "quantity": 20.0},
+    ]
 
 
 @pytest.mark.asyncio

@@ -10,6 +10,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     UniqueConstraint,
@@ -216,6 +217,8 @@ class Transaction(Base):
 
     user = relationship("User", back_populates="transactions")
     stock = relationship("Stock", back_populates="transactions")
+
+    __table_args__ = (Index("ix_transactions_user_symbol_account_type", "user_id", "symbol", "account_type"),)
 
 
 class PortfolioHistory(Base):

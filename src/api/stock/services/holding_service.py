@@ -1,13 +1,13 @@
 from typing import List, NamedTuple, Optional
 
 from loguru import logger
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from .. import models
 from ..models import Holding, Stock
-from ..schemas import SecurityType
+from ..schemas import AccountType, SecurityType
 from ..services import alphavantage_service, investment_trust_service
 from .stock_price_fetcher import (
     fetch_japan_stock_prices,
@@ -384,6 +384,7 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
     else:
         logger.info("Holdingsを更新できませんでした action=update user_id={} symbol={}", user_id, symbol)
 
+    await enrich_holdings_with_account_holdings(db, user_id, [holding])
     return holding
 
 
@@ -484,6 +485,58 @@ def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[st
     return country, sector_name
 
 
+async def _get_account_holdings_by_symbol(
+    db: AsyncSession, user_id: int, symbols: list[str]
+) -> dict[str, list[dict[str, float | str]]]:
+    if not symbols:
+        return {}
+
+    quantity = func.coalesce(models.Transaction.adjusted_quantity, models.Transaction.quantity)
+    signed_quantity = case(
+        (models.Transaction.transaction_type == "buy", quantity),
+        else_=-quantity,
+    )
+    query = (
+        select(
+            models.Transaction.symbol,
+            models.Transaction.account_type,
+            func.sum(signed_quantity).label("quantity"),
+        )
+        .where(
+            models.Transaction.user_id == user_id,
+            models.Transaction.symbol.in_(symbols),
+        )
+        .group_by(models.Transaction.symbol, models.Transaction.account_type)
+    )
+    result = await db.execute(query)
+
+    account_holdings_by_symbol: dict[str, list[dict[str, float | str]]] = {}
+    for row in result:
+        account_quantity = float(row.quantity or 0)
+        if account_quantity <= 0:
+            continue
+        account_holdings_by_symbol.setdefault(row.symbol, []).append(
+            {"account_type": row.account_type, "quantity": account_quantity}
+        )
+
+    account_type_order = [account_type.value for account_type in AccountType]
+    order_by_account_type = {account_type: index for index, account_type in enumerate(account_type_order)}
+    for account_holdings in account_holdings_by_symbol.values():
+        account_holdings.sort(key=lambda item: order_by_account_type.get(str(item["account_type"]), 999))
+    return account_holdings_by_symbol
+
+
+async def enrich_holdings_with_account_holdings(
+    db: AsyncSession, user_id: int, holdings: list[Holding]
+) -> list[Holding]:
+    account_holdings_by_symbol = await _get_account_holdings_by_symbol(
+        db, user_id, [holding.symbol for holding in holdings]
+    )
+    for holding in holdings:
+        holding.account_holdings = account_holdings_by_symbol.get(holding.symbol, [])
+    return holdings
+
+
 async def list_holdings(db: AsyncSession, user_id: int, symbol: Optional[str] = None) -> List[Holding]:
     """
     ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨、国、セクターと共に取得します。
@@ -517,6 +570,7 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: Optional[str] = 
         holding.security_type = holding.stock.security_type
         holding.currency = holding.stock.currency
         holding.country, holding.sector_name = _derive_country_and_sector(holding.stock)
+    await enrich_holdings_with_account_holdings(db, user_id, list(holdings))
     logger.info(
         "Holdingsを取得しました action=select user_id={} symbol={} count={}",
         user_id,

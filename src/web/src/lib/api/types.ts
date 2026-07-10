@@ -62,6 +62,12 @@ export interface Holding {
   country: "JP" | "US" | "OTHER" | null
   sector_name: string | null
   note: string | null
+  account_holdings: AccountHolding[]
+}
+
+interface AccountHolding {
+  account_type: AccountType
+  quantity: number
 }
 
 // Transactions

@@ -28,6 +28,7 @@ export function createHolding(overrides: Partial<Holding> = {}): Holding {
     country: null,
     sector_name: null,
     note: null,
+    account_holdings: [],
     ...overrides,
   }
 }

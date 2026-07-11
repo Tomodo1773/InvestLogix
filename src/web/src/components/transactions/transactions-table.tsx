@@ -1,3 +1,4 @@
+import { useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TablePagination } from "@/components/ui/table-pagination"
@@ -31,6 +32,7 @@ function getDisplayValues(transaction: Transaction, mode: TransactionsTableMode)
 }
 
 export function TransactionsTable({ transactions, isLoading, mode = "all" }: TransactionsTableProps) {
+  const tableRef = useRef<HTMLDivElement>(null)
   const {
     sortKey,
     sortDirection,
@@ -77,8 +79,23 @@ export function TransactionsTable({ transactions, isLoading, mode = "all" }: Tra
       : (bValue as number) - (aValue as number)
   })
 
-  const { currentPage, totalPages, paginatedData, handlePageChange, hasNextPage, hasPreviousPage } =
-    usePagination(sortedTransactions, PAGE_SIZE)
+  const {
+    currentPage,
+    totalPages,
+    paginatedData,
+    handlePageChange: changePage,
+    hasNextPage,
+    hasPreviousPage,
+  } = usePagination(sortedTransactions, PAGE_SIZE, { scrollToTop: mode === "all" })
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return
+
+    changePage(page)
+    if (mode === "holding") {
+      tableRef.current?.scrollIntoView({ block: "start" })
+    }
+  }
 
   const handleSort = (key: SortKey) => {
     baseSortHandler(key)
@@ -89,7 +106,7 @@ export function TransactionsTable({ transactions, isLoading, mode = "all" }: Tra
   const skeletonCount = mode === "holding" ? 3 : PAGE_SIZE
 
   return (
-    <Card>
+    <Card ref={tableRef}>
       <CardHeader>
         <CardTitle>取引履歴</CardTitle>
       </CardHeader>

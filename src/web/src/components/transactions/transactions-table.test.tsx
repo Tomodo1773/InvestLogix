@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { userEvent } from "@testing-library/user-event"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { TransactionWithPL } from "@/lib/api/types"
 import { TransactionsTable } from "./transactions-table"
 
@@ -22,6 +23,25 @@ const transaction: TransactionWithPL = {
   unrealized_pl: 20000,
   unrealized_pl_percentage: 20,
 }
+
+const scrollIntoViewMock = vi.fn()
+const scrollToMock = vi.fn()
+
+beforeEach(() => {
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+    value: scrollIntoViewMock,
+    writable: true,
+  })
+  Object.defineProperty(window, "scrollTo", {
+    value: scrollToMock,
+    writable: true,
+  })
+})
+
+afterEach(() => {
+  scrollIntoViewMock.mockClear()
+  scrollToMock.mockClear()
+})
 
 describe("TransactionsTable", () => {
   it("取引履歴ページでは共通列と銘柄列を表示する", () => {
@@ -55,5 +75,19 @@ describe("TransactionsTable", () => {
     expect(cells[4]).toHaveTextContent("500")
     expect(cells[5]).toHaveTextContent("100,000")
     expect(cells[8]).toHaveTextContent("+20.0%")
+  })
+
+  it("銘柄詳細のページ送りでは取引テーブルへスクロールする", async () => {
+    const user = userEvent.setup()
+    const transactions = Array.from({ length: 21 }, (_, index) => ({
+      ...transaction,
+      transaction_id: index + 1,
+    }))
+    render(<TransactionsTable transactions={transactions} isLoading={false} mode="holding" />)
+
+    await user.click(screen.getByLabelText("Go to next page"))
+
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: "start" })
+    expect(scrollToMock).not.toHaveBeenCalled()
   })
 })

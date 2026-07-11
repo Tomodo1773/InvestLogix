@@ -56,6 +56,17 @@ describe("usePagination", () => {
     expect(scrollToMock).toHaveBeenCalledWith(0, 0)
   })
 
+  it("scrollToTopがfalseの場合は画面先頭へスクロールしない", () => {
+    const { result } = renderHook(() => usePagination(testData, 10, { scrollToTop: false }))
+
+    act(() => {
+      result.current.handlePageChange(2)
+    })
+
+    expect(result.current.currentPage).toBe(2)
+    expect(scrollToMock).not.toHaveBeenCalled()
+  })
+
   it("hasNextPage / hasPreviousPageが正しく判定されること", () => {
     const { result } = renderHook(() => usePagination(testData, 10))
 

@@ -9,7 +9,15 @@ interface UsePaginationResult<T> {
   hasPreviousPage: boolean
 }
 
-export function usePagination<T>(data: T[] | undefined, pageSize: number): UsePaginationResult<T> {
+interface UsePaginationOptions {
+  scrollToTop?: boolean
+}
+
+export function usePagination<T>(
+  data: T[] | undefined,
+  pageSize: number,
+  { scrollToTop = true }: UsePaginationOptions = {}
+): UsePaginationResult<T> {
   const [currentPage, setCurrentPage] = useState(1)
 
   // データが undefined の場合は空配列として扱う
@@ -36,8 +44,9 @@ export function usePagination<T>(data: T[] | undefined, pageSize: number): UsePa
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page)
-      // ページトップにスクロール
-      window.scrollTo(0, 0)
+      if (scrollToTop) {
+        window.scrollTo(0, 0)
+      }
     }
   }
 

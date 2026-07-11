@@ -2,20 +2,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TablePagination } from "@/components/ui/table-pagination"
 import { useTableSort } from "@/hooks/use-table-sort"
-import type { Transaction } from "@/lib/api/types"
-import { formatCurrency, formatDate } from "@/lib/format"
+import type { Transaction, TransactionWithPL } from "@/lib/api/types"
+import { formatCurrency, formatDate, formatPercent, getPLColorClass } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
+
+type TransactionsTableMode = "all" | "holding"
 
 interface TransactionsTableProps {
   transactions: Transaction[] | undefined
   isLoading: boolean
+  mode?: TransactionsTableMode
 }
 
 type SortKey = "symbol" | "transaction_date" | "quantity" | "price" | "total_amount"
 
 const PAGE_SIZE = 20
 
-export function TransactionsTable({ transactions, isLoading }: TransactionsTableProps) {
+function isTransactionWithPL(transaction: Transaction): transaction is TransactionWithPL {
+  return "unrealized_pl_percentage" in transaction
+}
+
+function getDisplayValues(transaction: Transaction, mode: TransactionsTableMode) {
+  const quantity =
+    mode === "holding" ? (transaction.adjusted_quantity ?? transaction.quantity) : transaction.quantity
+  const price = mode === "holding" ? (transaction.adjusted_price ?? transaction.price) : transaction.price
+
+  return { quantity, price, totalAmount: quantity * price }
+}
+
+export function TransactionsTable({ transactions, isLoading, mode = "all" }: TransactionsTableProps) {
   const {
     sortKey,
     sortDirection,
@@ -40,16 +55,16 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
         bValue = new Date(b.transaction_date).getTime()
         break
       case "quantity":
-        aValue = a.quantity
-        bValue = b.quantity
+        aValue = getDisplayValues(a, mode).quantity
+        bValue = getDisplayValues(b, mode).quantity
         break
       case "price":
-        aValue = a.price
-        bValue = b.price
+        aValue = getDisplayValues(a, mode).price
+        bValue = getDisplayValues(b, mode).price
         break
       case "total_amount":
-        aValue = a.quantity * a.price
-        bValue = b.quantity * b.price
+        aValue = getDisplayValues(a, mode).totalAmount
+        bValue = getDisplayValues(b, mode).totalAmount
         break
     }
 
@@ -70,10 +85,8 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
     handlePageChange(1)
   }
 
-  const getAccountTypeLabel = (accountType: string) => {
-    // バックエンドから返される値をそのまま表示
-    return accountType
-  }
+  const columnCount = mode === "holding" ? 9 : 7
+  const skeletonCount = mode === "holding" ? 3 : PAGE_SIZE
 
   return (
     <Card>
@@ -83,7 +96,7 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
       <CardContent>
         {isLoading ? (
           <div className="space-y-2">
-            {[...Array(20)].map((_, i) => (
+            {[...Array(skeletonCount)].map((_, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton loading elements
               <div key={`skeleton-${i}`} className="h-12 animate-pulse rounded bg-muted" />
             ))}
@@ -102,12 +115,14 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                       {getSortIcon("transaction_date")}
                     </div>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => handleSort("symbol")}>
-                    <div className="flex items-center">
-                      銘柄名/コード
-                      {getSortIcon("symbol")}
-                    </div>
-                  </TableHead>
+                  {mode === "all" ? (
+                    <TableHead className="cursor-pointer select-none" onClick={() => handleSort("symbol")}>
+                      <div className="flex items-center">
+                        銘柄名/コード
+                        {getSortIcon("symbol")}
+                      </div>
+                    </TableHead>
+                  ) : null}
                   <TableHead>取引種別</TableHead>
                   <TableHead>口座</TableHead>
                   <TableHead
@@ -137,23 +152,37 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                       {getSortIcon("total_amount")}
                     </div>
                   </TableHead>
+                  {mode === "holding" ? (
+                    <>
+                      <TableHead className="text-right">手数料</TableHead>
+                      <TableHead className="text-right">税金</TableHead>
+                      <TableHead className="text-right">損益率</TableHead>
+                    </>
+                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedData && paginatedData.length > 0 ? (
                   paginatedData.map((transaction) => {
-                    const totalAmount = transaction.quantity * transaction.price
+                    const { quantity, price, totalAmount } = getDisplayValues(transaction, mode)
                     const isBuy = transaction.transaction_type === "buy"
+                    const unrealizedPlPercentage = isTransactionWithPL(transaction)
+                      ? transaction.unrealized_pl_percentage
+                      : null
 
                     return (
                       <TableRow key={transaction.transaction_id}>
                         <TableCell>{formatDate(transaction.transaction_date)}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{transaction.stock_name || transaction.symbol}</div>
-                            <div className="text-sm text-muted-foreground">{transaction.symbol}</div>
-                          </div>
-                        </TableCell>
+                        {mode === "all" ? (
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">
+                                {transaction.stock_name || transaction.symbol}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{transaction.symbol}</div>
+                            </div>
+                          </TableCell>
+                        ) : null}
                         <TableCell>
                           <span
                             className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -163,16 +192,29 @@ export function TransactionsTable({ transactions, isLoading }: TransactionsTable
                             {isBuy ? "買付" : "売却"}
                           </span>
                         </TableCell>
-                        <TableCell>{getAccountTypeLabel(transaction.account_type)}</TableCell>
-                        <TableCell className="text-right">{transaction.quantity.toLocaleString()}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(transaction.price)}</TableCell>
+                        <TableCell>{transaction.account_type}</TableCell>
+                        <TableCell className="text-right">{quantity.toLocaleString()}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(price)}</TableCell>
                         <TableCell className="text-right">{formatCurrency(totalAmount)}</TableCell>
+                        {mode === "holding" ? (
+                          <>
+                            <TableCell className="text-right">{formatCurrency(transaction.fee)}</TableCell>
+                            <TableCell className="text-right">{formatCurrency(transaction.tax)}</TableCell>
+                            <TableCell
+                              className={`text-right font-medium ${getPLColorClass(unrealizedPlPercentage)}`}
+                            >
+                              {isBuy && unrealizedPlPercentage !== null
+                                ? formatPercent(unrealizedPlPercentage)
+                                : "-"}
+                            </TableCell>
+                          </>
+                        ) : null}
                       </TableRow>
                     )
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={columnCount} className="text-center text-muted-foreground">
                       取引履歴がありません
                     </TableCell>
                   </TableRow>

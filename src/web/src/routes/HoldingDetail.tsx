@@ -6,9 +6,9 @@ import { HoldingDividendsSection } from "@/components/holding-detail/HoldingDivi
 import { HoldingNoteSection } from "@/components/holding-detail/HoldingNoteSection"
 import { HoldingStockSplitsSection } from "@/components/holding-detail/HoldingStockSplitsSection"
 import { HoldingSummarySection } from "@/components/holding-detail/HoldingSummarySection"
-import { HoldingTransactionsSection } from "@/components/holding-detail/HoldingTransactionsSection"
 import { AppLayout } from "@/components/layout/app-layout"
 import { PriceChart } from "@/components/stock/price-chart"
+import { TransactionsTable } from "@/components/transactions/transactions-table"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -129,9 +129,10 @@ function HoldingDetailContent() {
         />
 
         {/* 取引履歴 */}
-        <HoldingTransactionsSection
+        <TransactionsTable
           transactions={transactions ?? undefined}
           isLoading={isLoadingTransactions}
+          mode="holding"
         />
 
         {/* 配当金履歴 */}

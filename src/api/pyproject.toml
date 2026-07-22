@@ -7,7 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.139.0",
     "sqlalchemy>=2.0.50",
-    "uvicorn>=0.50.0",
+    "uvicorn>=0.51.0",
     "python-jose[cryptography]>=3.5.0",
     "pwdlib[argon2]>=0.3.0",
     "pydantic>=2.13.4",
@@ -25,8 +25,8 @@ dependencies = [
     "psycopg2-binary>=2.9.12",
     "psycopg>=3.3.4",
     "loguru>=0.7.3",
-    "setuptools>=82.0.1",
-    "openai>=2.44.0",
+    "setuptools>=83.0.0",
+    "openai>=2.45.0",
 ]
 
 [tool.uv]
@@ -34,7 +34,7 @@ package = false
 exclude-newer = "7 days"
 
 [build-system]
-requires = ["setuptools>=82.0.1"]
+requires = ["setuptools>=83.0.0"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]

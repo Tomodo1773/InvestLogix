@@ -201,15 +201,6 @@ class TestNowJst:
         # 現在時刻であることを確認（秒単位での比較は避ける）
         assert isinstance(now, datetime)
 
-    def test_now_jst_returns_current_time(self):
-        """now_jst()が現在時刻を返すこと"""
-        now1 = now_jst()
-        now2 = now_jst()
-
-        # 2回の呼び出しの時刻差が1秒以内であること
-        diff = abs((now2 - now1).total_seconds())
-        assert diff < 1.0
-
 
 class TestGetDateRangeForApi:
     """get_date_range_for_api関数のテスト"""

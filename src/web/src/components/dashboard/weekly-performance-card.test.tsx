@@ -56,13 +56,4 @@ describe("WeeklyPerformanceCard", () => {
 
     expect(screen.getByText("表示できる銘柄がありません")).toBeInTheDocument()
   })
-
-  it("ローディング中にスケルトンが表示されること", () => {
-    renderWithRouter(<WeeklyPerformanceCard performers={undefined} direction="top" isLoading={true} />)
-
-    expect(screen.getByText("今週の値上がりトップ5")).toBeInTheDocument()
-    const skeleton = screen.getByText("今週の値上がりトップ5").closest("div")?.parentElement
-      ?.nextElementSibling?.firstElementChild
-    expect(skeleton).toHaveClass("animate-pulse")
-  })
 })

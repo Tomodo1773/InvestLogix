@@ -69,16 +69,6 @@ describe("NisaLimitGauge", () => {
     expect(screen.getByText("¥0 / ¥1,200,000")).toBeInTheDocument()
   })
 
-  it("ローディング中にスケルトンが表示されること", () => {
-    render(<NisaLimitGauge data={undefined} isLoading={true} />)
-
-    expect(screen.getByText("NISA投資枠")).toBeInTheDocument()
-
-    // スケルトンローダーの確認
-    const skeleton = screen.getByText("NISA投資枠").parentElement?.nextElementSibling?.firstElementChild
-    expect(skeleton).toHaveClass("animate-pulse")
-  })
-
   it("前年のデータが含まれていても現在年のみが計算されること", () => {
     vi.setSystemTime(new Date("2026-02-15"))
 

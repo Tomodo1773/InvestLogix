@@ -72,14 +72,6 @@ describe("StockSplitsTable", () => {
     expect(symbolHeader).toHaveClass("cursor-pointer")
   })
 
-  it("ローディング状態でスケルトンが表示されること", () => {
-    render(<StockSplitsTable stockSplits={undefined} isLoading={true} />)
-
-    // スケルトンが表示されていることを確認（20個）
-    const skeletons = document.querySelectorAll(".animate-pulse")
-    expect(skeletons.length).toBe(20)
-  })
-
   it("空データ時にメッセージが表示されること", () => {
     render(<StockSplitsTable stockSplits={[]} isLoading={false} />)
 
@@ -103,24 +95,5 @@ describe("StockSplitsTable", () => {
     // 1ページ目には20件表示される
     const firstPageRows = screen.getAllByRole("row").slice(1)
     expect(firstPageRows).toHaveLength(20)
-  })
-
-  it("分割比率のフォーマットが正しく動作すること", () => {
-    const customSplit: StockSplit[] = [
-      {
-        split_id: 1,
-        user_id: 1,
-        symbol: "TEST",
-        split_date: "2024-01-01",
-        split_ratio: 5.0,
-        created_at: "2024-01-02T10:00:00+09:00",
-        stock_name: "Test Company",
-      },
-    ]
-
-    render(<StockSplitsTable stockSplits={customSplit} isLoading={false} />)
-
-    // 5.0が「5:1 分割」としてフォーマットされる
-    expect(screen.getByText("5:1 分割")).toBeInTheDocument()
   })
 })

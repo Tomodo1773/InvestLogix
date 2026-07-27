@@ -14,7 +14,7 @@ jobs:
       api: ${{ steps.changes.outputs.api }}
       web: ${{ steps.changes.outputs.web }}
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -42,18 +42,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.0
+        uses: github/codeql-action/init@v4.37.1
         with:
           languages: 'actions'
           queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.0
+        uses: github/codeql-action/analyze@v4.37.1
         with:
           category: "/language:actions"
 
@@ -69,18 +69,18 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.0
+        uses: github/codeql-action/init@v4.37.1
         with:
           languages: 'python'
           queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.0
+        uses: github/codeql-action/analyze@v4.37.1
         with:
           category: "/language:python"
 
@@ -96,17 +96,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4.37.0
+        uses: github/codeql-action/init@v4.37.1
         with:
           languages: 'javascript-typescript'
           queries: security-and-quality
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v4.37.0
+        uses: github/codeql-action/analyze@v4.37.1
         with:
           category: "/language:javascript-typescript"

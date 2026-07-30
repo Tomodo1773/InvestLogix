@@ -1,11 +1,12 @@
 import { Plus, RefreshCw } from "lucide-react"
 import { useState } from "react"
-import useSWR from "swr"
+import useSWR, { mutate as revalidate } from "swr"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { StockSplitForm } from "@/components/stock-splits/stock-split-form"
 import { StockSplitsTable } from "@/components/stock-splits/stock-splits-table"
 import { Button } from "@/components/ui/button"
 import { getStockSplits } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function StockSplits() {
@@ -16,7 +17,7 @@ export default function StockSplits() {
     data: stockSplits,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/stock-splits/" : null, () => getStockSplits())
+  } = useSWR(isAuthenticated ? SWR_KEYS.stockSplits : null, () => getStockSplits())
 
   const handleRefresh = () => {
     mutate()
@@ -25,6 +26,13 @@ export default function StockSplits() {
   const handleCreated = () => {
     setIsFormOpen(false)
     mutate()
+    // 分割登録は過去取引の調整値を再計算するため、取引と保有状況のキャッシュも古くなる。
+    // 銘柄別のキー（?symbol=... 付き）も落とすので前方一致で判定する
+    revalidate(
+      (key) =>
+        typeof key === "string" &&
+        (key.startsWith(SWR_KEYS.transactions) || key.startsWith(SWR_KEYS.holdings))
+    )
   }
 
   return (

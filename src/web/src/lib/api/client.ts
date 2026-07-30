@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/lib/stores/auth-store"
 import type {
   Dividend,
   DividendBySymbolItem,
@@ -35,9 +36,12 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     },
   })
 
+  // 401はセッション切れ。ここでは認証状態を落とすだけにして、
+  // ログイン画面への遷移はルータを持つAuthProviderに任せる
+  // （window.location だとフルリロードになりSPAの状態を失う）
   if (response.status === 401) {
-    window.location.href = "/login"
-    throw new Error("Unauthorized")
+    useAuthStore.getState().setUser(null)
+    throw new Error("セッションの有効期限が切れました")
   }
 
   if (!response.ok) {

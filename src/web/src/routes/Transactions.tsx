@@ -4,6 +4,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { TransactionsTable } from "@/components/transactions/transactions-table"
 import { Button } from "@/components/ui/button"
 import { getTransactions } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Transactions() {
@@ -13,7 +14,7 @@ export default function Transactions() {
     data: transactions,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/transactions/" : null, getTransactions)
+  } = useSWR(isAuthenticated ? SWR_KEYS.transactions : null, getTransactions)
 
   const handleRefresh = () => {
     mutate()

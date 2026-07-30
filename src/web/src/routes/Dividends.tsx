@@ -7,6 +7,7 @@ import { DividendsTable } from "@/components/dividends/dividends-table"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Button } from "@/components/ui/button"
 import { getDividends, getDividendsMonthly } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Dividends() {
@@ -17,13 +18,13 @@ export default function Dividends() {
     data: dividends,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/dividends/" : null, getDividends)
+  } = useSWR(isAuthenticated ? SWR_KEYS.dividends : null, getDividends)
 
   const {
     data: dividendsMonthly,
     isLoading: monthlyLoading,
     mutate: mutateMonthly,
-  } = useSWR(isAuthenticated ? "dividends-monthly" : null, getDividendsMonthly)
+  } = useSWR(isAuthenticated ? SWR_KEYS.dividendsMonthly : null, getDividendsMonthly)
 
   const isRefreshing = isLoading || monthlyLoading
 

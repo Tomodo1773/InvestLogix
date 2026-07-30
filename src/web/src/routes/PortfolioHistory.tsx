@@ -4,6 +4,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { PortfolioHistoryTable } from "@/components/portfolio-history/portfolio-history-table"
 import { Button } from "@/components/ui/button"
 import { getPortfolioHistory } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function PortfolioHistory() {
@@ -13,7 +14,7 @@ export default function PortfolioHistory() {
     data: history,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/portfolio/history" : null, getPortfolioHistory)
+  } = useSWR(isAuthenticated ? SWR_KEYS.portfolioHistory : null, getPortfolioHistory)
 
   const handleRefresh = () => {
     mutate()

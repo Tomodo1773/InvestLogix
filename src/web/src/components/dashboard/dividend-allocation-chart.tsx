@@ -4,6 +4,7 @@ import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getDividendAllocation } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import type { DividendBySymbolItem, MonthlyDividendItem } from "@/lib/api/types"
 import { CHART_COLORS, CHART_OTHER_COLOR } from "@/lib/chart-colors"
 import { formatCurrency } from "@/lib/format"
@@ -79,7 +80,7 @@ export function DividendAllocationChart({ monthlyDividends, refreshSignal }: Div
 
   const fetcher = useCallback(() => getDividendAllocation(swrParams), [swrParams])
 
-  const { data, isLoading } = useSWR(["dividends-by-symbol", selectedPeriod, refreshSignal], fetcher)
+  const { data, isLoading } = useSWR(SWR_KEYS.dividendAllocation(selectedPeriod, refreshSignal), fetcher)
 
   const chartData = useMemo(() => transformDividendsToChartData(data), [data])
   const total = useMemo(() => chartData.reduce((sum, item) => sum + item.value, 0), [chartData])

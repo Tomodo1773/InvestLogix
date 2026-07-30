@@ -3,8 +3,9 @@ FastAPIアプリケーション定義
 ルーティングとミドルウェアの設定を行う
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from .database import settings
 from .routes import (
@@ -18,6 +19,7 @@ from .routes import (
     transactions,
     users,
 )
+from .services.errors import DuplicateStockSplitError, StockNotFoundError
 
 # FastAPIアプリケーションの作成
 app = FastAPI(
@@ -35,6 +37,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ドメインエラーからHTTPレスポンスへの変換をここに集約する。
+# detailはWeb側でそのまま利用者に表示されるため日本語にする。
+@app.exception_handler(StockNotFoundError)
+async def handle_stock_not_found(request: Request, exc: StockNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND,
+        content={"detail": "指定された銘柄は登録されていません"},
+    )
+
+
+@app.exception_handler(DuplicateStockSplitError)
+async def handle_duplicate_stock_split(request: Request, exc: DuplicateStockSplitError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content={"detail": "同じ銘柄・同じ分割基準日の株式分割がすでに登録されています"},
+    )
 
 
 # API基本情報のエンドポイント（テスト用）

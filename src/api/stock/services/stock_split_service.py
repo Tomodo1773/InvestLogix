@@ -5,13 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
-from .stock_service import StockNotFoundError
-
-
-class DuplicateStockSplitError(ValueError):
-    """同一銘柄・同一分割基準日の分割情報がすでに登録されている場合のエラー"""
-
-    pass
+from .errors import DuplicateStockSplitError, StockNotFoundError
 
 
 class StockSplitService:

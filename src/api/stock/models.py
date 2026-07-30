@@ -114,7 +114,7 @@ class StockSplit(Base):
     symbol = Column(String(15), ForeignKey("stocks.symbol"), nullable=False)  # [SYSTEM] 銘柄コード
     split_date = Column(
         DateTime(timezone=True), nullable=False
-    )  # [USER_INPUT] 分割基準日（この日以前の取引が調整対象）
+    )  # [USER_INPUT] 分割基準日（この日より前の取引が調整対象）
     split_ratio = Column(Float, nullable=False)  # [USER_INPUT] 分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
 

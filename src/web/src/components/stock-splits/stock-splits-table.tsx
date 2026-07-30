@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { TablePagination } from "@/components/ui/table-pagination"
-import { useTableSort } from "@/hooks/use-table-sort"
 import type { StockSplit } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
+import { useTableSort } from "@/lib/hooks/use-table-sort"
 import { formatSplitRatio } from "@/lib/stock-split"
 
 interface StockSplitsTableProps {

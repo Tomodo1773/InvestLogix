@@ -5,8 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import schemas
 from ..auth import get_current_user, get_db_for_user
-from ..services.stock_service import StockNotFoundError
-from ..services.stock_split_service import DuplicateStockSplitError, StockSplitService
+from ..services.stock_split_service import StockSplitService
 
 router = APIRouter()
 
@@ -29,20 +28,11 @@ async def create_stock_split(
         登録された株式分割情報
 
     Raises:
-        HTTPException: 銘柄が未登録の場合は404、同一銘柄・同一分割基準日が登録済みの場合は409
+        StockNotFoundError: 銘柄が未登録の場合（app.pyのハンドラが404に変換する）
+        DuplicateStockSplitError: 同一銘柄・同一分割基準日が登録済みの場合（同ハンドラが409に変換する）
     """
     service = StockSplitService(db)
-    try:
-        return await service.create_stock_split(split, current_user.user_id)
-    except StockNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="指定された銘柄は登録されていません"
-        )
-    except DuplicateStockSplitError:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="同じ銘柄・同じ分割基準日の株式分割がすでに登録されています",
-        )
+    return await service.create_stock_split(split, current_user.user_id)
 
 
 @router.get("/", response_model=List[schemas.StockSplit])

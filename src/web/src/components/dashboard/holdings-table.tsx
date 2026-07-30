@@ -3,7 +3,6 @@ import { Link } from "react-router"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { useTableSort } from "@/hooks/use-table-sort"
 import type { Holding } from "@/lib/api/types"
 import {
   formatCurrency,
@@ -13,6 +12,7 @@ import {
   getPLColorClass,
 } from "@/lib/format"
 import { getLotStatusSortValue, getUnitLotGroups, hasUnitLot, isJapaneseStock } from "@/lib/holding-lot"
+import { useTableSort } from "@/lib/hooks/use-table-sort"
 
 interface HoldingsTableProps {
   holdings: Holding[] | undefined

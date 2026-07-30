@@ -75,12 +75,13 @@ InvestLogix/
 
 | ワークフロー | 説明 |
 |-------------|------|
-| `api-ci.yml` | バックエンドのリント・型チェック |
+| `api-ci.yml` | バックエンドのリント・フォーマットチェック（Ruff） |
 | `api-test.yml` | バックエンドのテスト |
 | `api-cd.yml` | バックエンドのCloud Runへのデプロイ（main push時） |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
-| `ruff-autofix.yml` | Ruffによるコードの自動修正とコミット（手動実行） |
-| `biome-autofix.yml` | Biomeによるコードの自動修正とコミット（手動実行） |
+| `codeql.yml` | CodeQLによるコード解析 |
+
+Ruffのバージョンは `src/api/uv.lock` を唯一の情報源とします。CI（`api-ci.yml`）・pre-commit・ローカルの `uv run ruff` がすべて同じバージョンで動くよう、`.pre-commit-config.yaml` の `rev` も uv.lock のRuffに合わせて更新してください。
 
 ## フロントエンド (src/web)
 

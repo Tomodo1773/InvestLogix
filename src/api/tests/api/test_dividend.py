@@ -82,7 +82,7 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
     # レスポンス検証
     assert response.status_code == 404
-    assert response.json()["detail"] == "Stock not found"
+    assert response.json()["detail"] == "指定された銘柄は登録されていません"
 
 
 @pytest.mark.asyncio

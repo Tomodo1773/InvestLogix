@@ -17,6 +17,7 @@ import {
   getStockSplits,
   getTransactionsBySymbol,
 } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { formatCurrency, formatCurrencyWithDecimals } from "@/lib/format"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
@@ -28,22 +29,22 @@ function HoldingDetailContent() {
     data: holdings,
     isLoading: isLoadingHolding,
     mutate: mutateHolding,
-  } = useSWR(isAuthenticated && symbol ? `/holdings/${symbol}` : null, () =>
+  } = useSWR(isAuthenticated && symbol ? SWR_KEYS.holdingBySymbol(symbol) : null, () =>
     symbol ? getHoldingBySymbol(symbol) : null
   )
 
   const { data: transactions, isLoading: isLoadingTransactions } = useSWR(
-    isAuthenticated && symbol ? `/transactions/${symbol}` : null,
+    isAuthenticated && symbol ? SWR_KEYS.transactionsBySymbol(symbol) : null,
     () => (symbol ? getTransactionsBySymbol(symbol) : null)
   )
 
   const { data: dividends, isLoading: isLoadingDividends } = useSWR(
-    isAuthenticated && symbol ? `/dividends/${symbol}` : null,
+    isAuthenticated && symbol ? SWR_KEYS.dividendsBySymbol(symbol) : null,
     () => (symbol ? getDividendsBySymbol(symbol) : null)
   )
 
   const { data: stockSplits, isLoading: isLoadingStockSplits } = useSWR(
-    isAuthenticated && symbol ? `/stock-splits/${symbol}` : null,
+    isAuthenticated && symbol ? SWR_KEYS.stockSplitsBySymbol(symbol) : null,
     () => (symbol ? getStockSplits(symbol) : null)
   )
 

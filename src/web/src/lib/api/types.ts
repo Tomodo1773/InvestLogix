@@ -170,6 +170,14 @@ export interface StockSplit {
   stock_name: string | null
 }
 
+export interface StockSplitCreate {
+  symbol: string
+  /** 分割基準日（YYYY-MM-DD。JSTとして解釈される） */
+  split_date: string
+  /** 分割比率（分割前1株が分割後に何株になるか） */
+  split_ratio: number
+}
+
 // CSV Import
 export interface CsvTransactionPreview {
   symbol: string

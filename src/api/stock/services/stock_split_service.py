@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
+from .errors import DuplicateStockSplitError, StockNotFoundError
 
 
 class StockSplitService:
@@ -25,7 +26,14 @@ class StockSplitService:
 
         Returns:
             登録された株式分割情報
+
+        Raises:
+            StockNotFoundError: 銘柄マスターに未登録の銘柄コードが指定された場合
+            DuplicateStockSplitError: 同一銘柄・同一分割基準日の分割情報が登録済みの場合
         """
+        await self._ensure_stock_exists(split_data.symbol)
+        await self._ensure_not_duplicated(split_data, user_id)
+
         # 株式分割情報を登録
         db_split = models.StockSplit(
             user_id=user_id,
@@ -49,6 +57,46 @@ class StockSplitService:
         )
         return db_split
 
+    async def _ensure_stock_exists(self, symbol: str) -> None:
+        """銘柄マスターに登録済みの銘柄かを検証する
+
+        分割は取引のある銘柄に対して登録するものなので、
+        銘柄マスターへの自動登録（外部API呼び出し）は行わない。
+
+        Args:
+            symbol: 銘柄コード
+
+        Raises:
+            StockNotFoundError: 銘柄マスターに未登録の場合
+        """
+        result = await self.db.execute(select(models.Stock.symbol).where(models.Stock.symbol == symbol))
+        if result.scalar_one_or_none() is None:
+            raise StockNotFoundError(f"Stock not found: {symbol}")
+
+    async def _ensure_not_duplicated(self, split_data: schemas.StockSplitCreate, user_id: int) -> None:
+        """同一銘柄・同一分割基準日の分割情報が未登録かを検証する
+
+        重複登録を許すと調整値に分割比率が二重に掛かるため、登録前に弾く。
+
+        Args:
+            split_data: 株式分割情報
+            user_id: ユーザーID
+
+        Raises:
+            DuplicateStockSplitError: 登録済みの場合
+        """
+        result = await self.db.execute(
+            select(models.StockSplit.split_id).where(
+                models.StockSplit.user_id == user_id,
+                models.StockSplit.symbol == split_data.symbol,
+                models.StockSplit.split_date == split_data.split_date,
+            )
+        )
+        if result.scalar_one_or_none() is not None:
+            raise DuplicateStockSplitError(
+                f"Stock split already registered: {split_data.symbol} {split_data.split_date:%Y-%m-%d}"
+            )
+
     async def list_stock_splits(self, user_id: int, symbol: Optional[str] = None) -> List[models.StockSplit]:
         """
         株式分割履歴を取得する
@@ -62,7 +110,7 @@ class StockSplitService:
         """
         query = (
             select(models.StockSplit, models.Stock.name)
-            .join(models.Stock, models.StockSplit.symbol == models.Stock.symbol)
+            .outerjoin(models.Stock, models.StockSplit.symbol == models.Stock.symbol)
             .where(models.StockSplit.user_id == user_id)
             .order_by(models.StockSplit.split_date.desc())
         )

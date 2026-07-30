@@ -8,6 +8,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { getHoldings, getWeeklyPerformance, recalculateAllHoldings } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { downloadCsv, holdingsToCsv } from "@/lib/csv"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
@@ -19,10 +20,10 @@ export default function Holdings() {
     data: holdings,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/holdings/" : null, getHoldings)
+  } = useSWR(isAuthenticated ? SWR_KEYS.holdings : null, getHoldings)
 
   const { data: weeklyPerformance } = useSWR(
-    isAuthenticated ? "weekly-performance" : null,
+    isAuthenticated ? SWR_KEYS.weeklyPerformance : null,
     getWeeklyPerformance
   )
 

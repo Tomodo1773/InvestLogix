@@ -7,16 +7,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models, schemas
-from .jquants_service import get_jquants_client
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .classification_service import classify_fund_currency
+from .errors import StockNotFoundError
 from .investment_trust_service import fetch_investment_trust_details
-
-
-class StockNotFoundError(ValueError):
-    """銘柄が見つからない場合のエラー"""
-
-    pass
+from .jquants_service import get_jquants_client
 
 
 class StockService:

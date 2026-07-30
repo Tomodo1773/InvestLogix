@@ -10,6 +10,7 @@ import {
   getTransactionsMonthlySummary,
   getWeeklyPerformance,
 } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 import { AssetChart } from "./asset-chart"
 import { DividendAllocationChart } from "./dividend-allocation-chart"
@@ -27,37 +28,37 @@ export function Dashboard() {
     data: summary,
     isLoading: summaryLoading,
     mutate: mutateSummary,
-  } = useSWR("portfolio-summary", getPortfolioSummary)
+  } = useSWR(SWR_KEYS.portfolioSummary, getPortfolioSummary)
 
   const {
     data: history,
     isLoading: historyLoading,
     mutate: mutateHistory,
-  } = useSWR("portfolio-history", getPortfolioHistory)
+  } = useSWR(SWR_KEYS.portfolioHistory, getPortfolioHistory)
 
   const {
     data: trades,
     isLoading: tradesLoading,
     mutate: mutateTrades,
-  } = useSWR("transactions-monthly", getTransactionsMonthlySummary)
+  } = useSWR(SWR_KEYS.transactionsMonthly, getTransactionsMonthlySummary)
 
   const {
     data: dividends,
     isLoading: dividendsLoading,
     mutate: mutateDividends,
-  } = useSWR("dividends-monthly", getDividendsMonthly)
+  } = useSWR(SWR_KEYS.dividendsMonthly, getDividendsMonthly)
 
   const {
     data: weeklyPerformance,
     isLoading: weeklyPerformanceLoading,
     mutate: mutateWeeklyPerformance,
-  } = useSWR("weekly-performance", getWeeklyPerformance)
+  } = useSWR(SWR_KEYS.weeklyPerformance, getWeeklyPerformance)
 
   const {
     data: holdings,
     isLoading: holdingsLoading,
     mutate: mutateHoldings,
-  } = useSWR("/api/v1/holdings/", getHoldings)
+  } = useSWR(SWR_KEYS.holdings, getHoldings)
 
   const weeklyChangeMap = useMemo(() => buildWeeklyChangeMap(weeklyPerformance), [weeklyPerformance])
 

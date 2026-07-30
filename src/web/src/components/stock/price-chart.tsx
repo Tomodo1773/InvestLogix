@@ -12,6 +12,7 @@ import {
 import useSWR from "swr"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getPriceHistory } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import type { PriceDataPoint, PriceHistoryInterval, TransactionWithPL } from "@/lib/api/types"
 
 interface PriceChartProps {
@@ -88,7 +89,7 @@ export function PriceChart({ symbol, securityType, transactions }: PriceChartPro
   const limit = interval === "monthly" ? 60 : 80
 
   const { data, isLoading, error } = useSWR(
-    securityType === "FUND" ? null : `/symbols/${symbol}/price-history?interval=${interval}&limit=${limit}`,
+    securityType === "FUND" ? null : SWR_KEYS.priceHistory(symbol, interval, limit),
     () => getPriceHistory(symbol, interval, limit)
   )
 

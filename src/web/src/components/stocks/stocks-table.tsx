@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useTableSort } from "@/hooks/use-table-sort"
 import type { Stock } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
+import { useTableSort } from "@/lib/hooks/use-table-sort"
 
 interface StocksTableProps {
   stocks: Stock[] | undefined

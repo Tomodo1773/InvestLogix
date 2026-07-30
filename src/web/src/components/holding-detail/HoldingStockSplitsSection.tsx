@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import type { StockSplit } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
+import { formatSplitRatio } from "@/lib/stock-split"
 
 interface HoldingStockSplitsSectionProps {
   stockSplits: StockSplit[] | undefined
@@ -9,10 +10,6 @@ interface HoldingStockSplitsSectionProps {
 }
 
 export function HoldingStockSplitsSection({ stockSplits, isLoading }: HoldingStockSplitsSectionProps) {
-  const formatSplitRatio = (ratio: number) => {
-    return `${ratio}:1 分割`
-  }
-
   return (
     <Card>
       <CardHeader>

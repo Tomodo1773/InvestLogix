@@ -44,11 +44,12 @@ jobs:
         working-directory: src/api
         run: sfw uv sync --frozen --only-group dev
 
+      # --no-sync がないと uv run が完全な依存に同期し直し、上の --only-group dev が無駄になる
       # line-lengthはpyproject.tomlの[tool.ruff]から読まれる
       - name: Run Ruff Check
         working-directory: src/api
-        run: uv run ruff check
+        run: uv run --no-sync ruff check
 
       - name: Run Ruff Format Check
         working-directory: src/api
-        run: uv run ruff format --check --diff
+        run: uv run --no-sync ruff format --check --diff

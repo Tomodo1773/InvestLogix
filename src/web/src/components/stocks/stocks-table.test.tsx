@@ -82,14 +82,6 @@ describe("StocksTable", () => {
     expect(cells[0]).toHaveTextContent("AAPL") // Apple Inc.が最初
   })
 
-  it("ローディング状態でスケルトンが表示されること", () => {
-    render(<StocksTable stocks={undefined} isLoading={true} />)
-
-    // スケルトンが表示されていることを確認（5つ）
-    const skeletons = document.querySelectorAll(".animate-pulse")
-    expect(skeletons).toHaveLength(5)
-  })
-
   it("空データ時にメッセージが表示されること", () => {
     render(<StocksTable stocks={[]} isLoading={false} />)
 

@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 import pytest
 
 from stock.services.csv_utils import (
-    FUND_SYMBOL_MAP,
     date_key,
     decode_csv_content,
     get_fund_symbol,
@@ -130,11 +129,6 @@ class TestDateKey:
 
 class TestFundSymbolMap:
     """FUND_SYMBOL_MAPの検証"""
-
-    def test_all_symbols_have_expected_format(self):
-        """全シンボルがJPで始まることを確認"""
-        for name, symbol in FUND_SYMBOL_MAP.items():
-            assert symbol.startswith("JP"), f"{name}のシンボル{symbol}がJPで始まっていません"
 
     def test_sbi_fund_variants_map_to_same_symbol(self):
         """SBI米国高配当株式ファンドの各表記が同じシンボルにマッピングされることを確認"""

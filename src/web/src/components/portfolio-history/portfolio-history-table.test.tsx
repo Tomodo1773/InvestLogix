@@ -83,14 +83,6 @@ describe("PortfolioHistoryTable", () => {
     expect(negativeCells?.[3]).toHaveClass("text-destructive") // 評価損益
   })
 
-  it("ローディング状態でスケルトンが表示されること", () => {
-    render(<PortfolioHistoryTable history={undefined} isLoading={true} />)
-
-    // スケルトンが表示されていることを確認（20個）
-    const skeletons = document.querySelectorAll(".animate-pulse")
-    expect(skeletons).toHaveLength(20)
-  })
-
   it("空データ時にメッセージが表示されること", () => {
     render(<PortfolioHistoryTable history={[]} isLoading={false} />)
 

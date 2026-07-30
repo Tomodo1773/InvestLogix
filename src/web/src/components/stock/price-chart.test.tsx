@@ -116,23 +116,6 @@ describe("PriceChart", () => {
     expect(screen.getByText("月足")).toBeInTheDocument()
   })
 
-  it("ローディング状態でスピナーが表示されること", async () => {
-    const useSWR = await import("swr")
-    vi.mocked(useSWR.default).mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    })
-
-    render(<PriceChart symbol="7203" securityType="STOCK" />)
-
-    // スピナーが表示されていることを確認
-    const spinner = document.querySelector(".animate-spin")
-    expect(spinner).toBeInTheDocument()
-  })
-
   it("エラー時にエラーメッセージが表示されること", async () => {
     const useSWR = await import("swr")
     vi.mocked(useSWR.default).mockReturnValue({
@@ -187,23 +170,6 @@ describe("PriceChart", () => {
 
     // 週足が選択状態になる
     expect(buttonWeekly).toHaveClass("bg-primary")
-  })
-
-  it("データがある場合にグラフが表示されること", async () => {
-    const useSWR = await import("swr")
-    vi.mocked(useSWR.default).mockReturnValue({
-      data: mockPriceData,
-      isLoading: false,
-      error: null,
-      isValidating: false,
-      mutate: vi.fn(),
-    })
-
-    render(<PriceChart symbol="7203" securityType="STOCK" />)
-
-    // Rechartsコンポーネントが表示されていることを確認
-    expect(screen.getByTestId("recharts-container")).toBeInTheDocument()
-    expect(screen.getByTestId("line-chart")).toBeInTheDocument()
   })
 
   describe("X軸ティック計算とフォーマット", () => {

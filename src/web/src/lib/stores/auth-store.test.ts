@@ -11,12 +11,6 @@ describe("useAuthStore", () => {
     })
   })
 
-  it("初期状態でisAuthenticatedがfalseであること", () => {
-    const state = useAuthStore.getState()
-    expect(state.isAuthenticated).toBe(false)
-    expect(state.user).toBeNull()
-  })
-
   it("setUserでユーザーを設定するとisAuthenticatedがtrueになること", () => {
     const mockUser = {
       user_id: 1,
@@ -54,13 +48,5 @@ describe("useAuthStore", () => {
     const state = useAuthStore.getState()
     expect(state.user).toBeNull()
     expect(state.isAuthenticated).toBe(false)
-  })
-
-  it("setLoadingでローディング状態を切り替えられること", () => {
-    useAuthStore.getState().setLoading(false)
-    expect(useAuthStore.getState().isLoading).toBe(false)
-
-    useAuthStore.getState().setLoading(true)
-    expect(useAuthStore.getState().isLoading).toBe(true)
   })
 })

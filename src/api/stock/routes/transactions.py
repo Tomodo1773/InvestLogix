@@ -21,7 +21,7 @@ from ..schemas import (
 )
 from ..services.alphavantage_service import fetch_usdjpy_daily_rates
 from ..services.csv_import_service import apply_usdjpy_rates, detect_new_transactions, parse_csv_content
-from ..services.stock_service import StockNotFoundError
+from ..services.errors import StockNotFoundError
 from ..services.transaction_service import TransactionService
 
 router = APIRouter()
@@ -37,17 +37,14 @@ async def create_transaction(
     新規取引を登録する
     - transaction: 取引情報（銘柄、数量、価格、取引種別等）
     - 登録成功時: 作成された取引情報を返却
-    - 銘柄不存在時: 404 Not Found
+    - 銘柄不存在時: 404 Not Found（StockNotFoundErrorをapp.pyのハンドラが変換する）
     - 売却時の保有数量不足: 400 Bad Request
     """
     transaction_service = TransactionService(db)
-    try:
-        db_transaction = await transaction_service.create_transaction(transaction, current_user.user_id)
-        if not db_transaction:
-            raise HTTPException(status_code=400, detail="Insufficient shares")
-        return db_transaction
-    except StockNotFoundError:
-        raise HTTPException(status_code=404, detail="Stock not found")
+    db_transaction = await transaction_service.create_transaction(transaction, current_user.user_id)
+    if not db_transaction:
+        raise HTTPException(status_code=400, detail="売却数量が保有数量を超えています")
+    return db_transaction
 
 
 @router.get("/", response_model=List[Transaction | TransactionWithPL])

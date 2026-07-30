@@ -18,7 +18,7 @@ from ..schemas import (
 )
 from ..services.dividend_csv_import_service import detect_new_dividends, parse_dividend_csv_content
 from ..services.dividend_service import DividendService
-from ..services.stock_service import StockNotFoundError
+from ..services.errors import StockNotFoundError
 
 router = APIRouter()
 
@@ -33,14 +33,10 @@ async def create_dividend(
     配当情報を登録する
     - dividend: 配当情報（銘柄、配当額、配当日等）
     - 登録成功時: 作成された配当情報を返却
-    - 銘柄不存在時: 404 Not Found
+    - 銘柄不存在時: 404 Not Found（StockNotFoundErrorをapp.pyのハンドラが変換する）
     """
     dividend_service = DividendService(db)
-    try:
-        db_dividend = await dividend_service.create_dividend(dividend, current_user.user_id)
-        return db_dividend
-    except StockNotFoundError:
-        raise HTTPException(status_code=404, detail="Stock not found")
+    return await dividend_service.create_dividend(dividend, current_user.user_id)
 
 
 @router.get("/", response_model=List[Dividend])

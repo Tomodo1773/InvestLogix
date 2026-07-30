@@ -42,7 +42,8 @@ export const navItems = [
   },
   {
     to: "/stock-splits",
-    label: "株式分割履歴",
+    // 閲覧のみの「〜履歴」と区別するため、登録もできるこのページは「履歴」を付けない
+    label: "株式分割",
     icon: Scissors,
   },
   {

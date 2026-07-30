@@ -4,6 +4,7 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { StocksTable } from "@/components/stocks/stocks-table"
 import { Button } from "@/components/ui/button"
 import { getStocks } from "@/lib/api/client"
+import { SWR_KEYS } from "@/lib/api/keys"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Stocks() {
@@ -13,7 +14,7 @@ export default function Stocks() {
     data: stocks,
     isLoading,
     mutate,
-  } = useSWR(isAuthenticated ? "/api/v1/stocks/" : null, () => getStocks())
+  } = useSWR(isAuthenticated ? SWR_KEYS.stocks : null, () => getStocks())
 
   const handleRefresh = () => {
     mutate()

@@ -95,12 +95,12 @@ class StockUSDetail(StockUSDetailBase):
 class StockSplitBase(BaseModel):
     """株式分割情報の基底スキーマ"""
 
-    symbol: str
+    symbol: str = Field(..., min_length=1, max_length=15)
     split_date: datetime = Field(
         ...,
         json_schema_extra={"examples": ["2024-01-15T00:00:00+09:00", "2024-01-15T00:00:00", "2024-01-15"]},
     )
-    split_ratio: float = Field(..., description="分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）")
+    split_ratio: float = Field(..., gt=0, description="分割比率（例: 4:1分割なら4.0、1:2併合なら0.5）")
 
     @field_validator("split_date", mode="before")
     @classmethod

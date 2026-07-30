@@ -28,15 +28,11 @@ async def create_stock_split(
         登録された株式分割情報
 
     Raises:
-        HTTPException: 分割情報の登録に失敗した場合
+        StockNotFoundError: 銘柄が未登録の場合（app.pyのハンドラが404に変換する）
+        DuplicateStockSplitError: 同一銘柄・同一分割基準日が登録済みの場合（同ハンドラが409に変換する）
     """
     service = StockSplitService(db)
-    try:
-        return await service.create_stock_split(split, current_user.user_id)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=f"株式分割の登録に失敗しました: {str(e)}"
-        )
+    return await service.create_stock_split(split, current_user.user_id)
 
 
 @router.get("/", response_model=List[schemas.StockSplit])

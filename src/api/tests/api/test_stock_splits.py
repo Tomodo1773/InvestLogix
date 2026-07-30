@@ -412,3 +412,105 @@ async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, au
     # 調整値は4 * 2 = 8倍
     assert float(transaction["adjusted_quantity"]) == 800.0  # 100 * 4 * 2
     assert float(transaction["adjusted_price"]) == 1250.0  # 10000 / 4 / 2
+
+
+@pytest.mark.asyncio
+async def test_create_stock_split_rejects_duplicate(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """同一銘柄・同一分割基準日の重複登録が拒否されることを確認
+
+    期待する動作:
+    - 2回目の登録は409 Conflictになる
+    - 重複登録によって調整値に分割比率が二重に掛からない
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    # 1. 分割前の取引を登録（100株@10000円）
+    transaction_data = {
+        "symbol": "8058",
+        "transaction_type": "buy",
+        "quantity": "100.0",
+        "price": "10000.0",
+        "account_type": "特定",
+        "fee": "0.0",
+        "tax": "0.0",
+        "transaction_date": "2024-01-01T00:00:00",
+    }
+    await client.post("/api/v1/transactions/", json=transaction_data)
+
+    split_data = {
+        "symbol": "8058",
+        "split_date": "2024-06-01T00:00:00",
+        "split_ratio": "4.0",
+    }
+
+    # 2. 1回目の登録は成功する
+    first_response = await client.post("/api/v1/stock-splits/", json=split_data)
+    assert first_response.status_code == 201
+
+    # 3. 2回目の登録は409になる
+    second_response = await client.post("/api/v1/stock-splits/", json=split_data)
+    assert second_response.status_code == 409
+
+    # 4. 分割は1件のみ登録され、調整値は4倍のまま（二重適用されていない）
+    splits_response = await client.get("/api/v1/stock-splits/?symbol=8058")
+    assert len(splits_response.json()) == 1
+
+    transactions_response = await client.get("/api/v1/transactions/?symbol=8058")
+    transaction = transactions_response.json()[0]
+    assert float(transaction["adjusted_quantity"]) == 400.0
+    assert float(transaction["adjusted_price"]) == 2500.0
+
+
+@pytest.mark.asyncio
+async def test_create_stock_split_rejects_unknown_symbol(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """銘柄マスターに未登録の銘柄コードが拒否されることを確認
+
+    期待する動作:
+    - 取引実績のない銘柄コードでは404 Not Foundになる
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    split_data = {
+        "symbol": "9999",
+        "split_date": "2024-06-01T00:00:00",
+        "split_ratio": "4.0",
+    }
+    response = await client.post("/api/v1/stock-splits/", json=split_data)
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_create_stock_split_rejects_non_positive_ratio(
+    client: AsyncClient, db_session: AsyncSession, auth_token: str
+):
+    """0以下の分割比率が拒否されることを確認
+
+    期待する動作:
+    - 比率0はゼロ除算を招くため422 Unprocessable Entityになる
+    - 負の比率も422になる
+
+    Args:
+        client: 非同期HTTPクライアント
+        db_session: テスト用DBセッション
+        auth_token: 認証トークン
+    """
+    for invalid_ratio in ("0.0", "-2.0"):
+        response = await client.post(
+            "/api/v1/stock-splits/",
+            json={
+                "symbol": "8058",
+                "split_date": "2024-06-01T00:00:00",
+                "split_ratio": invalid_ratio,
+            },
+        )
+        assert response.status_code == 422, f"split_ratio={invalid_ratio}"

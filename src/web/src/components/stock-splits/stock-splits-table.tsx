@@ -5,6 +5,7 @@ import { useTableSort } from "@/hooks/use-table-sort"
 import type { StockSplit } from "@/lib/api/types"
 import { formatDate } from "@/lib/format"
 import { usePagination } from "@/lib/hooks/use-pagination"
+import { formatSplitRatio } from "@/lib/stock-split"
 
 interface StockSplitsTableProps {
   stockSplits: StockSplit[] | undefined
@@ -64,11 +65,6 @@ export function StockSplitsTable({ stockSplits, isLoading }: StockSplitsTablePro
   const handleSort = (key: SortKey) => {
     baseSortHandler(key)
     handlePageChange(1)
-  }
-
-  const formatSplitRatio = (ratio: number) => {
-    if (Number.isNaN(ratio)) return String(ratio)
-    return `${ratio}:1 分割`
   }
 
   return (

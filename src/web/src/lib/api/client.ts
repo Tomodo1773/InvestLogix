@@ -16,6 +16,7 @@ import type {
   PriceHistoryResponse,
   Stock,
   StockSplit,
+  StockSplitCreate,
   TokenResponse,
   Transaction,
   TransactionWithPL,
@@ -45,6 +46,15 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
   }
 
   return response.json()
+}
+
+/** JSONボディを送る書き込み系リクエスト（Content-Typeとシリアライズを共通化） */
+async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unknown): Promise<T> {
+  return fetchWithAuth<T>(endpoint, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
 }
 
 // Auth APIs
@@ -128,11 +138,7 @@ export async function getHoldingBySymbol(symbol: string): Promise<Holding[]> {
 }
 
 export async function updateHoldingNote(symbol: string, note: string | null): Promise<Holding> {
-  return fetchWithAuth<Holding>(`/api/v1/holdings/${encodeURIComponent(symbol)}/note`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ note }),
-  })
+  return sendJson<Holding>(`/api/v1/holdings/${encodeURIComponent(symbol)}/note`, "PUT", { note })
 }
 
 export async function getTransactionsBySymbol(symbol: string): Promise<TransactionWithPL[]> {
@@ -172,6 +178,10 @@ export async function getStockSplits(symbol?: string): Promise<StockSplit[]> {
   return fetchWithAuth<StockSplit[]>(`/api/v1/stock-splits/${params}`)
 }
 
+export async function createStockSplit(request: StockSplitCreate): Promise<StockSplit> {
+  return sendJson<StockSplit>("/api/v1/stock-splits/", "POST", request)
+}
+
 // CSV Import APIs
 export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResponse> {
   const formData = new FormData()
@@ -184,13 +194,7 @@ export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResp
 }
 
 export async function confirmImport(request: ImportConfirmRequest): Promise<ImportConfirmResponse> {
-  return fetchWithAuth<ImportConfirmResponse>("/api/v1/transactions/import/confirm", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  })
+  return sendJson<ImportConfirmResponse>("/api/v1/transactions/import/confirm", "POST", request)
 }
 
 // Dividend CSV Import APIs
@@ -207,11 +211,5 @@ export async function uploadDividendCsvForPreview(file: File): Promise<DividendI
 export async function confirmDividendImport(
   request: DividendImportConfirmRequest
 ): Promise<DividendImportConfirmResponse> {
-  return fetchWithAuth<DividendImportConfirmResponse>("/api/v1/dividends/import/confirm", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(request),
-  })
+  return sendJson<DividendImportConfirmResponse>("/api/v1/dividends/import/confirm", "POST", request)
 }

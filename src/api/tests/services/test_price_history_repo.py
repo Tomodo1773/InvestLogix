@@ -1,11 +1,11 @@
 """price_history_repo のテスト"""
 
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from stock.models import Stock
+from stock.models import JST, Stock
 from stock.services import price_history_repo
 
 
@@ -102,3 +102,44 @@ async def test_prune_old_prices_removes_only_old_rows(db_session: AsyncSession):
 
     remaining = await price_history_repo.get_recent_prices(db_session, "8058", days_back=60)
     assert len(remaining) == 2
+
+
+# JST 2024-12-01 00:30 は UTC では 2024-11-30 15:30。
+# サーバがUTCで動いていると日付が1日前になり、境界が1日ずれる。
+_JST_BOUNDARY_NOW = datetime(2024, 12, 1, 0, 30, tzinfo=JST)
+
+
+@pytest.mark.asyncio
+async def test_get_recent_prices_respects_jst_boundary(db_session: AsyncSession, monkeypatch):
+    """JST 0時台でも下限日が JST の日付基準で決まること
+
+    UTC 基準だと threshold が 2024-11-29 になり、11/29 の行まで拾ってしまう。
+    """
+    assert _JST_BOUNDARY_NOW.astimezone(UTC).date() == date(2024, 11, 30)
+    monkeypatch.setattr(price_history_repo, "get_jst_now", lambda: _JST_BOUNDARY_NOW)
+
+    await _create_stock(db_session)
+    rows = [_make_row(date(2024, 11, 29)), _make_row(date(2024, 11, 30)), _make_row(date(2024, 12, 1))]
+    await price_history_repo.upsert_prices(db_session, "8058", rows)
+
+    fetched = await price_history_repo.get_recent_prices(db_session, "8058", days_back=1)
+    assert [r["date"] for r in fetched] == [date(2024, 11, 30), date(2024, 12, 1)]
+
+
+@pytest.mark.asyncio
+async def test_prune_old_prices_respects_jst_boundary(db_session: AsyncSession, monkeypatch):
+    """JST 0時台でも削除境界が JST の日付基準で決まること
+
+    UTC 基準だと threshold が 2024-11-29 になり、11/29 の行が削除されずに残る。
+    """
+    monkeypatch.setattr(price_history_repo, "get_jst_now", lambda: _JST_BOUNDARY_NOW)
+
+    await _create_stock(db_session)
+    rows = [_make_row(date(2024, 11, 29)), _make_row(date(2024, 11, 30)), _make_row(date(2024, 12, 1))]
+    await price_history_repo.upsert_prices(db_session, "8058", rows)
+
+    deleted = await price_history_repo.prune_old_prices(db_session, "8058", keep_days=1)
+    assert deleted == 1
+
+    remaining = await price_history_repo.get_recent_prices(db_session, "8058", days_back=30)
+    assert [r["date"] for r in remaining] == [date(2024, 11, 30), date(2024, 12, 1)]

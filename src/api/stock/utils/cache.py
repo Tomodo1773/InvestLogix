@@ -8,7 +8,8 @@
 import asyncio
 import functools
 import time
-from typing import Any, Callable, Dict, Optional, Tuple, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 # 型変数の定義
 T = TypeVar("T")
@@ -39,7 +40,7 @@ def timed_cache(seconds: int = 3600):
     def decorator(func: F) -> F:
         # キャッシュを保持する辞書
         # キー: 引数のハッシュ、値: (結果, タイムスタンプ)のタプル
-        cache: Dict[str, Tuple[Any, float]] = {}
+        cache: dict[str, tuple[Any, float]] = {}
 
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -107,9 +108,9 @@ class CacheManager:
     """
 
     def __init__(self):
-        self.caches: Dict[str, Dict[str, Tuple[Any, float]]] = {}
+        self.caches: dict[str, dict[str, tuple[Any, float]]] = {}
 
-    def register_cache(self, name: str, cache_dict: Dict[str, Tuple[Any, float]]) -> None:
+    def register_cache(self, name: str, cache_dict: dict[str, tuple[Any, float]]) -> None:
         """
         キャッシュを登録します
 
@@ -119,7 +120,7 @@ class CacheManager:
         """
         self.caches[name] = cache_dict
 
-    def invalidate(self, name: Optional[str] = None) -> None:
+    def invalidate(self, name: str | None = None) -> None:
         """
         キャッシュを無効化します
 
@@ -130,7 +131,7 @@ class CacheManager:
             if name in self.caches:
                 self.caches[name].clear()
         else:
-            for cache_name, cache in self.caches.items():
+            for cache in self.caches.values():
                 cache.clear()
 
 

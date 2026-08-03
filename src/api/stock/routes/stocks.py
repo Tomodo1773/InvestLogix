@@ -1,4 +1,4 @@
-from typing import Annotated, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from loguru import logger
@@ -36,7 +36,7 @@ async def create_stock(
     return db_stock
 
 
-@router.get("/", response_model=List[Stock])
+@router.get("/", response_model=list[Stock])
 async def list_stocks(
     current_user: Annotated[User, Depends(get_current_user)],
     market: str | None = None,

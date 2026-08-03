@@ -1,6 +1,6 @@
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from loguru import logger
 
 from ..auth import get_password_hash
 from ..models import User, get_jst_now

@@ -1,4 +1,4 @@
-from typing import Annotated, Dict, List
+from typing import Annotated
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -50,7 +50,7 @@ async def update_portfolio_summary(
     return await portfolio_service.get_portfolio_summary(current_user.user_id)
 
 
-@router.get("/history", response_model=List[PortfolioHistoryResponse])
+@router.get("/history", response_model=list[PortfolioHistoryResponse])
 async def get_portfolio_history(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
@@ -69,7 +69,7 @@ async def get_portfolio_history(
     return await portfolio_service.get_portfolio_history(current_user.user_id)
 
 
-@router.post("/update-and-notify", response_model=Dict)
+@router.post("/update-and-notify", response_model=dict)
 async def update_portfolio_and_notify(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):

@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Union
 
 import httpx
 from loguru import logger
 
 from ..database import settings
 
-DateInput = Union[str, date, datetime]
+DateInput = str | date | datetime
 TIINGO_BASE_URL = "https://api.tiingo.com/tiingo/daily"
 
 

@@ -3,8 +3,8 @@
 外部APIは呼ばない。`stock_price_fetcher.py` から DB 読み取り経路として利用される。
 """
 
+from collections.abc import Sequence
 from datetime import date, timedelta
-from typing import Optional, Sequence
 
 from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -15,7 +15,9 @@ from ..models import PriceHistory, get_jst_now
 
 async def get_recent_prices(db: AsyncSession, symbol: str, days_back: int) -> list[dict]:
     """直近 N カレンダー日分の価格を日付昇順で返す。該当が無ければ空リスト。"""
-    threshold = date.today() - timedelta(days=days_back)
+    # TODO: JST基準に直す。date.today() はサーバーのローカルTZ依存で、UTC環境では
+    # JST 00:00-09:00 の間だけ日付が1日前になる。挙動変更を伴うため別PRで対応する
+    threshold = date.today() - timedelta(days=days_back)  # noqa: DTZ011
     result = await db.execute(
         select(PriceHistory)
         .where(PriceHistory.symbol == symbol)
@@ -26,7 +28,7 @@ async def get_recent_prices(db: AsyncSession, symbol: str, days_back: int) -> li
     return [_row_to_dict(row) for row in rows]
 
 
-async def get_latest_close(db: AsyncSession, symbol: str) -> Optional[float]:
+async def get_latest_close(db: AsyncSession, symbol: str) -> float | None:
     """最新営業日の終値を返す。該当が無ければ None。"""
     result = await db.execute(
         select(PriceHistory.close)
@@ -74,7 +76,8 @@ async def upsert_prices(db: AsyncSession, symbol: str, rows: Sequence[dict]) -> 
 
 async def prune_old_prices(db: AsyncSession, symbol: str, keep_days: int = 21) -> int:
     """keep_days より古い行を削除。削除件数を返す。"""
-    threshold = date.today() - timedelta(days=keep_days)
+    # TODO: JST基準に直す。理由は get_recent_prices と同じ
+    threshold = date.today() - timedelta(days=keep_days)  # noqa: DTZ011
     result = await db.execute(
         delete(PriceHistory).where(PriceHistory.symbol == symbol).where(PriceHistory.date < threshold)
     )

@@ -1,8 +1,6 @@
-from typing import Dict, List, Optional, Union
-
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
 from .. import models, schemas
 from ..utils import get_jst_extract_columns
@@ -22,7 +20,7 @@ class TransactionService:
 
     async def create_transaction(
         self, transaction: schemas.TransactionCreate, user_id: int
-    ) -> Optional[models.Transaction]:
+    ) -> models.Transaction | None:
         # 株式の存在確認または登録
         await self.stock_service.get_or_create_stock(transaction.symbol, user_id)
 
@@ -141,8 +139,8 @@ class TransactionService:
         )
 
     async def list_transactions(
-        self, user_id: int, symbol: Optional[str] = None, include_unrealized_pl: bool = False
-    ) -> Union[List[models.Transaction], List[schemas.TransactionWithPL]]:
+        self, user_id: int, symbol: str | None = None, include_unrealized_pl: bool = False
+    ) -> list[models.Transaction] | list[schemas.TransactionWithPL]:
         # 銘柄名を取得するためにStockテーブルを結合
         query = (
             select(models.Transaction, models.Stock.name)
@@ -214,7 +212,7 @@ class TransactionService:
 
         return transactions
 
-    async def get_monthly_summary(self, user_id: int) -> List[Dict]:
+    async def get_monthly_summary(self, user_id: int) -> list[dict]:
         """
         ユーザーの月次トランザクション集計を取得する
 
@@ -276,7 +274,7 @@ class TransactionService:
         logger.info("Transactionの月次集計を取得しました user_id={} months={}", user_id, len(summaries))
         return summaries
 
-    async def get_yearly_summary(self, user_id: int) -> List[Dict]:
+    async def get_yearly_summary(self, user_id: int) -> list[dict]:
         """
         ユーザーの年次トランザクション集計を取得する
 

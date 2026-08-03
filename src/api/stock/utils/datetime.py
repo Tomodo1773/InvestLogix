@@ -4,14 +4,13 @@
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
 from zoneinfo import ZoneInfo
 
 JST = ZoneInfo("Asia/Tokyo")
 UTC = ZoneInfo("UTC")
 
 
-def to_jst(dt: Optional[datetime]) -> Optional[datetime]:
+def to_jst(dt: datetime | None) -> datetime | None:
     """任意のdatetimeをJSTに変換する
 
     Args:
@@ -28,7 +27,7 @@ def to_jst(dt: Optional[datetime]) -> Optional[datetime]:
     return dt.astimezone(JST)
 
 
-def from_jst_input(dt_input: Optional[str | datetime]) -> Optional[datetime]:
+def from_jst_input(dt_input: str | datetime | None) -> datetime | None:
     """リクエストのdatetime入力をJSTとして解釈する
 
     Pydanticバリデータの mode="before" で使用することを想定。

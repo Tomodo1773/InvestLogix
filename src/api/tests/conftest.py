@@ -1,7 +1,7 @@
 import asyncio
 import uuid
+from collections.abc import AsyncGenerator, Generator
 from datetime import date, timedelta
-from typing import AsyncGenerator, Generator
 
 import psycopg
 import pytest
@@ -44,7 +44,7 @@ def _async_db_url(base_connection_url: str, database: str) -> str:
 
 
 @pytest.fixture(scope="session")
-def base_connection_url() -> Generator[str, None, None]:
+def base_connection_url() -> Generator[str]:
     container = PostgresContainer("postgres:16-alpine")
     container.start()
     try:
@@ -54,7 +54,7 @@ def base_connection_url() -> Generator[str, None, None]:
 
 
 @pytest_asyncio.fixture(scope="session", autouse=True, loop_scope="session")
-async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str, None]:
+async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str]:
     template_db_name = "template_investlogix"
     admin_url = _admin_connection_url(base_connection_url)
 
@@ -90,7 +90,7 @@ async def bootstrap_schema(base_connection_url: str) -> AsyncGenerator[str, None
 
 
 @pytest.fixture(scope="function")
-def db_url(base_connection_url: str, bootstrap_schema: str) -> Generator[str, None, None]:
+def db_url(base_connection_url: str, bootstrap_schema: str) -> Generator[str]:
     template_db_name = bootstrap_schema
     admin_url = _admin_connection_url(base_connection_url)
     db_name = f"t_{uuid.uuid4().hex[:8]}"
@@ -107,7 +107,7 @@ def db_url(base_connection_url: str, bootstrap_schema: str) -> Generator[str, No
 
 
 @pytest_asyncio.fixture(autouse=True, scope="function")
-async def setup_database(db_url: str) -> AsyncGenerator[AsyncEngine, None]:
+async def setup_database(db_url: str) -> AsyncGenerator[AsyncEngine]:
     """各テストで使用するデータベースの初期化を行うフィクスチャー
 
     各テスト実行前にデータベースを作成し、テスト終了後にクリーンアップを行います。
@@ -127,7 +127,7 @@ async def setup_database(db_url: str) -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture
-async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(setup_database) -> AsyncGenerator[AsyncSession]:
     """非同期データベースセッションのフィクスチャー
 
     各テストは独立したトランザクション内で実行され、テスト終了後に自動的にロールバックされます。
@@ -140,11 +140,9 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
     """
     TestingSessionLocal = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
 
-    async with TestingSessionLocal() as session:
-        # トランザクションを開始
-        async with session.begin():
-            yield session
-            # トランザクションは自動的にロールバックされます
+    # session.begin() でトランザクションを開始する。終了時に自動的にロールバックされる
+    async with TestingSessionLocal() as session, session.begin():
+        yield session
 
 
 async def _create_user_and_login(
@@ -191,7 +189,7 @@ async def auth_admin_token(client: AsyncClient, setup_database) -> None:
 
 
 @pytest_asyncio.fixture
-async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
+async def client(setup_database) -> AsyncGenerator[AsyncClient]:
     """非同期HTTPクライアントのフィクスチャー
 
     テスト用のデータベース接続をオーバーライドした非同期HTTPクライアントを提供します。
@@ -228,7 +226,7 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def sync_client(setup_database) -> Generator[TestClient, None, None]:
+def sync_client(setup_database) -> Generator[TestClient]:
     """同期HTTPクライアントのフィクスチャー
 
     テスト用のデータベース接続をオーバーライドした同期HTTPクライアントを提供します。

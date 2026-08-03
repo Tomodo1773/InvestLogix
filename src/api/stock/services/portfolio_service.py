@@ -1,5 +1,4 @@
 from datetime import timedelta
-from typing import Dict, List
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -21,7 +20,7 @@ class PortfolioService:
         self.db = db
 
     async def _calculate_portfolio_summary(
-        self, user_id: int, holdings: List[models.Holding] | None = None
+        self, user_id: int, holdings: list[models.Holding] | None = None
     ) -> dict:
         """ポートフォリオのサマリー情報を計算する内部メソッド
 
@@ -80,13 +79,13 @@ class PortfolioService:
         }
 
     async def get_portfolio_summary(
-        self, user_id: int, holdings: List[models.Holding] | None = None
+        self, user_id: int, holdings: list[models.Holding] | None = None
     ) -> schemas.PortfolioSummary:
         """ポートフォリオのサマリー情報を計算して取得"""
         summary = await self._calculate_portfolio_summary(user_id, holdings=holdings)
         return schemas.PortfolioSummary(**summary)
 
-    async def get_portfolio_history(self, user_id: int) -> List[models.PortfolioHistory]:
+    async def get_portfolio_history(self, user_id: int) -> list[models.PortfolioHistory]:
         """ポートフォリオの履歴一覧を取得
 
         日付の昇順（古い順）でポートフォリオの履歴を返します。
@@ -106,7 +105,7 @@ class PortfolioService:
         return histories
 
     async def create_portfolio_history(
-        self, user_id: int, holdings: List[models.Holding] | None = None
+        self, user_id: int, holdings: list[models.Holding] | None = None
     ) -> models.PortfolioHistory:
         """現在のポートフォリオ状態を計算して履歴として保存"""
         summary = await self._calculate_portfolio_summary(user_id, holdings=holdings)
@@ -151,7 +150,7 @@ class PortfolioService:
         )
         return history
 
-    async def update_and_notify(self, user_id: int) -> Dict:
+    async def update_and_notify(self, user_id: int) -> dict:
         """
         ポートフォリオの全銘柄を更新し、履歴を保存し、
         資産サマリ＋週間騰落ランキング＋AI解説を1通のLINE Flex Messageで通知する

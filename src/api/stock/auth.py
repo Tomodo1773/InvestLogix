@@ -1,5 +1,6 @@
+from collections.abc import AsyncGenerator
 from datetime import timedelta
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 
 from fastapi import Cookie, Depends, HTTPException, status
 from jose import JWTError, jwt
@@ -152,7 +153,7 @@ async def get_admin_user(
 async def get_db_for_user(
     current_user: schemas.User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-) -> AsyncGenerator[AsyncSession, None]:
+) -> AsyncGenerator[AsyncSession]:
     """
     RLS用のuser_idを設定したデータベースセッションを返す依存性注入
     - 認証済みユーザーのuser_idをPostgreSQLセッション変数に設定する

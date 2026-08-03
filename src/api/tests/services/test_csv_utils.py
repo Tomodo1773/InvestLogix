@@ -1,6 +1,6 @@
 """CSV共通ユーティリティのテスト"""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -88,7 +88,7 @@ class TestDecodeCsvContent:
     """decode_csv_content関数のテスト"""
 
     def test_utf8_content(self):
-        content = "日本語,テスト\n1,2".encode("utf-8")
+        content = "日本語,テスト\n1,2".encode()
         lines = decode_csv_content(content)
         assert len(lines) == 2
         assert "日本語" in lines[0]
@@ -114,7 +114,7 @@ class TestDateKey:
         assert date_key(dt) == "2024-01-15"
 
     def test_utc_datetime(self):
-        dt = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+        dt = datetime(2024, 1, 15, 10, 0, 0, tzinfo=UTC)
         result = date_key(dt)
         # UTCからJSTへ変換されるので、日付が変わる可能性がある
         assert result.startswith("2024-01-15")

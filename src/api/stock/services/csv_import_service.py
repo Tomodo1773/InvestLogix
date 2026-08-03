@@ -77,7 +77,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
 
     # ヘッダー行を検索
     header_index = next(
-        (i for i, line in enumerate(lines) if line.startswith("約定日") or line.startswith("国内約定日")),
+        (i for i, line in enumerate(lines) if line.startswith(("約定日", "国内約定日"))),
         None,
     )
     if header_index is None:
@@ -135,7 +135,7 @@ def parse_csv_content(content: bytes) -> tuple[list[ParsedTransaction], list[str
             cand = get_fund_symbol(name)
             return cand if cand else ""
         code_str = str(val)
-        code_str = code_str[:-2] if code_str.endswith(".0") else code_str
+        code_str = code_str.removesuffix(".0")
         return code_str
 
     df_raw["コード"] = df_raw.apply(lambda row: normalize_code(row["コード"], row["銘柄"]), axis=1)

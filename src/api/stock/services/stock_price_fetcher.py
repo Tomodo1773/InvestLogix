@@ -7,7 +7,6 @@
 
 import asyncio
 from datetime import date as date_type
-from typing import Optional
 
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,14 +100,14 @@ async def refresh_price_history(db: AsyncSession, stock: Stock, days_back: int =
     return len(normalized)
 
 
-def get_latest_japan_price(prices: list[dict]) -> Optional[float]:
+def get_latest_japan_price(prices: list[dict]) -> float | None:
     """日本株の株価リストから最新終値（調整済）を取得"""
     if prices:
         return float(prices[-1].get("C", 0))
     return None
 
 
-def get_latest_us_price(prices: list[dict]) -> Optional[float]:
+def get_latest_us_price(prices: list[dict]) -> float | None:
     """米国株の株価リストから最新終値（調整済）を取得"""
     if prices:
         return float(prices[-1]["close"])

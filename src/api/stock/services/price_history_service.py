@@ -4,7 +4,6 @@
 """
 
 from datetime import timedelta
-from typing import List
 
 import pandas as pd
 from loguru import logger
@@ -13,8 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Stock
 from ..schemas import PriceDataPoint, PriceHistoryInterval
-from ..utils.datetime import now_jst
 from ..utils.cache import timed_cache
+from ..utils.datetime import now_jst
 from .jquants_service import get_jquants_client
 from .tiingo_service import fetch_us_daily_prices_from_tiingo
 
@@ -42,7 +41,7 @@ class PriceHistoryService:
         return start.strftime("%Y-%m-%d")
 
     @staticmethod
-    def _aggregate_to_weekly(data: List[dict]) -> List[dict]:
+    def _aggregate_to_weekly(data: list[dict]) -> list[dict]:
         """日次データを週次データに集計"""
         if not data:
             return []
@@ -73,7 +72,7 @@ class PriceHistoryService:
         return result
 
     @staticmethod
-    def _aggregate_to_monthly(data: List[dict]) -> List[dict]:
+    def _aggregate_to_monthly(data: list[dict]) -> list[dict]:
         """日次データを月次データに集計"""
         if not data:
             return []
@@ -105,7 +104,7 @@ class PriceHistoryService:
 
     async def _fetch_japanese_stock_prices(
         self, symbol: str, start_date: str, end_date: str
-    ) -> List[PriceDataPoint]:
+    ) -> list[PriceDataPoint]:
         """
         J-Quants APIから日本株の株価データを取得
 
@@ -150,11 +149,11 @@ class PriceHistoryService:
                 end_date,
                 str(e),
             )
-            raise Exception(f"Failed to fetch Japanese stock prices: {str(e)}")
+            raise Exception(f"Failed to fetch Japanese stock prices: {e!s}")
 
     @staticmethod
     @timed_cache(seconds=3600)  # 1時間キャッシュ
-    def _fetch_us_stock_prices_cached(symbol: str, start_date: str, end_date: str) -> List[dict]:
+    def _fetch_us_stock_prices_cached(symbol: str, start_date: str, end_date: str) -> list[dict]:
         """
         Tiingoから米国株の株価データを取得（キャッシュ付き）
 
@@ -184,11 +183,11 @@ class PriceHistoryService:
                 end_date,
                 str(e),
             )
-            raise Exception(f"Failed to fetch US stock prices: {str(e)}")
+            raise Exception(f"Failed to fetch US stock prices: {e!s}")
 
     async def _fetch_us_stock_prices(
         self, symbol: str, start_date: str, end_date: str
-    ) -> List[PriceDataPoint]:
+    ) -> list[PriceDataPoint]:
         """
         米国株の株価データを取得（非同期ラッパー）
 
@@ -202,7 +201,7 @@ class PriceHistoryService:
         """
         return self._fetch_us_stock_prices_cached(symbol, start_date, end_date)
 
-    async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> List[dict]:
+    async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> list[dict]:
         result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))
         stock = result.scalar_one_or_none()
 

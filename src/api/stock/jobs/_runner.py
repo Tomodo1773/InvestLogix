@@ -7,7 +7,7 @@
 
 import asyncio
 import sys
-from typing import Awaitable, Callable, List, Optional
+from collections.abc import Awaitable, Callable
 
 from loguru import logger
 from sqlalchemy import select
@@ -16,13 +16,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import AsyncSessionLocal, set_rls_user_id
 from ..models import User
 
-UserAction = Callable[[AsyncSession, User], Awaitable[Optional[List[str]]]]
+UserAction = Callable[[AsyncSession, User], Awaitable[list[str] | None]]
 
 # サマリログに含める失敗銘柄の最大数。これを超えた分は省略件数として記録する
 MAX_FAILED_SYMBOLS_IN_LOG = 50
 
 
-async def _fetch_target_users() -> List[User]:
+async def _fetch_target_users() -> list[User]:
     """LINE連携済みユーザーを対象ユーザーとして取得する"""
     async with AsyncSessionLocal() as session:
         result = await session.execute(select(User).where(User.line_user_id.is_not(None)))

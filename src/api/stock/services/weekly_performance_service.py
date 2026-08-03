@@ -4,7 +4,6 @@
 """
 
 import asyncio
-from typing import List, Optional, Tuple
 
 from loguru import logger
 from sqlalchemy import select
@@ -15,7 +14,7 @@ from ..schemas import SecurityType, StockWeeklyPerformance
 from .stock_price_fetcher import fetch_japan_stock_prices, fetch_us_stock_prices
 
 
-async def get_japan_stock_weekly_prices(symbol: str, db: AsyncSession) -> Optional[Tuple[float, float]]:
+async def get_japan_stock_weekly_prices(symbol: str, db: AsyncSession) -> tuple[float, float] | None:
     """
     日本株の最新株価と5営業日前の株価を price_history から取得します。
 
@@ -37,7 +36,7 @@ async def get_japan_stock_weekly_prices(symbol: str, db: AsyncSession) -> Option
     return None
 
 
-async def get_us_stock_weekly_prices(symbol: str, db: AsyncSession) -> Optional[Tuple[float, float]]:
+async def get_us_stock_weekly_prices(symbol: str, db: AsyncSession) -> tuple[float, float] | None:
     """
     米国株の最新株価と5営業日前の株価を price_history から取得します。
     ※ 騰落率計算のため、円換算は行わず米ドル建てで返します。
@@ -61,7 +60,7 @@ async def get_us_stock_weekly_prices(symbol: str, db: AsyncSession) -> Optional[
     return None
 
 
-async def _fetch_stock_weekly_prices(stock: models.Stock, db: AsyncSession) -> Optional[Tuple[float, float]]:
+async def _fetch_stock_weekly_prices(stock: models.Stock, db: AsyncSession) -> tuple[float, float] | None:
     """銘柄の通貨・種別に応じて適切な株価取得関数を呼び出す。対象外の銘柄は None を返す。"""
     if stock.currency == "JPY" and stock.security_type in [
         SecurityType.STOCK.value,
@@ -79,7 +78,7 @@ async def _fetch_stock_weekly_prices(stock: models.Stock, db: AsyncSession) -> O
     return None
 
 
-async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[StockWeeklyPerformance]:
+async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> list[StockWeeklyPerformance]:
     """
     保有銘柄の週間騰落率を計算します。
     保有数量が0の銘柄と投資信託（FUND）は除外します。
@@ -134,8 +133,8 @@ async def calculate_weekly_performance(db: AsyncSession, user_id: int) -> List[S
 
 
 def get_top_bottom_performers(
-    performances: List[StockWeeklyPerformance], n: int = 5
-) -> Tuple[List[StockWeeklyPerformance], List[StockWeeklyPerformance]]:
+    performances: list[StockWeeklyPerformance], n: int = 5
+) -> tuple[list[StockWeeklyPerformance], list[StockWeeklyPerformance]]:
     """
     騰落率の上位・下位n位を抽出します。
 

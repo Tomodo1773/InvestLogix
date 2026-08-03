@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,9 +33,9 @@ async def create_stock_split(
     return await service.create_stock_split(split, current_user.user_id)
 
 
-@router.get("/", response_model=List[schemas.StockSplit])
+@router.get("/", response_model=list[schemas.StockSplit])
 async def list_stock_splits(
-    symbol: Optional[str] = Query(None, description="銘柄コード（未指定の場合は全銘柄）"),
+    symbol: str | None = Query(None, description="銘柄コード（未指定の場合は全銘柄）"),
     current_user: schemas.User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):

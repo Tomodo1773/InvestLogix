@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
 
@@ -36,7 +35,7 @@ class AccountType(str, Enum):
 class StockBase(BaseModel):
     symbol: str
     name: str
-    name_en: Optional[str]
+    name_en: str | None
     market: str
     security_type: SecurityType
     currency: str
@@ -45,7 +44,7 @@ class StockBase(BaseModel):
 class Stock(BaseModel):
     symbol: str
     name: str
-    name_en: Optional[str]
+    name_en: str | None
     market: str
     security_type: SecurityType
     currency: str
@@ -60,13 +59,13 @@ class Stock(BaseModel):
 
 class StockJPXDetailBase(BaseModel):
     symbol: str
-    sector_17_code: Optional[str]
-    sector_17_name: Optional[str]
-    sector_33_code: Optional[str]
-    sector_33_name: Optional[str]
+    sector_17_code: str | None
+    sector_17_name: str | None
+    sector_33_code: str | None
+    sector_33_name: str | None
     market_segment: str
-    market_code: Optional[str]
-    market_name: Optional[str]
+    market_code: str | None
+    market_name: str | None
     margin_trading: bool = True
 
 
@@ -82,8 +81,8 @@ class StockJPXDetail(StockJPXDetailBase):
 
 class StockUSDetailBase(BaseModel):
     symbol: str
-    gics_sector: Optional[str]
-    gics_industry: Optional[str]
+    gics_sector: str | None
+    gics_industry: str | None
     sp500_component: bool = False
     market: str
 
@@ -112,8 +111,6 @@ class StockSplitBase(BaseModel):
 class StockSplitCreate(StockSplitBase):
     """株式分割登録リクエスト"""
 
-    pass
-
 
 class StockSplit(StockSplitBase):
     """株式分割情報"""
@@ -121,7 +118,7 @@ class StockSplit(StockSplitBase):
     split_id: int
     user_id: int
     created_at: datetime
-    stock_name: Optional[str] = None
+    stock_name: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("split_date", "created_at")
@@ -142,7 +139,7 @@ class UserCreate(UserBase):
 class User(UserBase):
     user_id: int
     created_at: datetime
-    line_user_id: Optional[str] = None
+    line_user_id: str | None = None
     is_admin: bool = False
     model_config = ConfigDict(from_attributes=True)
 
@@ -157,21 +154,21 @@ class HoldingBase(BaseModel):
     quantity: float
     average_cost: float
     total_cost: float
-    current_price: Optional[float]
-    current_price_usd: Optional[float] = None
-    market_value: Optional[float]
-    market_value_usd: Optional[float] = None
-    realized_pl: Optional[float]
-    total_dividend: Optional[float]
-    unrealized_pl: Optional[float]
-    unrealized_pl_percentage: Optional[float]
-    total_pl: Optional[float]
-    total_pl_percentage: Optional[float]
-    note: Optional[str] = None
+    current_price: float | None
+    current_price_usd: float | None = None
+    market_value: float | None
+    market_value_usd: float | None = None
+    realized_pl: float | None
+    total_dividend: float | None
+    unrealized_pl: float | None
+    unrealized_pl_percentage: float | None
+    total_pl: float | None
+    total_pl_percentage: float | None
+    note: str | None = None
 
 
 class HoldingNoteUpdate(BaseModel):
-    note: Optional[str] = Field(None, max_length=2000)
+    note: str | None = Field(None, max_length=2000)
 
 
 class AccountHolding(BaseModel):
@@ -182,12 +179,12 @@ class AccountHolding(BaseModel):
 class Holding(HoldingBase):
     user_id: int
     last_updated: datetime
-    stock_name: Optional[str] = None
-    security_type: Optional[str] = None
-    currency: Optional[str] = None
-    country: Optional[str] = None
-    sector_name: Optional[str] = None
-    account_holdings: List[AccountHolding] = Field(default_factory=list)
+    stock_name: str | None = None
+    security_type: str | None = None
+    currency: str | None = None
+    country: str | None = None
+    sector_name: str | None = None
+    account_holdings: list[AccountHolding] = Field(default_factory=list)
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("last_updated")
@@ -201,20 +198,20 @@ class TransactionBase(BaseModel):
     transaction_type: TransactionType
     quantity: float
     price: float
-    usd_price: Optional[float] = None
-    adjusted_price: Optional[float] = None
-    adjusted_quantity: Optional[float] = None
+    usd_price: float | None = None
+    adjusted_price: float | None = None
+    adjusted_quantity: float | None = None
     account_type: AccountType
     fee: float
     tax: float
-    realized_pl: Optional[float] = None
+    realized_pl: float | None = None
 
 
 class Transaction(TransactionBase):
     transaction_id: int
     user_id: int
     transaction_date: datetime
-    stock_name: Optional[str] = None  # 銘柄名を追加
+    stock_name: str | None = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("transaction_date")
@@ -226,8 +223,8 @@ class Transaction(TransactionBase):
 class TransactionWithPL(Transaction):
     """買付損益情報を含む取引情報"""
 
-    unrealized_pl: Optional[float] = None  # 未実現損益金額（現在価格×数量 - 取得価格×数量）
-    unrealized_pl_percentage: Optional[float] = None  # 未実現損益率（%）
+    unrealized_pl: float | None = None  # 未実現損益金額（現在価格×数量 - 取得価格×数量）
+    unrealized_pl_percentage: float | None = None  # 未実現損益率（%）
 
 
 class PortfolioHistoryBase(BaseModel):
@@ -261,8 +258,8 @@ class DividendBase(BaseModel):
     )
     shares_owned: float
     total_amount: float
-    tax: Optional[float]
-    fee: Optional[float]
+    tax: float | None
+    fee: float | None
 
     @field_validator("payment_date", mode="before")
     @classmethod
@@ -274,7 +271,7 @@ class DividendBase(BaseModel):
 class Dividend(DividendBase):
     dividend_id: int
     user_id: int
-    stock_name: Optional[str] = None  # 銘柄名を追加
+    stock_name: str | None = None  # 銘柄名を追加
     model_config = ConfigDict(from_attributes=True)
 
     @field_serializer("payment_date")
@@ -347,19 +344,19 @@ class DividendBySymbol(BaseModel):
 
 # レスポンスモデル
 class StockWithRelations(Stock):
-    jpx_detail: Optional[StockJPXDetail] = None
-    us_detail: Optional[StockUSDetail] = None
-    holdings: List[Holding] = []
-    transactions: List[Transaction] = []
-    portfolio_history: List[PortfolioHistory] = []
-    dividend: List[Dividend] = []
+    jpx_detail: StockJPXDetail | None = None
+    us_detail: StockUSDetail | None = None
+    holdings: list[Holding] = []
+    transactions: list[Transaction] = []
+    portfolio_history: list[PortfolioHistory] = []
+    dividend: list[Dividend] = []
 
 
 class UserWithRelations(User):
-    holdings: List[Holding] = []
-    transactions: List[Transaction] = []
-    portfolio_history: List[PortfolioHistory] = []
-    dividend: List[Dividend] = []
+    holdings: list[Holding] = []
+    transactions: list[Transaction] = []
+    portfolio_history: list[PortfolioHistory] = []
+    dividend: list[Dividend] = []
 
 
 # APIリクエスト/レスポンスモデル
@@ -379,13 +376,9 @@ class StockCreate(BaseModel):
 class StockJPXDetailCreate(StockJPXDetailBase):
     """日本株詳細情報登録リクエスト"""
 
-    pass
-
 
 class StockUSDetailCreate(StockUSDetailBase):
     """米国株詳細情報登録リクエスト"""
-
-    pass
 
 
 class TransactionCreate(BaseModel):
@@ -395,7 +388,7 @@ class TransactionCreate(BaseModel):
     transaction_type: TransactionType
     quantity: float
     price: float
-    usd_price: Optional[float] = None
+    usd_price: float | None = None
     account_type: AccountType
     fee: float
     tax: float
@@ -413,8 +406,6 @@ class TransactionCreate(BaseModel):
 
 class DividendCreate(DividendBase):
     """配当金登録リクエスト"""
-
-    pass
 
 
 class PortfolioSummary(BaseModel):
@@ -460,9 +451,9 @@ class StockWeeklyPerformance(BaseModel):
 class WeeklyPerformanceResponse(BaseModel):
     """週間騰落率取得レスポンス（画面表示用）"""
 
-    top_performers: List[StockWeeklyPerformance]
-    bottom_performers: List[StockWeeklyPerformance]
-    all_performers: List[StockWeeklyPerformance]
+    top_performers: list[StockWeeklyPerformance]
+    bottom_performers: list[StockWeeklyPerformance]
+    all_performers: list[StockWeeklyPerformance]
     timestamp: str
 
 
@@ -491,7 +482,7 @@ class PriceHistoryResponse(BaseModel):
 
     symbol: str = Field(..., description="銘柄コード")
     interval: str = Field(..., description="データ間隔（daily, weekly, monthly）")
-    data: List[PriceDataPoint] = Field(..., description="株価データのリスト")
+    data: list[PriceDataPoint] = Field(..., description="株価データのリスト")
 
 
 # CSVインポート用のスキーマ
@@ -503,7 +494,7 @@ class CsvTransactionPreview(BaseModel):
     transaction_type: TransactionType
     quantity: float
     price: float
-    usd_price: Optional[float] = None
+    usd_price: float | None = None
     account_type: AccountType
     fee: float
     tax: float
@@ -518,17 +509,17 @@ class CsvTransactionPreview(BaseModel):
 class ImportPreviewResponse(BaseModel):
     """インポートプレビューレスポンス"""
 
-    new_transactions: List[CsvTransactionPreview]
+    new_transactions: list[CsvTransactionPreview]
     existing_count: int
     csv_total_count: int
     skipped_count: int
-    errors: List[str]
+    errors: list[str]
 
 
 class ImportConfirmRequest(BaseModel):
     """インポート確認リクエスト"""
 
-    transactions: List[TransactionCreate]
+    transactions: list[TransactionCreate]
 
 
 class ImportConfirmResponse(BaseModel):
@@ -536,7 +527,7 @@ class ImportConfirmResponse(BaseModel):
 
     created_count: int
     failed_count: int
-    errors: List[str]
+    errors: list[str]
 
 
 # 配当金CSVインポート用のスキーマ
@@ -558,17 +549,17 @@ class CsvDividendPreview(BaseModel):
 class DividendImportPreviewResponse(BaseModel):
     """配当金インポートプレビューレスポンス"""
 
-    new_dividends: List[CsvDividendPreview]
+    new_dividends: list[CsvDividendPreview]
     existing_count: int
     csv_total_count: int
     skipped_count: int
-    errors: List[str]
+    errors: list[str]
 
 
 class DividendImportConfirmRequest(BaseModel):
     """配当金インポート確認リクエスト"""
 
-    dividends: List[DividendCreate]
+    dividends: list[DividendCreate]
 
 
 class DividendImportConfirmResponse(BaseModel):
@@ -576,4 +567,4 @@ class DividendImportConfirmResponse(BaseModel):
 
     created_count: int
     failed_count: int
-    errors: List[str]
+    errors: list[str]

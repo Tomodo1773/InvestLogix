@@ -1,19 +1,18 @@
 """CSVインポート機能のテスト"""
 
-from datetime import date
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest
 
 from stock.schemas import AccountType, TransactionType
-from stock.utils.datetime import JST
 from stock.services.csv_import_service import (
     ParsedTransaction,
     apply_usdjpy_rates,
     detect_new_transactions,
     parse_csv_content,
 )
+from stock.utils.datetime import JST
 
 
 class TestParseCsvContent:
@@ -204,7 +203,7 @@ class TestParseCsvContent:
 
     def test_no_header(self):
         """ヘッダーなしCSVのテスト"""
-        csv_content = "2024/01/30,テスト株式,1234".encode("utf-8")
+        csv_content = "2024/01/30,テスト株式,1234".encode()
 
         with pytest.raises(ValueError, match="ヘッダが見つかりませんでした"):
             parse_csv_content(csv_content)

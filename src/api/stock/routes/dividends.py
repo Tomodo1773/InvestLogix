@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from loguru import logger
@@ -39,10 +39,10 @@ async def create_dividend(
     return await dividend_service.create_dividend(dividend, current_user.user_id)
 
 
-@router.get("/", response_model=List[Dividend])
+@router.get("/", response_model=list[Dividend])
 async def list_dividends(
     current_user: Annotated[User, Depends(get_current_user)],
-    symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
+    symbol: str | None = Query(None, description="シンボルでフィルタリング"),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """
@@ -54,7 +54,7 @@ async def list_dividends(
     return await dividend_service.list_dividends(current_user.user_id, symbol)
 
 
-@router.get("/monthly", response_model=List[MonthlyDividend])
+@router.get("/monthly", response_model=list[MonthlyDividend])
 async def get_monthly_dividends(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
@@ -66,11 +66,11 @@ async def get_monthly_dividends(
     return await dividend_service.get_monthly_dividends(current_user.user_id)
 
 
-@router.get("/by-symbol", response_model=List[DividendBySymbol])
+@router.get("/by-symbol", response_model=list[DividendBySymbol])
 async def get_dividends_by_symbol(
     current_user: Annotated[User, Depends(get_current_user)],
-    year: Optional[int] = Query(None, ge=2000, le=2100),
-    month: Optional[int] = Query(None, ge=1, le=12),
+    year: int | None = Query(None, ge=2000, le=2100),
+    month: int | None = Query(None, ge=1, le=12),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """
@@ -207,7 +207,7 @@ async def confirm_dividend_csv_import(
             )
         except Exception as e:
             failed_count += 1
-            errors.append(f"登録失敗: {dividend.symbol} - {str(e)}")
+            errors.append(f"登録失敗: {dividend.symbol} - {e!s}")
             logger.error(
                 "配当金CSV登録失敗 action=dividend_csv_confirm user_id={} symbol={} error={}",
                 current_user.user_id,

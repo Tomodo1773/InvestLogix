@@ -1,4 +1,5 @@
 from datetime import date
+from typing import ClassVar
 
 import pytest
 
@@ -14,7 +15,7 @@ class MockResponse:
 
 
 class MockAsyncClient:
-    responses: list[dict] = []
+    responses: ClassVar[list[dict]] = []
 
     def __init__(self, *args, **kwargs):
         pass

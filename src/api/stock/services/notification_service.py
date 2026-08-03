@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 import httpx
 from dotenv import load_dotenv
@@ -32,7 +32,7 @@ class NotificationService:
     """LINE通知サービス（ユーザーIDの解決などの共通処理を提供）"""
 
     @staticmethod
-    async def get_line_user_id(user_id: int, db: AsyncSession = None) -> Optional[str]:
+    async def get_line_user_id(user_id: int, db: AsyncSession = None) -> str | None:
         """指定されたユーザーIDに対応するLINE UserIDを取得する"""
         if db is None:
             return None
@@ -145,7 +145,7 @@ def _summary_row(label: str, value: str, value_color: str = COLOR_TEXT_PRIMARY) 
     }
 
 
-def _build_summary_contents(portfolio_data: Dict[str, Any]) -> list[dict]:
+def _build_summary_contents(portfolio_data: dict[str, Any]) -> list[dict]:
     """資産サマリ部分のFlexコンテンツを作成する"""
     total_cost = _format_currency(portfolio_data["total_cost"])
     total_market_value = _format_currency(portfolio_data["total_market_value"])
@@ -181,7 +181,7 @@ def _build_summary_contents(portfolio_data: Dict[str, Any]) -> list[dict]:
 
 
 def _build_combined_flex(
-    portfolio_data: Dict[str, Any],
+    portfolio_data: dict[str, Any],
     top_performers: list,
     bottom_performers: list,
     sections: ChangeReasonSections | None,
@@ -272,7 +272,7 @@ def _build_combined_flex(
 
 async def send_weekly_summary_notification(
     user_id: int,
-    portfolio_data: Dict[str, Any],
+    portfolio_data: dict[str, Any],
     top_performers: list,
     bottom_performers: list,
     sections: ChangeReasonSections | None,
@@ -311,5 +311,5 @@ async def send_weekly_summary_notification(
         return False
 
     except Exception as e:
-        logger.error(f"LINE通知の送信中にエラーが発生しました: {str(e)}")
+        logger.error(f"LINE通知の送信中にエラーが発生しました: {e!s}")
         return False

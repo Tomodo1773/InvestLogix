@@ -11,10 +11,6 @@ HTTPステータスへの変換は app.py の例外ハンドラで行うので�
 class StockNotFoundError(ValueError):
     """銘柄が見つからない場合のエラー"""
 
-    pass
-
 
 class DuplicateStockSplitError(ValueError):
     """同一銘柄・同一分割基準日の分割情報がすでに登録されている場合のエラー"""
-
-    pass

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from stock.models import Holding, User
 from stock.services.holding_service import update_all_holdings_pl
+
 from ..conftest import MOCK_JAPAN_STOCK_PRICE_UPDATED, MOCK_US_STOCK_PRICE_UPDATED, MOCK_USD_JPY_RATE_RESPONSE
 
 

@@ -25,12 +25,12 @@ import type {
   WeeklyPerformanceResponse,
 } from "./types"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
-
+// APIは同一オリジンの /api 配下で配信される（本番はVercel Function、開発はViteのプロキシが中継）。
+// そのため絶対URLは持たず、Cookieも同一オリジンのものだけを送る。
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(endpoint, {
     ...options,
-    credentials: "include",
+    credentials: "same-origin",
     headers: {
       ...options.headers,
     },
@@ -63,7 +63,7 @@ async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unkno
 
 // Auth APIs
 export async function login(username: string, password: string): Promise<TokenResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/token`, {
+  const response = await fetch("/api/v1/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -72,7 +72,7 @@ export async function login(username: string, password: string): Promise<TokenRe
       username,
       password,
     }),
-    credentials: "include",
+    credentials: "same-origin",
   })
 
   if (!response.ok) {

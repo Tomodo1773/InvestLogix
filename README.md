@@ -95,12 +95,12 @@ docker compose exec api uv run python -m stock.jobs.update_and_notify
 ```bash
 cd src/web
 sfw pnpm install
-cp .env.local.example .env.local
 pnpm dev
 ```
 
-- `VITE_API_URL` が API のURL（デフォルトは `http://localhost:8000`）
 - 起動後のURLはViteの表示（通常は `http://localhost:5173`）に従ってください
+- APIはVite開発サーバの `/api` プロキシ経由で呼ばれます。転送先の既定は `http://localhost:8000` で、
+  変えたい場合のみ環境変数 `DEV_API_PROXY_TARGET` を指定してください
 
 ## 開発（詳細）
 
@@ -120,7 +120,6 @@ uv run uvicorn stock.app:app --reload --port 8000
 
 - `src/docker-compose.yaml` のDBは `POSTGRES_PASSWORD=hogehoge` が固定です。DockerのDBを使う場合は
   `src/api/.env` の `DB_PASSWORD` を合わせるか、`src/docker-compose.yaml` を修正してください。
-- フロント開発サーバのオリジンに合わせて `CORS_ORIGINS` を設定してください（Vite既定は `http://localhost:5173`）。
 
 ### Frontend（`src/web`）
 
@@ -133,7 +132,7 @@ pnpm check
 ## 環境変数
 
 - Backend: `src/api/.env.sample` を参考に `src/api/.env` を作成
-- Frontend: `src/web/.env.local.example` を参考に `src/web/.env.local` を作成
+- Frontend: ローカル開発では設定不要。Vercel側でのみ、APIの転送先として `API_ORIGIN` を設定する
 
 ## API仕様
 

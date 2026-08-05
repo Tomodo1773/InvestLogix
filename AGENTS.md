@@ -203,6 +203,21 @@ Cookie(httponly) ベースの認証に一本化。`/api/v1/token` がログイ�
 | Webフロントエンド | Cookie(httponly) | ブラウザからのアクセス |
 | Swagger UI (/docs) | Cookie(httponly) | `/api/v1/token` を Try it out でログイン後、Cookieが自動付与される |
 
+Cookie は `SameSite=Lax` / `HttpOnly` / `Secure`（本番のみ）で発行する。Webフロントとは同一オリジンで
+やり取りするため `SameSite=None` は不要で、クロスサイトからのCSRFはブラウザ側で遮断される。
+
+### フロントエンドからのAPI呼び出し経路
+
+Webフロントは API を絶対URLでは呼ばず、**同一オリジンの `/api` 配下**を叩く。中継は環境ごとに以下が担う。
+
+| 環境 | 中継 | 転送先の指定 |
+|------|------|-------------|
+| 本番(Vercel) | Vercel Function `src/web/api/[...path].ts` | Vercelの環境変数 `API_ORIGIN` |
+| ローカル | Vite開発サーバのプロキシ (`vite.config.ts`) | 環境変数 `DEV_API_PROXY_TARGET`（既定 `http://localhost:8000`） |
+
+この構成により API 側は CORS ミドルウェアを持たない。**フロント側に絶対URLを書き戻したり、
+API に CORS 設定を復活させたりしないこと**（同一オリジン前提が崩れ、`SameSite=None` が再び必要になる）。
+
 ### パスワードハッシュ
 
 - **アルゴリズム**: Argon2id（OWASP推奨）

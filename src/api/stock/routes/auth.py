@@ -37,14 +37,14 @@ async def login_for_access_token(
 
     access_token = create_access_token(data={"sub": user.username})
 
-    # 環境に応じてCookie設定を変更
-    is_production = ENVIRONMENT.lower() == "production"
+    # フロントとは同一オリジン（Vercel Functionが /api を中継）でやり取りするため、
+    # SameSite=Lax のままで動く。クロスサイトからのCSRFはブラウザ側で遮断される。
     response.set_cookie(
         key="token",
         value=access_token,
         httponly=True,
-        secure=is_production,
-        samesite="none" if is_production else "lax",
+        secure=ENVIRONMENT.lower() == "production",
+        samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 分を秒に変換
         path="/",
     )

@@ -4,10 +4,8 @@ FastAPIアプリケーション定義
 """
 
 from fastapi import FastAPI, Request, status
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from .database import settings
 from .routes import (
     auth,
     dividends,
@@ -28,15 +26,8 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORSミドルウェアの設定
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_origin_regex=r"^https://.+-tomodo1773s-projects\.vercel\.app$",
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# CORSミドルウェアは持たない。Webフロントは同一オリジンの /api をVercel Functionで中継しており、
+# ブラウザからのクロスオリジンリクエストを許可する必要がないため。
 
 
 # ドメインエラーからHTTPレスポンスへの変換をここに集約する。

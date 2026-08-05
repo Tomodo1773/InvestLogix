@@ -49,7 +49,8 @@ services:
     image: investlogix-web
     container_name: investlogix-web
     environment:
-      VITE_API_URL: http://localhost:8000
+      # Vite開発サーバのプロキシがコンテナ内から中継するため、サービス名で解決する
+      DEV_API_PROXY_TARGET: http://api:8000
     volumes:
       - ./web:/app
       - /app/node_modules

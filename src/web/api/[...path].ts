@@ -4,8 +4,10 @@
  * ブラウザからは常に同一オリジンへのリクエストになるため、API側でCORSを設定する必要がなく、
  * 認証Cookieもファーストパーティ（SameSite=Lax）で扱える。
  * 転送先はVercelの環境変数 API_ORIGIN から読む（リポジトリにバックエンドのURLを残さないため）。
+ *
+ * ランタイムはVercelの既定（Node.js）を使う。Web標準のRequest/Responseで書けるため
+ * ランタイム指定は不要で、指定しないぶん構成の陳腐化にも強い。
  */
-export const config = { runtime: "edge" }
 
 /** ボディを持てないメソッド。fetchにbodyを渡すとTypeErrorになる */
 const BODYLESS_METHODS = new Set(["GET", "HEAD"])

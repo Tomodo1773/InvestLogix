@@ -1,6 +1,5 @@
 import asyncio
 import re
-from typing import List, Optional
 
 from loguru import logger
 from sqlalchemy import select
@@ -18,7 +17,7 @@ class StockService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def get_or_create_stock(self, symbol: str, user_id: Optional[int] = None) -> models.Stock:
+    async def get_or_create_stock(self, symbol: str, user_id: int | None = None) -> models.Stock:
         """
         Stockを取得または作成する
         - 既存の場合: 登録済みのStockを返す
@@ -222,7 +221,7 @@ class StockService:
         logger.info("Stockを更新しました action=update symbol={}", symbol)
         return db_stock
 
-    async def list_stocks(self, market: Optional[str] = None) -> List[models.Stock]:
+    async def list_stocks(self, market: str | None = None) -> list[models.Stock]:
         query = select(models.Stock)
         if market:
             query = query.where(models.Stock.market == market)

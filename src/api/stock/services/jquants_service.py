@@ -11,7 +11,7 @@ V2 API対応版:
 
 import asyncio
 import os
-from typing import Dict, List, Optional
+import sys
 
 import httpx
 from dotenv import load_dotenv
@@ -35,7 +35,7 @@ class JQuantsClient:
         self.api_key = api_key
         self.client = ClientV2(api_key=api_key)
 
-    async def get_prices(self, symbol: str, start_date: str, end_date: Optional[str] = None) -> List[Dict]:
+    async def get_prices(self, symbol: str, start_date: str, end_date: str | None = None) -> list[dict]:
         """
         指定した銘柄の株価情報を取得する
         Args:
@@ -65,7 +65,7 @@ class JQuantsClient:
             # V2形式をそのまま返す
             return data.get("data", [])
 
-    def get_company_info(self, symbol: str) -> Optional[Dict]:
+    def get_company_info(self, symbol: str) -> dict | None:
         """
         指定した銘柄の企業情報を取得する
         Args:
@@ -78,7 +78,7 @@ class JQuantsClient:
             return None
         return response.iloc[0].to_dict()
 
-    def get_market_segment(self, symbol: str = "") -> List[Dict]:
+    def get_market_segment(self, symbol: str = "") -> list[dict]:
         """
         市場区分情報を取得する
         Args:
@@ -144,7 +144,7 @@ if __name__ == "__main__":
 
     if not api_key:
         logger.error("環境変数 JQUANTS_API_KEY が未設定です action=external_io")
-        exit(1)
+        sys.exit(1)
 
     # クライアントを初期化
     _jquants_client = JQuantsClient(api_key=api_key)

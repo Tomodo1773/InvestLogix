@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,7 +95,7 @@ class StockSplitService:
                 f"Stock split already registered: {split_data.symbol} {split_data.split_date:%Y-%m-%d}"
             )
 
-    async def list_stock_splits(self, user_id: int, symbol: Optional[str] = None) -> List[models.StockSplit]:
+    async def list_stock_splits(self, user_id: int, symbol: str | None = None) -> list[models.StockSplit]:
         """
         株式分割履歴を取得する
 

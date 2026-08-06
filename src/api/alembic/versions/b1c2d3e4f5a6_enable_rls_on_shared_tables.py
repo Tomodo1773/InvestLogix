@@ -6,14 +6,14 @@ Create Date: 2026-05-03 15:00:00.000000
 
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 from alembic import op
 
 revision: str = "b1c2d3e4f5a6"
-down_revision: Union[str, None] = "c1d2e3f4a5b6"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "c1d2e3f4a5b6"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 # Supabaseの「RLS未有効」警告を抑止するためにENABLEだけ行う共有/メタテーブル。
 # ポリシーは設定しないため、テーブルオーナー(postgres)からは通常通りアクセス可能。

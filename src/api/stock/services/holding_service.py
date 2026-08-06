@@ -1,4 +1,4 @@
-from typing import List, NamedTuple, Optional
+from typing import NamedTuple
 
 from loguru import logger
 from sqlalchemy import case, func, select
@@ -389,8 +389,8 @@ async def update_single_holding_pl(db: AsyncSession, user_id: int, symbol: str) 
 
 
 async def update_holding_note(
-    db: AsyncSession, user_id: int, symbol: str, note: Optional[str]
-) -> Optional[Holding]:
+    db: AsyncSession, user_id: int, symbol: str, note: str | None
+) -> Holding | None:
     """
     指定された銘柄のメモ（投資意図）を更新します。
 
@@ -418,8 +418,8 @@ async def update_holding_note(
 async def update_all_holdings_pl(
     db: AsyncSession,
     user_id: int,
-    holdings: List[Holding] | None = None,
-) -> tuple[List[Holding], List[str]]:
+    holdings: list[Holding] | None = None,
+) -> tuple[list[Holding], list[str]]:
     """
     ユーザーの保有する全銘柄の損益を一括更新します。
 
@@ -461,7 +461,7 @@ async def update_all_holdings_pl(
     return updated_holdings, sorted(failed_symbols)
 
 
-def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[str]]:
+def _derive_country_and_sector(stock: Stock) -> tuple[str | None, str | None]:
     """Stock から国 (JP/US/OTHER) とセクター名を導出する。
 
     - 投信 (security_type=="FUND") は国際分散のため "OTHER" に集約
@@ -469,7 +469,7 @@ def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[st
     - セクター名は JPX 17 業種または GICS セクター。詳細レコードが無い場合は None
     """
     if stock.security_type == "FUND":
-        country: Optional[str] = "OTHER"
+        country: str | None = "OTHER"
     elif stock.currency == "JPY":
         country = "JP"
     elif stock.currency == "USD":
@@ -477,7 +477,7 @@ def _derive_country_and_sector(stock: Stock) -> tuple[Optional[str], Optional[st
     else:
         country = "OTHER"
 
-    sector_name: Optional[str] = None
+    sector_name: str | None = None
     if stock.jpx_detail is not None:
         sector_name = stock.jpx_detail.sector_17_name
     elif stock.us_detail is not None:
@@ -537,7 +537,7 @@ async def enrich_holdings_with_account_holdings(
     return holdings
 
 
-async def list_holdings(db: AsyncSession, user_id: int, symbol: Optional[str] = None) -> List[Holding]:
+async def list_holdings(db: AsyncSession, user_id: int, symbol: str | None = None) -> list[Holding]:
     """
     ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨、国、セクターと共に取得します。
     symbolが指定された場合は、その銘柄の情報のみを返します。

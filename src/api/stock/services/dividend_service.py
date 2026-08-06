@@ -1,8 +1,6 @@
-from typing import List, Optional
-
+from loguru import logger
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from loguru import logger
 
 from .. import models, schemas
 from ..utils import get_jst_extract_columns
@@ -15,9 +13,7 @@ class DividendService:
         self.db = db
         self.stock_service = StockService(db)
 
-    async def create_dividend(
-        self, dividend: schemas.DividendCreate, user_id: int
-    ) -> Optional[models.Dividend]:
+    async def create_dividend(self, dividend: schemas.DividendCreate, user_id: int) -> models.Dividend | None:
         # 株式の存在確認または登録
         await self.stock_service.get_or_create_stock(dividend.symbol, user_id)
 
@@ -67,7 +63,7 @@ class DividendService:
 
         return db_dividend
 
-    async def list_dividends(self, user_id: int, symbol: Optional[str] = None) -> List[models.Dividend]:
+    async def list_dividends(self, user_id: int, symbol: str | None = None) -> list[models.Dividend]:
         query = (
             select(models.Dividend, models.Stock.name)
             .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
@@ -93,7 +89,7 @@ class DividendService:
         )
         return dividends
 
-    async def get_monthly_dividends(self, user_id: int) -> List[dict]:
+    async def get_monthly_dividends(self, user_id: int) -> list[dict]:
         """月次の配当金集計を取得する
 
         Args:
@@ -159,7 +155,7 @@ class DividendService:
 
     async def get_dividends_by_symbol(
         self, user_id: int, year: int | None = None, month: int | None = None
-    ) -> List[dict]:
+    ) -> list[dict]:
         """銘柄別の配当金集計を取得する（税・手数料控除後の純額、金額降順）
 
         Args:

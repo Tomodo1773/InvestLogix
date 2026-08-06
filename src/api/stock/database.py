@@ -1,6 +1,5 @@
 import json
 from enum import Enum
-from typing import List
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -53,7 +52,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
 
     # CORS設定
-    CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # サーバー設定
     HOST: str = "0.0.0.0"
@@ -71,7 +70,7 @@ class Settings(BaseSettings):
 
     @field_validator("CORS_ORIGINS", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v: str | List[str]) -> List[str]:
+    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
         """CORS_ORIGINSをJSON文字列からリストに変換"""
         if isinstance(v, str):
             try:

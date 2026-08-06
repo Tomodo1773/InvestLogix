@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,11 +55,11 @@ async def update_holding_note(
     return holding
 
 
-@router.get("/", response_model=List[Holding])
+@router.get("/", response_model=list[Holding])
 async def list_holdings(
     current_user: Annotated[User, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db_for_user),
-    symbol: Optional[str] = Query(None, description="フィルタリングする銘柄コード"),
+    symbol: str | None = Query(None, description="フィルタリングする銘柄コード"),
 ):
     """
     ユーザーの保有銘柄一覧を取得する
@@ -69,7 +69,7 @@ async def list_holdings(
     return await holding_service.list_holdings(db, current_user.user_id, symbol)
 
 
-@router.post("/recalculate-all", response_model=List[Holding])
+@router.post("/recalculate-all", response_model=list[Holding])
 async def recalculate_all_holdings_pl(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):

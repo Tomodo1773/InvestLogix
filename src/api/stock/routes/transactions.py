@@ -1,4 +1,4 @@
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from loguru import logger
@@ -47,10 +47,10 @@ async def create_transaction(
     return db_transaction
 
 
-@router.get("/", response_model=List[Transaction | TransactionWithPL])
+@router.get("/", response_model=list[Transaction | TransactionWithPL])
 async def list_transactions(
     current_user: Annotated[User, Depends(get_current_user)],
-    symbol: Optional[str] = Query(None, description="シンボルでフィルタリング"),
+    symbol: str | None = Query(None, description="シンボルでフィルタリング"),
     include_unrealized_pl: bool = Query(False, description="買付に未実現損益を含める（symbolと併用）"),
     db: AsyncSession = Depends(get_db_for_user),
 ):
@@ -65,7 +65,7 @@ async def list_transactions(
     return await transaction_service.list_transactions(current_user.user_id, symbol, include_unrealized_pl)
 
 
-@router.get("/monthly-summary", response_model=List[MonthlySummary])
+@router.get("/monthly-summary", response_model=list[MonthlySummary])
 async def get_monthly_transaction_summary(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
@@ -79,7 +79,7 @@ async def get_monthly_transaction_summary(
     return await transaction_service.get_monthly_summary(current_user.user_id)
 
 
-@router.get("/yearly-summary", response_model=List[YearlySummary])
+@router.get("/yearly-summary", response_model=list[YearlySummary])
 async def get_yearly_transaction_summary(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
@@ -243,7 +243,7 @@ async def confirm_csv_import(
             )
         except Exception as e:
             failed_count += 1
-            errors.append(f"登録失敗: {transaction.symbol} - {str(e)}")
+            errors.append(f"登録失敗: {transaction.symbol} - {e!s}")
             logger.error(
                 "CSV取引登録失敗 action=csv_confirm user_id={} symbol={} error={}",
                 current_user.user_id,

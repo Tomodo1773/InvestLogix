@@ -52,7 +52,7 @@ class TestParseDividendCsvContent:
         csv_content = '''"受渡日","口座","商品","銘柄名","数量","受取額(税引後・円)"
 "2024/03/15","特定","株式","野村MRF","100","10"'''
 
-        dividends, errors = parse_dividend_csv_content(csv_content.encode("utf-8"))
+        dividends, _ = parse_dividend_csv_content(csv_content.encode("utf-8"))
 
         assert len(dividends) == 0
 
@@ -77,7 +77,7 @@ class TestParseDividendCsvContent:
 
     def test_no_header(self):
         """ヘッダーなしCSVのテスト"""
-        csv_content = "2024/03/15,特定,株式,テスト株式".encode("utf-8")
+        csv_content = "2024/03/15,特定,株式,テスト株式".encode()
 
         with pytest.raises(ValueError, match="ヘッダ行が見つかりませんでした"):
             parse_dividend_csv_content(csv_content)

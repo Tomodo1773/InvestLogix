@@ -135,7 +135,8 @@ uv run uvicorn stock.app:app --reload --port 8000
 
 - `src/docker-compose.yaml` のDBは `POSTGRES_PASSWORD=hogehoge` が固定です。DockerのDBを使う場合は
   `src/api/.env` の `DB_PASSWORD` を合わせるか、`src/docker-compose.yaml` を修正してください。
-- フロント開発サーバのオリジンに合わせて `CORS_ORIGINS` を設定してください（Vite既定は `http://localhost:5173`）。
+- CORSの設定は不要です。フロントは Vite の dev proxy（本番はCloudflare Worker）経由でAPIを叩くため、
+  ブラウザから見て常に同一オリジンになります。
 
 ### Frontend（`src/web`）
 

@@ -1,4 +1,3 @@
-import json
 from enum import Enum
 
 from pydantic import field_validator
@@ -51,9 +50,6 @@ class Settings(BaseSettings):
     # OpenAI API設定
     OPENAI_API_KEY: str = ""
 
-    # CORS設定
-    CORS_ORIGINS: list[str] = ["http://localhost:3000"]
-
     # サーバー設定
     HOST: str = "0.0.0.0"
     PORT: int = 8000
@@ -67,17 +63,6 @@ class Settings(BaseSettings):
         if self.DATABASE_URL:
             return self.DATABASE_URL
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
-
-    @field_validator("CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: str | list[str]) -> list[str]:
-        """CORS_ORIGINSをJSON文字列からリストに変換"""
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return [i.strip() for i in v.split(",")]
-        return v
 
     @field_validator("PORT", "ACCESS_TOKEN_EXPIRE_MINUTES", mode="before")
     @classmethod

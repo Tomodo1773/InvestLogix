@@ -55,10 +55,6 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "DB_NAME"
         value = var.db_name
       }
-      env {
-        name  = "CORS_ORIGINS"
-        value = jsonencode(var.cors_origins)
-      }
 
       dynamic "env" {
         for_each = local.service_secrets

@@ -16,7 +16,7 @@
   "compatibility_date": "2026-07-29",
   "assets": {
     "directory": "./dist",
-    // 現在の vercel.json の rewrite と等価。SPAのルートを index.html に落とす
+    // SPAのルートを index.html に落とす（クライアントルーティングを直リロードでも通す）
     "not_found_handling": "single-page-application",
     // /api/* だけ Worker に渡す。それ以外はWorkerを起動せずアセット配信されるので
     // Worker のリクエスト課金対象にならない

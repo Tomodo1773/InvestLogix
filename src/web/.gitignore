@@ -12,9 +12,6 @@ build
 # local env files
 .env*.local
 
-# vercel（切り替え検証が済むまでロールバック手段として残す）
-.vercel
-
 # cloudflare workers
 .wrangler
 # wrangler dev 用のローカル環境変数（API_ORIGIN が入るため絶対にコミットしない）

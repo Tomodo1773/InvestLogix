@@ -58,9 +58,6 @@ yarn-error.log*
 !.env.*.example
 !.env.*.sample
 
-# vercel（切り替え検証が済むまでロールバック手段として残す）
-.vercel/
-
 # cloudflare workers
 .wrangler/
 .dev.vars

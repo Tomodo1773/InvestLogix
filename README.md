@@ -28,7 +28,6 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - フロントエンド: Cloudflare Workers（Static Assets）
   - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、認証Cookieがサードパーティ扱いにならずSafari等でも通る
   - バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
-  - DNS切り替えのロールバック手段として、Vercelプロジェクトは切り替え検証が済むまで残している
 - バックエンド: Google Cloud Run
   - API は Cloud Run Service
   - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler

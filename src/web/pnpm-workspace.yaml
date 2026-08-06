@@ -1,4 +1,5 @@
 minimumReleaseAge: 10080
+trustLockfile: true
 minimumReleaseAgeExclude:
   - vite
   - rolldown

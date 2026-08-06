@@ -28,7 +28,6 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - フロントエンド: Cloudflare Workers（Static Assets）
   - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、認証Cookieがサードパーティ扱いにならずSafari等でも通る
   - バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
-  - DNS切り替えのロールバック手段として、Vercelプロジェクトは切り替え検証が済むまで残している
 - バックエンド: Google Cloud Run
   - API は Cloud Run Service
   - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler
@@ -135,7 +134,8 @@ uv run uvicorn stock.app:app --reload --port 8000
 
 - `src/docker-compose.yaml` のDBは `POSTGRES_PASSWORD=hogehoge` が固定です。DockerのDBを使う場合は
   `src/api/.env` の `DB_PASSWORD` を合わせるか、`src/docker-compose.yaml` を修正してください。
-- フロント開発サーバのオリジンに合わせて `CORS_ORIGINS` を設定してください（Vite既定は `http://localhost:5173`）。
+- CORSの設定は不要です。フロントは Vite の dev proxy（本番はCloudflare Worker）経由でAPIを叩くため、
+  ブラウザから見て常に同一オリジンになります。
 
 ### Frontend（`src/web`）
 

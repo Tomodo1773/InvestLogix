@@ -27,11 +27,11 @@ import type {
 
 // APIは常に同一オリジンの相対パスで叩く。本番はCloudflare Workerが、
 // 開発時はViteのdev proxyが /api/* をバックエンドへ転送する。
-// バックエンドのURLをバンドルに焼き込まないための設計
+// バックエンドのURLをバンドルに焼き込まないための設計。
+// 同一オリジンなので認証Cookieは既定で送られる（credentials の指定は不要）
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(endpoint, {
     ...options,
-    credentials: "include",
     headers: {
       ...options.headers,
     },
@@ -73,7 +73,6 @@ export async function login(username: string, password: string): Promise<TokenRe
       username,
       password,
     }),
-    credentials: "include",
   })
 
   if (!response.ok) {

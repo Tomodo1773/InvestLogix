@@ -75,4 +75,6 @@ URL map と serverless NEG で完全な同一オリジン化ができ、`infra/*
 - **さらに、リダイレクトを追うにはボディをバッファで渡す必要がある。** 受信 Request のボディはストリームなので、リダイレクトで再送が必要になると `TypeError: A request with a one-time-use body ... encountered a redirect requiring the body to be retransmitted` になる。GET は影響しないため気づきにくく、ログインや CSV インポートのような POST だけが 500 になる
 - **`API_ORIGIN` は `https://` で登録する。** `http://` だと Cloud Run が HTTPS へリダイレクトし、上記のボディ再送エラーを踏む。GET は透過的に追従して成功するため原因が分かりにくい
 - **`API_ORIGIN` に同一ゾーン内のカスタムドメインを指定してはいけない。** Worker から自分と同じゾーンのホストへ `fetch` するとリダイレクトループになる（Cloudflare の既知の制約。回避策として案内される Service Bindings は Worker 間専用で、転送先が Cloud Run の本構成では使えない）。Worker の転送先は Cloud Run の `*.run.app` を直接指定する。API のカスタムドメインは Swagger UI や手動確認といった「人間が直接触る入口」として引き続き有効
-- Cookie の `samesite` 変更と CORS 撤去は、DNS を Vercel に戻すロールバック手段を残すため、切り替え検証が済んでから別途行う。それまで `vercel.json` と Vercel プロジェクトは残す
+- Cookie の `samesite` 変更と CORS 撤去は、DNS を Vercel に戻すロールバック手段を残すため、切り替え検証が済んでから別コミットで行った（PR #435）。**これを当てた時点で Vercel へのロールバックはできなくなる**（`samesite=lax` かつ CORS なしの API は `*.vercel.app` からのリクエストを通せない）。以降のロールバック手段は Worker の再デプロイのみ
+- API はどのオリジンからも CORS ヘッダーを返さなくなった。将来フロントを別オリジンに置く構成に戻すなら CORS ミドルウェアの再導入が必要になる
+- 同 PR で Vercel の残骸（`vercel.json`、Vercel の `projectId` / `orgId` を含む `project.json`、`@vercel/analytics`）も撤去した。アクセス解析の代替は入れていない

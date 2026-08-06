@@ -18,11 +18,6 @@ variable "db_host" {
   description = "Supabase の pooler ホスト。"
 }
 
-variable "cors_origins" {
-  type        = list(string)
-  description = "Cloud Run Service の CORS_ORIGINS に渡す URL リスト。"
-}
-
 variable "region" {
   type        = string
   default     = "asia-northeast1"

@@ -1,8 +1,6 @@
-# AGENTS.md
+# InvestLogix
 
 ユーザからの問いかけには必ず日本語で返答してください。
-
-> **Note**: このリポジトリの `CLAUDE.md` は `AGENTS.md` へのシンボリックリンクです。編集するときは `AGENTS.md` 側を編集してください。
 
 ## サービスレベル
 
@@ -80,6 +78,7 @@ InvestLogix/
 | `api-cd.yml` | バックエンドのCloud Runへのデプロイ（main push時） |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
 | `codeql.yml` | CodeQLによるコード解析 |
+| `agent-docs-sync.yml` | 指示ファイルとスキルの同期チェック |
 
 Ruffのバージョンは `src/api/uv.lock` を唯一の情報源とします。CI（`api-ci.yml`）・pre-commit・ローカルの `uv run ruff` がすべて同じバージョンで動くよう、`.pre-commit-config.yaml` の `rev` も uv.lock のRuffに合わせて更新してください。
 
@@ -95,7 +94,7 @@ React + Vite ベースのSPAです。Vercelでデプロイされています。
 4. テストコードを実装する（`src/web/docs/testing-guide.md`を参照）
 5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
 6. `pnpm test`でテストを実行する
-7. ドキュメント(AGENTS.md, README.md)を更新する
+7. ドキュメント(AGENTS.md/CLAUDE.md, README.md)を更新する
 8. コミットする
 
 ### 実装の指針
@@ -155,7 +154,7 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 5. `uv run ruff format` でコードを整形する
 6. `uv run ruff check --fix` でコードスタイルを整える
 7. api-test-runnerサブエージェントでテストを行う
-8. ドキュメント(AGENTS.md, README.md)を更新する
+8. ドキュメント(AGENTS.md/CLAUDE.md, README.md)を更新する
 9. コミットする
 
 ### 実装の指針
@@ -237,3 +236,9 @@ docker compose exec api uv run python -m stock.jobs.update_and_notify
 
 - 現在時刻は `stock/utils/datetime.py` の `now_jst()` を使う。`datetime.utcnow()` や `datetime.now()` は使わない
 - DB に保存する時刻はタイムゾーン付き（JST）
+
+## 指示ファイルの同期
+
+`AGENTS.md` と `CLAUDE.md`、`.agents/skills` と `.claude/skills` は同じ内容の別実体です。片方を変更したら、もう一方も同じ内容に揃えてください。
+
+クローン後に `git config core.hooksPath .githooks` を実行してください。

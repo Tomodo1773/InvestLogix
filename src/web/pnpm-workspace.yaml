@@ -1,3 +1,6 @@
+allowBuilds:
+  esbuild: false
+  workerd: false
 minimumReleaseAge: 10080
 trustLockfile: true
 minimumReleaseAgeExclude:

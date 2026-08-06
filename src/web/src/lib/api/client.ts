@@ -25,10 +25,11 @@ import type {
   WeeklyPerformanceResponse,
 } from "./types"
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000"
-
+// APIは常に同一オリジンの相対パスで叩く。本番はCloudflare Workerが、
+// 開発時はViteのdev proxyが /api/* をバックエンドへ転送する。
+// バックエンドのURLをバンドルに焼き込まないための設計
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+  const response = await fetch(endpoint, {
     ...options,
     credentials: "include",
     headers: {
@@ -63,7 +64,7 @@ async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unkno
 
 // Auth APIs
 export async function login(username: string, password: string): Promise<TokenResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/token`, {
+  const response = await fetch("/api/v1/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

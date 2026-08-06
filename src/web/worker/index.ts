@@ -21,9 +21,12 @@ export default {
     const target = new URL(url.pathname + url.search, env.API_ORIGIN)
 
     return fetch(new Request(target, request), {
-      // APIのリダイレクトはWorkerが追わずブラウザに返す。
-      // Workerが追うと Location にバックエンドのURLが露出する
-      redirect: "manual",
+      // リダイレクトはWorker側で追う。FastAPIは末尾スラッシュ不一致で307を返し、
+      // その Location は絶対URL（Host がバックエンドのもの）になる。
+      // ブラウザに渡すとクロスサイト遷移になりCookieが送られず、
+      // かつバックエンドのURLが露出するため、ここで解決して最終結果だけを返す。
+      // Workersの受信Requestは redirect が manual なので明示的に上書きする
+      redirect: "follow",
     })
   },
 } satisfies ExportedHandler<Env>

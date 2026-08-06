@@ -1,0 +1,28 @@
+{
+  // バックエンドのオリジンは vars に書かない。`wrangler secret put API_ORIGIN` で
+  // Cloudflare 側に登録する（vars に同名を置くと secret を上書きしてしまう）。
+  // カスタムドメインも routes に書かず、ダッシュボードで attach する。
+  // どちらもリポジトリにURLを残さないため。
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "investlogix-web",
+  "main": "./worker/index.ts",
+  // Workersランタイムの破壊的変更をゲートする日付。この日付時点の挙動で動く。
+  // 同梱 workerd がサポートする上限日以下である必要があり、超えると wrangler dev が起動しない。
+  //
+  // 制約は一方向なので、wrangler を上げても上限が上がるだけでこの値は有効なまま。
+  // Dependabot が wrangler を更新しても**ここを触る必要はない**。
+  // 日付でゲートされた新しい挙動が欲しいときだけ、意図して上げること
+  // （上げるのはランタイムの意味論を変える行為なので自動化しない）
+  "compatibility_date": "2026-07-29",
+  "assets": {
+    "directory": "./dist",
+    // 現在の vercel.json の rewrite と等価。SPAのルートを index.html に落とす
+    "not_found_handling": "single-page-application",
+    // /api/* だけ Worker に渡す。それ以外はWorkerを起動せずアセット配信されるので
+    // Worker のリクエスト課金対象にならない
+    "run_worker_first": ["/api/*"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}

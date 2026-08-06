@@ -12,8 +12,11 @@ build
 # local env files
 .env*.local
 
-# vercel
-.vercel
+# cloudflare workers
+.wrangler
+# wrangler dev 用のローカル環境変数（API_ORIGIN が入るため絶対にコミットしない）
+.dev.vars
+.dev.vars.*
 
 # typescript
 *.tsbuildinfo

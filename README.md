@@ -25,7 +25,10 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - DB: PostgreSQL
 
 ### インフラ
-- フロントエンド: Vercel
+- フロントエンド: Cloudflare Workers（Static Assets）
+  - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、認証Cookieがサードパーティ扱いにならずSafari等でも通る
+  - バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
+  - DNS切り替えのロールバック手段として、Vercelプロジェクトは切り替え検証が済むまで残している
 - バックエンド: Google Cloud Run
   - API は Cloud Run Service
   - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler
@@ -34,7 +37,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - 上記の構造（env, IAM, scaling, cron 等）は OpenTofu でプロビジョニング
 
 ### デプロイと運用
-- アプリのデプロイ: フロントは Vercel 連携、バックエンドは Cloud Build による Cloud Run 自動デプロイ
+- アプリのデプロイ: フロントは `web-cd.yml` による Cloudflare Workers 自動デプロイ、バックエンドは Cloud Build による Cloud Run 自動デプロイ
 - インフラ構造の変更: `infra/*.tf` を編集して `tofu apply`
 - シークレット値の更新: `gcloud secrets versions add`（Terraform は値を持たない）
 - Cloud Run Jobs のイメージ更新: main マージ後に `scripts/update-cloud-run-jobs.sh`
@@ -95,12 +98,24 @@ docker compose exec api uv run python -m stock.jobs.update_and_notify
 ```bash
 cd src/web
 sfw pnpm install
-cp .env.local.example .env.local
 pnpm dev
 ```
 
-- `VITE_API_URL` が API のURL（デフォルトは `http://localhost:8000`）
 - 起動後のURLはViteの表示（通常は `http://localhost:5173`）に従ってください
+- フロントは API を同一オリジンの相対パス（`/api/*`）で叩きます。開発時は Vite の dev proxy が `http://localhost:8000` へ転送するため、環境変数の設定は不要です
+- 転送先を変えたい場合のみ `API_PROXY_TARGET` を指定してください（Docker Compose では `http://api:8000` を渡しています）
+
+### 4) Cloudflare Worker 込みで確認する（任意）
+
+本番と同じ経路（Workerが `/api/*` をプロキシする形）を手元で再現したい場合のみ実行します。
+
+```bash
+cd src/web
+printf 'API_ORIGIN=http://localhost:8000\n' > .dev.vars
+pnpm build && pnpm cf-dev
+```
+
+`.dev.vars` は gitignore 済みです。バックエンドのURLが入るためコミットしないでください。
 
 ## 開発（詳細）
 
@@ -133,7 +148,8 @@ pnpm check
 ## 環境変数
 
 - Backend: `src/api/.env.sample` を参考に `src/api/.env` を作成
-- Frontend: `src/web/.env.local.example` を参考に `src/web/.env.local` を作成
+- Frontend: 通常は設定不要。Vite の dev proxy の転送先を変える場合のみ `API_PROXY_TARGET` を指定する
+- Cloudflare Worker: バックエンドのオリジンは `API_ORIGIN`。本番は `wrangler secret put API_ORIGIN`、手元は `src/web/.dev.vars` に置く（どちらもリポジトリには入れない）
 
 ## API仕様
 

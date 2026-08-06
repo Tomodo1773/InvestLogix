@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // WorkersランタイムとDOMは Request / Response / fetch 等の型が衝突するため
+    // dom を外す。@types/node も同様に衝突するので types を空にする
+    "lib": ["esnext"],
+    "types": [],
+    "paths": {}
+  },
+  "include": ["./**/*.ts", "../worker-configuration.d.ts"]
+}

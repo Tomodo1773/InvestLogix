@@ -79,13 +79,20 @@ InvestLogix/
 | `api-test.yml` | バックエンドのテスト |
 | `api-cd.yml` | バックエンドのCloud Runへのデプロイ（main push時） |
 | `web-ci.yml` | フロントエンドのビルド・チェック |
+| `web-cd.yml` | フロントエンドのCloudflare Workersへのデプロイ（main push時） |
 | `codeql.yml` | CodeQLによるコード解析 |
 
 Ruffのバージョンは `src/api/uv.lock` を唯一の情報源とします。CI（`api-ci.yml`）・pre-commit・ローカルの `uv run ruff` がすべて同じバージョンで動くよう、`.pre-commit-config.yaml` の `rev` も uv.lock のRuffに合わせて更新してください。
 
 ## フロントエンド (src/web)
 
-React + Vite ベースのSPAです。Vercelでデプロイされています。
+React + Vite ベースのSPAです。Cloudflare Workers（Static Assets）でデプロイされています。
+
+`worker/index.ts` が `/api/*` を受けて Cloud Run へプロキシします。これによりフロントとAPIが同一オリジンになるため、フロント側はAPIを**常に相対パスで叩きます**（`API_BASE_URL` のような基底URLは持ちません）。バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）にあり、リポジトリにもクライアントバンドルにも入れません。
+
+- `wrangler.jsonc` を変更したら `pnpm cf-typegen` で `worker-configuration.d.ts` を再生成する
+- `compatibility_date` は同梱 workerd がサポートする上限日以下にする。超えると `wrangler dev` が起動しない。制約は一方向（wrangler を上げると上限が上がるだけ）なので、**依存更新に追随して上げる必要はない**。日付でゲートされた挙動が欲しいときだけ意図して上げる
+- `worker/` は Workers ランタイム、`src/` は DOM で型が衝突するため tsconfig を分けている。`pnpm typecheck` は両方を検査する
 
 ### 実装手順
 

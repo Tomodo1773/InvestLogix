@@ -72,4 +72,7 @@ URL map と serverless NEG で完全な同一オリジン化ができ、`infra/*
 - **`worker/` と `src/` は tsconfig を分ける必要がある。** `Request` / `Response` / `fetch` の型が Workers ランタイムと DOM で衝突する。`pnpm typecheck` は両方を検査する
 - **`worker-configuration.d.ts` はコミットしない。** 14000行超あるうえ、`wrangler types` がローカルの `.dev.vars` の変数名を読み取って `Env` に含めるため、マシン間で内容が一致しない。`pnpm typecheck` の先頭で毎回生成する（`prepare` は pnpm が "Already up to date" のときスキップするため使えなかった）
 - **Worker のプロキシはリダイレクトを追う必要がある。** FastAPI は末尾スラッシュ不一致で 307 を返し、その `Location` は絶対 URL（Host がバックエンドのもの）になる。ブラウザに渡すとクロスサイト遷移になって Cookie が送られず、かつバックエンドの URL が露出する。`redirect: "follow"` を明示すること（Workers の受信 Request は `redirect` が `manual` なので暗黙に引き継がれる）
+- **さらに、リダイレクトを追うにはボディをバッファで渡す必要がある。** 受信 Request のボディはストリームなので、リダイレクトで再送が必要になると `TypeError: A request with a one-time-use body ... encountered a redirect requiring the body to be retransmitted` になる。GET は影響しないため気づきにくく、ログインや CSV インポートのような POST だけが 500 になる
+- **`API_ORIGIN` は `https://` で登録する。** `http://` だと Cloud Run が HTTPS へリダイレクトし、上記のボディ再送エラーを踏む。GET は透過的に追従して成功するため原因が分かりにくい
+- **`API_ORIGIN` に同一ゾーン内のカスタムドメインを指定してはいけない。** Worker から自分と同じゾーンのホストへ `fetch` するとリダイレクトループになる（Cloudflare の既知の制約。回避策として案内される Service Bindings は Worker 間専用で、転送先が Cloud Run の本構成では使えない）。Worker の転送先は Cloud Run の `*.run.app` を直接指定する。API のカスタムドメインは Swagger UI や手動確認といった「人間が直接触る入口」として引き続き有効
 - Cookie の `samesite` 変更と CORS 撤去は、DNS を Vercel に戻すロールバック手段を残すため、切り替え検証が済んでから別途行う。それまで `vercel.json` と Vercel プロジェクトは残す

@@ -12,19 +12,32 @@ interface Env {
   API_ORIGIN: string
 }
 
+/** ボディを持ちえないメソッド。これ以外はバッファに読み切ってから転送する */
+const BODYLESS_METHODS = new Set(["GET", "HEAD"])
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
-
-    // Host は fetch が転送先URLから導出する。Cloud Run は Host でルーティングするため、
-    // 元の Host を引き継いではいけない（Request構築時に Host は引き継がれない）
     const target = new URL(url.pathname + url.search, env.API_ORIGIN)
 
-    return fetch(new Request(target, request), {
-      // リダイレクトはWorker側で追う。FastAPIは末尾スラッシュ不一致で307を返し、
-      // その Location は絶対URL（Host がバックエンドのもの）になる。
-      // ブラウザに渡すとクロスサイト遷移になりCookieが送られず、
-      // かつバックエンドのURLが露出するため、ここで解決して最終結果だけを返す。
+    // Host は転送先URLから導出させる。Cloud Run は Host でルーティングするため、
+    // 元の Host（フロントのドメイン）を引き継ぐと転送先に届かない
+    const headers = new Headers(request.headers)
+    headers.delete("host")
+
+    // ボディはストリームのままだと「リダイレクトで再送が必要になったとき」に
+    // 例外になる（GETは影響しないが、ログインやCSVインポートのPOSTが落ちる）。
+    // 読み切ってバッファで渡すことでリダイレクトを跨げるようにする。
+    // 個人利用の範囲ではアップロードサイズが小さいため全読みで問題ない
+    const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer()
+
+    return fetch(target, {
+      method: request.method,
+      headers,
+      body,
+      // リダイレクトはWorker側で追い、ブラウザには最終結果だけを返す。
+      // ブラウザに3xxを渡すと Location が絶対URL（Host がバックエンドのもの）なので
+      // クロスサイト遷移になりCookieが送られず、かつバックエンドのURLが露出する。
       // Workersの受信Requestは redirect が manual なので明示的に上書きする
       redirect: "follow",
     })

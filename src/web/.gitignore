@@ -17,6 +17,9 @@ build
 # wrangler dev 用のローカル環境変数（API_ORIGIN が入るため絶対にコミットしない）
 .dev.vars
 .dev.vars.*
+# wrangler types の生成物。14000行超あり、かつ .dev.vars の変数名を取り込むので
+# マシン間で内容が一致しない。pnpm install 時に prepare スクリプトで生成される
+worker-configuration.d.ts
 
 # typescript
 *.tsbuildinfo

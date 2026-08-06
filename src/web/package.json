@@ -9,7 +9,7 @@
     "lint": "biome lint --write .",
     "format": "biome format --write .",
     "check": "biome check --write . && pnpm typecheck && knip",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p worker/tsconfig.json",
+    "typecheck": "wrangler types && tsc --noEmit && tsc --noEmit -p worker/tsconfig.json",
     "knip": "knip",
     "test": "vitest run",
     "ci": "biome ci .",

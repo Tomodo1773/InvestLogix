@@ -90,7 +90,7 @@ React + Vite ベースのSPAです。Cloudflare Workers（Static Assets）でデ
 
 `worker/index.ts` が `/api/*` を受けて Cloud Run へプロキシします。これによりフロントとAPIが同一オリジンになるため、フロント側はAPIを**常に相対パスで叩きます**（`API_BASE_URL` のような基底URLは持ちません）。バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）にあり、リポジトリにもクライアントバンドルにも入れません。
 
-- `wrangler.jsonc` を変更したら `pnpm cf-typegen` で `worker-configuration.d.ts` を再生成する
+- Workersランタイムの型 `worker-configuration.d.ts` は生成物なのでコミットしない（gitignore済み）。14000行超あるうえ、`wrangler types` がローカルの `.dev.vars` の変数名を取り込むためマシン間で内容が一致しない。`pnpm typecheck` が毎回先頭で生成するので、手動実行は不要（単体で回したいときは `pnpm cf-typegen`）
 - `compatibility_date` は同梱 workerd がサポートする上限日以下にする。超えると `wrangler dev` が起動しない。制約は一方向（wrangler を上げると上限が上がるだけ）なので、**依存更新に追随して上げる必要はない**。日付でゲートされた挙動が欲しいときだけ意図して上げる
 - `worker/` は Workers ランタイム、`src/` は DOM で型が衝突するため tsconfig を分けている。`pnpm typecheck` は両方を検査する
 

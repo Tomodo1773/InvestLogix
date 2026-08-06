@@ -241,4 +241,4 @@ docker compose exec api uv run python -m stock.jobs.update_and_notify
 
 `AGENTS.md` と `CLAUDE.md`、`.agents/skills` と `.claude/skills` は、それぞれ同じ内容の別実体として管理します。シンボリックリンクは使いません（Windows で `git worktree` が失敗するため）。片方だけを変更せず、両方を同じ内容に揃えてコミットしてください。
 
-クローン後に `git config core.hooksPath .githooks` を実行すると、コミット時に一致を検証します。CIでも同じ検証を行います。
+クローン後に `git config core.hooksPath .githooks` を実行し、コミット時の検証を有効にしてください。CIでも同じ検証を行います。

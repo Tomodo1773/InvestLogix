@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router"
+import { Navigate, Route, Routes } from "react-router"
 import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import Dividends from "./routes/Dividends"
 import HoldingDetail from "./routes/HoldingDetail"
@@ -25,6 +25,9 @@ function App() {
         <Route path="/stock-splits" element={<StockSplits />} />
         <Route path="/stocks" element={<Stocks />} />
       </Route>
+      {/* 一致するルートが無いと何も描画されず真っ白になる。廃止した /login のブックマークや
+          PWAのstart_urlが残っていても復帰できるよう、トップへ寄せる */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

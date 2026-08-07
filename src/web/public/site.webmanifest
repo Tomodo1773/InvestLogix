@@ -1,6 +1,7 @@
 {
   "name": "InvestLogix - Portfolio Manager",
   "short_name": "InvestLogix",
+  "start_url": "/",
   "icons": [
     {
       "src": "/android-chrome-192x192.png",

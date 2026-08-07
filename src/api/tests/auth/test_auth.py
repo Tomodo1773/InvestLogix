@@ -124,6 +124,38 @@ async def test_login(client: AsyncClient, db_session: AsyncSession):
 
 
 @pytest.mark.asyncio
+async def test_logout(client: AsyncClient, auth_token: None):
+    """ログアウトのテスト
+
+    期待する動作:
+    - ステータスコード204
+    - Set-Cookieでtokenが失効する（発行時と同じ path / samesite 属性が付く）
+    - ログアウト後は認証が必要なエンドポイントが401になる
+
+    Args:
+        client: 非同期HTTPクライアント
+        auth_token: 一般ユーザーの認証フィクスチャ（clientにCookieをセットする副作用）
+    """
+    # ログアウト前はCookie認証が通ることを確認
+    assert (await client.get("/api/v1/me")).status_code == 200
+
+    response = await client.post("/api/v1/logout")
+
+    # レスポンス検証
+    assert response.status_code == 204
+    set_cookie = response.headers["set-cookie"]
+    assert "token=" in set_cookie
+    assert "Max-Age=0" in set_cookie
+    # 発行時と属性が食い違うとブラウザ側で削除が効かないため、set_cookieと揃っていることを確認
+    assert "Path=/" in set_cookie
+    assert "SameSite=lax" in set_cookie
+
+    # Cookieが破棄され、セッションが終了していることを確認
+    assert "token" not in client.cookies
+    assert (await client.get("/api/v1/me")).status_code == 401
+
+
+@pytest.mark.asyncio
 async def test_login_invalid_credentials(client: AsyncClient):
     """無効な認証情報でのログインテスト
 

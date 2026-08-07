@@ -9,6 +9,21 @@ from ..services.auth_service import AuthService
 
 router = APIRouter()
 
+TOKEN_COOKIE_NAME = "token"
+
+# フロントとAPIは同一オリジン（Cloudflare Workerが /api/* を転送する）なので
+# このCookieはサードパーティCookieにならない。よって samesite=lax で足りる。
+# Secure だけは本番のみ有効にする（ローカルはhttpで開発するため）
+#
+# 削除時に発行と同じ属性を渡さないとブラウザ側でCookieが消えないことがあるため、
+# 発行(set_cookie)と削除(delete_cookie)で属性を共有する。
+TOKEN_COOKIE_ATTRS = {
+    "path": "/",
+    "httponly": True,
+    "secure": settings.ENVIRONMENT.lower() == "production",
+    "samesite": "lax",
+}
+
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(
@@ -30,20 +45,25 @@ async def login_for_access_token(
 
     access_token = create_access_token(data={"sub": user.username})
 
-    # フロントとAPIは同一オリジン（Cloudflare Workerが /api/* を転送する）なので
-    # このCookieはサードパーティCookieにならない。よって samesite=lax で足りる。
-    # Secure だけは本番のみ有効にする（ローカルはhttpで開発するため）
     response.set_cookie(
-        key="token",
+        key=TOKEN_COOKIE_NAME,
         value=access_token,
-        httponly=True,
-        secure=settings.ENVIRONMENT.lower() == "production",
-        samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 分を秒に変換
-        path="/",
+        **TOKEN_COOKIE_ATTRS,
     )
     logger.info("Authトークンを発行しました action=create user_id={}", user.user_id)
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+async def logout(response: Response):
+    """
+    ログアウトする
+    - 認証Cookieを削除する
+    - 認証は不要（Cookieを消すだけの操作なので、未認証で叩かれても無害）
+    """
+    response.delete_cookie(key=TOKEN_COOKIE_NAME, **TOKEN_COOKIE_ATTRS)
+    logger.info("Authトークンを削除しました action=delete")
 
 
 @router.post("/users/", response_model=User)

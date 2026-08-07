@@ -4,9 +4,13 @@ resource "google_cloud_run_v2_service" "api" {
   ingress             = "INGRESS_TRAFFIC_ALL"
   deletion_protection = false
 
-  # *.run.app のデフォルト URL を無効化。アクセスはカスタムドメイン経由のみ。
-  # これが外れると URL が推測されて叩かれるリスクが出るので必ず維持する。
-  default_uri_disabled = true
+  # *.run.app のデフォルト URL。Cloudflare Worker の API_ORIGIN が
+  # このURLを指しているため無効化してはいけない。カスタムドメインは
+  # 同一ゾーンのためWorkerから fetch するとリダイレクトループになる。
+  #
+  # 直叩き防止（共有シークレット / OIDC）は未対応。必要になったら
+  # そちらで守る。URLを隠すことでは守らない。
+  default_uri_disabled = false
 
   # IAM チェックをスキップして認証不要で公開する。
   invoker_iam_disabled = true

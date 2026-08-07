@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @pytest.mark.asyncio
 async def test_create_dividend(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """配当情報の登録テスト
 
@@ -19,7 +19,7 @@ async def test_create_dividend(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 配当情報の登録
@@ -58,7 +58,7 @@ async def test_create_dividend(
 
 
 @pytest.mark.asyncio
-async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: str):
+async def test_create_dividend_stock_not_found(client: AsyncClient, auth_user):
     """存在しない銘柄の配当情報登録テスト
 
     期待する動作:
@@ -67,7 +67,7 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     dividend_data = {
         "symbol": "INVALID",
@@ -87,7 +87,7 @@ async def test_create_dividend_stock_not_found(client: AsyncClient, auth_token: 
 
 @pytest.mark.asyncio
 async def test_list_dividends(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data, create_dividend
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data, create_dividend
 ):
     """配当一覧取得テスト
 
@@ -99,7 +99,7 @@ async def test_list_dividends(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
         create_dividend: 配当登録用フィクスチャー
     """
@@ -149,7 +149,7 @@ async def test_list_dividends(
 
 
 @pytest.mark.asyncio
-async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup_dividend_data: dict):
+async def test_get_monthly_dividends(client: AsyncClient, auth_user, setup_dividend_data: dict):
     """月次配当金集計の取得テスト
 
     期待する動作:
@@ -158,7 +158,7 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_dividend_data: テスト用配当データ
     """
     # 月次配当金集計の取得
@@ -202,7 +202,7 @@ async def test_get_monthly_dividends(client: AsyncClient, auth_token: str, setup
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_by_symbol(client: AsyncClient, auth_token: str, setup_dividend_data: dict):
+async def test_get_dividends_by_symbol(client: AsyncClient, auth_user, setup_dividend_data: dict):
     """銘柄別配当金集計の取得テスト
 
     期待する動作:
@@ -213,7 +213,7 @@ async def test_get_dividends_by_symbol(client: AsyncClient, auth_token: str, set
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_dividend_data: テスト用配当データ（JP: 8058, US: AAPL）
     """
     response = await client.get("/api/v1/dividends/by-symbol")
@@ -244,7 +244,7 @@ async def test_get_dividends_by_symbol(client: AsyncClient, auth_token: str, set
 
 @pytest.mark.asyncio
 async def test_get_dividends_by_symbol_aggregates_multiple_payments(
-    client: AsyncClient, auth_token: str, setup_japanese_stock_data, create_dividend
+    client: AsyncClient, auth_user, setup_japanese_stock_data, create_dividend
 ):
     """同一銘柄の複数回配当が1件に合算されることを確認する"""
     await create_dividend(
@@ -279,9 +279,7 @@ async def test_get_dividends_by_symbol_aggregates_multiple_payments(
 
 
 @pytest.mark.asyncio
-async def test_get_monthly_dividends_respects_jst_boundary(
-    client: AsyncClient, auth_token: str, create_dividend
-):
+async def test_get_monthly_dividends_respects_jst_boundary(client: AsyncClient, auth_user, create_dividend):
     """JST 月初0時の配当が正しく当月に集計されることを確認する
 
     このテストは、タイムゾーン境界でのエッジケースを検証します:
@@ -314,7 +312,7 @@ async def test_get_monthly_dividends_respects_jst_boundary(
 
 
 @pytest.mark.asyncio
-async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_token: str, create_dividend):
+async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_user, create_dividend):
     """配当がない月も total_dividend: 0 で補完されることを確認する"""
     # 2024年1月と3月にデータを登録（2月は欠落）
     await create_dividend(
@@ -353,7 +351,7 @@ async def test_get_monthly_dividends_fills_gaps(client: AsyncClient, auth_token:
 
 @pytest.mark.asyncio
 async def test_get_dividends_by_symbol_with_year_month(
-    client: AsyncClient, auth_token: str, setup_japanese_stock_data, create_dividend
+    client: AsyncClient, auth_user, setup_japanese_stock_data, create_dividend
 ):
     """特定月を指定すると、その月のみの銘柄別集計が返ること"""
     await create_dividend(
@@ -389,7 +387,7 @@ async def test_get_dividends_by_symbol_with_year_month(
 
 @pytest.mark.asyncio
 async def test_get_dividends_by_symbol_empty_month(
-    client: AsyncClient, auth_token: str, setup_japanese_stock_data, create_dividend
+    client: AsyncClient, auth_user, setup_japanese_stock_data, create_dividend
 ):
     """配当がない月を指定すると空配列が返ること"""
     await create_dividend(
@@ -410,7 +408,7 @@ async def test_get_dividends_by_symbol_empty_month(
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_by_symbol_partial_params(client: AsyncClient, auth_token: str):
+async def test_get_dividends_by_symbol_partial_params(client: AsyncClient, auth_user):
     """yearのみ/monthのみ指定で422が返ること"""
     response = await client.get("/api/v1/dividends/by-symbol?year=2024")
     assert response.status_code == 422
@@ -420,7 +418,7 @@ async def test_get_dividends_by_symbol_partial_params(client: AsyncClient, auth_
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_by_symbol_jst_boundary(client: AsyncClient, auth_token: str, create_dividend):
+async def test_get_dividends_by_symbol_jst_boundary(client: AsyncClient, auth_user, create_dividend):
     """JST月境界で正しくフィルタリングされること"""
     # JST 2024-12-01 00:00:00 = UTC 2024-11-30 15:00:00
     await create_dividend(

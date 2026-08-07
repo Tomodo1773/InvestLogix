@@ -105,7 +105,7 @@ class TestBuildRankingRow:
 
 @pytest.mark.asyncio
 async def test_excludes_zero_quantity_holdings(
-    client, auth_token, setup_japanese_stock_data, create_transaction, mocker
+    client, auth_user, setup_japanese_stock_data, create_transaction, mocker
 ):
     """保有数量が0の銘柄が除外されることを検証（GET API統合テスト）
 
@@ -144,14 +144,14 @@ async def test_excludes_zero_quantity_holdings(
 
 @pytest.mark.asyncio
 async def test_calculates_change_rate_correctly(
-    db_session, auth_token, setup_japanese_stock_data, setup_us_stock_data, mocker
+    db_session, auth_user, setup_japanese_stock_data, setup_us_stock_data, mocker
 ):
     """騰落率が正しく計算されることを検証（サービス層のユニットテスト）
 
     setup_japanese_stock_dataとsetup_us_stock_dataフィクスチャで取引データが登録済み。
     calculate_weekly_performance関数を直接呼び出し、騰落率計算ロジックを検証する。
     """
-    # auth_tokenフィクスチャで作成されたユーザーを取得
+    # auth_userフィクスチャで作成されたユーザーを取得
     from sqlalchemy import select
 
     from stock.models import User
@@ -198,7 +198,7 @@ async def test_calculates_change_rate_correctly(
 
 @pytest.mark.asyncio
 async def test_get_weekly_performance_endpoint(
-    client, auth_token, setup_japanese_stock_data, setup_us_stock_data, mocker
+    client, auth_user, setup_japanese_stock_data, setup_us_stock_data, mocker
 ):
     """週間騰落率取得API（GET）の統合テスト
 

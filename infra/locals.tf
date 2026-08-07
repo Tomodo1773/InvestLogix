@@ -17,7 +17,6 @@ locals {
   # Service と Jobs で参照するシークレットは部分的に違うので、それぞれ定数化する。
   service_secrets = [
     "DB_PASSWORD",
-    "JWT_SECRET_KEY",
     "JQUANTS_API_KEY",
     "ALPHAVANTAGE_API_KEY",
     "TIINGO_API_KEY",

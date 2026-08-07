@@ -8,8 +8,8 @@ resource "google_cloud_run_v2_service" "api" {
   # このURLを指しているため無効化してはいけない。カスタムドメインは
   # 同一ゾーンのためWorkerから fetch するとリダイレクトループになる。
   #
-  # 直叩き防止（共有シークレット / OIDC）は未対応。必要になったら
-  # そちらで守る。URLを隠すことでは守らない。
+  # 直叩きは URL を隠すことでは守らない。API 側が全リクエストで Cloudflare Access の
+  # 署名済み JWT を検証するため、Cloudflare を経由しないリクエストは 401 になる。
   default_uri_disabled = false
 
   # IAM チェックをスキップして認証不要で公開する。
@@ -58,6 +58,17 @@ resource "google_cloud_run_v2_service" "api" {
       env {
         name  = "DB_NAME"
         value = var.db_name
+      }
+
+      # Cloudflare Access の JWT 検証設定。秘密ではないが環境ごとに変わるため variable で注入する。
+      # Cloud Run は *.run.app で直接叩けるので、この検証だけが未認証アクセスの防波堤になる。
+      env {
+        name  = "CF_ACCESS_TEAM_DOMAIN"
+        value = var.cf_access_team_domain
+      }
+      env {
+        name  = "CF_ACCESS_AUD"
+        value = var.cf_access_aud
       }
 
       dynamic "env" {

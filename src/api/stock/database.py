@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
@@ -33,10 +33,15 @@ class Settings(BaseSettings):
     DB_POOL_TIMEOUT: int = 30
     DB_POOL_RECYCLE: int = 1800
 
-    # 認証設定
-    JWT_SECRET_KEY: str = "dev_secret_key"
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    # 認証設定（Cloudflare Access）
+    # CF_ACCESS_TEAM_DOMAIN: Zero TrustのチームドメインでJWKSとissuerの導出に使う
+    #   （例: example.cloudflareaccess.com）
+    # CF_ACCESS_AUD: Access applicationのAudienceタグ。他アプリ向けJWTの使い回しを防ぐ
+    # DEV_AUTH_EMAIL: Cloudflareを経由しないローカル開発でログイン扱いにするメールアドレス。
+    #   productionでは設定できない（下の検証で起動時に失敗する）
+    CF_ACCESS_TEAM_DOMAIN: str = ""
+    CF_ACCESS_AUD: str = ""
+    DEV_AUTH_EMAIL: str = ""
 
     # J-Quants API設定
     JQUANTS_API_KEY: str = ""
@@ -68,7 +73,7 @@ class Settings(BaseSettings):
             return self.DATABASE_URL
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
-    @field_validator("PORT", "ACCESS_TOKEN_EXPIRE_MINUTES", mode="before")
+    @field_validator("PORT", mode="before")
     @classmethod
     def parse_number(cls, v: str | int) -> int:
         """文字列を数値に変換"""
@@ -92,6 +97,26 @@ class Settings(BaseSettings):
             return LogLevel[v.upper()]
         except KeyError:
             return LogLevel.INFO
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.lower() == "production"
+
+    @model_validator(mode="after")
+    def validate_auth_settings(self) -> "Settings":
+        """
+        本番の認証設定に穴が空いたまま起動しないようにする
+        - 開発用の認証迂回が有効なまま本番に出ることを防ぐ
+        - Access の検証設定が無いと全リクエストが401になるため、起動時に気付けるようにする
+        """
+        if not self.is_production:
+            return self
+
+        if self.DEV_AUTH_EMAIL:
+            raise ValueError("DEV_AUTH_EMAILはproductionでは設定できません")
+        if not self.CF_ACCESS_TEAM_DOMAIN or not self.CF_ACCESS_AUD:
+            raise ValueError("productionではCF_ACCESS_TEAM_DOMAINとCF_ACCESS_AUDが必要です")
+        return self
 
     model_config = SettingsConfigDict(
         case_sensitive=True,

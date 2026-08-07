@@ -1,4 +1,5 @@
-import { useAuthStore } from "@/lib/stores/auth-store"
+import { mutate } from "swr"
+import { SWR_KEYS } from "./keys"
 import type {
   Dividend,
   DividendBySymbolItem,
@@ -18,7 +19,6 @@ import type {
   Stock,
   StockSplit,
   StockSplitCreate,
-  TokenResponse,
   Transaction,
   TransactionWithPL,
   User,
@@ -28,20 +28,14 @@ import type {
 // APIは常に同一オリジンの相対パスで叩く。本番はCloudflare Workerが、
 // 開発時はViteのdev proxyが /api/* をバックエンドへ転送する。
 // バックエンドのURLをバンドルに焼き込まないための設計。
-// 同一オリジンなので認証Cookieは既定で送られる（credentials の指定は不要）
-async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(endpoint, {
-    ...options,
-    headers: {
-      ...options.headers,
-    },
-  })
+// 認証はCloudflare Accessがリクエストにヘッダーを付ける形で行うため、クライアント側では何も付けない
+async function fetchJson<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(endpoint, options)
 
-  // 401はセッション切れ。ここでは認証状態を落とすだけにして、
-  // ログイン画面への遷移はルータを持つAuthProviderに任せる
-  // （window.location だとフルリロードになりSPAの状態を失う）
+  // 401はCloudflare Accessのセッション切れ。キャッシュ済みのユーザーを捨てると
+  // AuthenticatedLayoutがログイン画面に切り替わる。ここで画面遷移まではしない
   if (response.status === 401) {
-    useAuthStore.getState().setUser(null)
+    mutate(SWR_KEYS.me, undefined, { revalidate: false })
     throw new Error("セッションの有効期限が切れました")
   }
 
@@ -55,7 +49,7 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
 
 /** JSONボディを送る書き込み系リクエスト（Content-Typeとシリアライズを共通化） */
 async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unknown): Promise<T> {
-  return fetchWithAuth<T>(endpoint, {
+  return fetchJson<T>(endpoint, {
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -63,87 +57,51 @@ async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unkno
 }
 
 // Auth APIs
-export async function login(username: string, password: string): Promise<TokenResponse> {
-  const response = await fetch("/api/v1/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Login failed" }))
-    throw new Error(typeof error.detail === "string" ? error.detail : "Login failed")
-  }
-
-  return response.json()
-}
-
-// 応答が返らないまま固まるとログアウト処理全体が止まってしまうため、待ち時間に上限を設ける。
-// Cloud Runのコールドスタート（数秒かかることがある）を空振りさせない程度には長く取る。
-// タイムアウトすると fetch は AbortError で reject するので、呼び出し側のcatchに落ちる
-const LOGOUT_TIMEOUT_MS = 10_000
-
-// 認証Cookieはhttponlyなのでクライアントからは消せない。サーバーに削除させる。
-// 204を返すのでボディのパースは行わない（fetchWithAuthは使えない）
-export async function logout(): Promise<void> {
-  const response = await fetch("/api/v1/logout", {
-    method: "POST",
-    signal: AbortSignal.timeout(LOGOUT_TIMEOUT_MS),
-  })
-
-  if (!response.ok) {
-    throw new Error("Logout failed")
-  }
-}
-
+// ログインとログアウトはCloudflare Accessが担当するため、ここにはAPIを持たない
+// （lib/auth.ts の startAccessLogin / accessLogout を使う）
 export async function getCurrentUser(): Promise<User> {
-  return fetchWithAuth<User>("/api/v1/me")
+  return fetchJson<User>("/api/v1/users/me")
 }
 
 // Portfolio APIs
 export async function getPortfolioSummary(): Promise<PortfolioSummary> {
-  return fetchWithAuth<PortfolioSummary>("/api/v1/portfolio/summary")
+  return fetchJson<PortfolioSummary>("/api/v1/portfolio/summary")
 }
 
 export async function getPortfolioHistory(): Promise<PortfolioHistoryItem[]> {
-  return fetchWithAuth<PortfolioHistoryItem[]>("/api/v1/portfolio/history")
+  return fetchJson<PortfolioHistoryItem[]>("/api/v1/portfolio/history")
 }
 
 export async function getWeeklyPerformance(): Promise<WeeklyPerformanceResponse> {
-  return fetchWithAuth<WeeklyPerformanceResponse>("/api/v1/portfolio/weekly-performance")
+  return fetchJson<WeeklyPerformanceResponse>("/api/v1/portfolio/weekly-performance")
 }
 
 export async function getHoldings(): Promise<Holding[]> {
-  return fetchWithAuth<Holding[]>("/api/v1/holdings/")
+  return fetchJson<Holding[]>("/api/v1/holdings/")
 }
 
 export async function recalculateAllHoldings(): Promise<Holding[]> {
-  return fetchWithAuth<Holding[]>("/api/v1/holdings/recalculate-all", {
+  return fetchJson<Holding[]>("/api/v1/holdings/recalculate-all", {
     method: "POST",
   })
 }
 
 // Transaction APIs
 export async function getTransactions(): Promise<Transaction[]> {
-  return fetchWithAuth<Transaction[]>("/api/v1/transactions/")
+  return fetchJson<Transaction[]>("/api/v1/transactions/")
 }
 
 export async function getTransactionsMonthlySummary(): Promise<MonthlySummaryItem[]> {
-  return fetchWithAuth<MonthlySummaryItem[]>("/api/v1/transactions/monthly-summary")
+  return fetchJson<MonthlySummaryItem[]>("/api/v1/transactions/monthly-summary")
 }
 
 // Dividend APIs
 export async function getDividends(): Promise<Dividend[]> {
-  return fetchWithAuth<Dividend[]>("/api/v1/dividends/")
+  return fetchJson<Dividend[]>("/api/v1/dividends/")
 }
 
 export async function getDividendsMonthly(): Promise<MonthlyDividendItem[]> {
-  return fetchWithAuth<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
+  return fetchJson<MonthlyDividendItem[]>("/api/v1/dividends/monthly")
 }
 
 export async function getDividendAllocation(params?: {
@@ -151,12 +109,12 @@ export async function getDividendAllocation(params?: {
   month: number
 }): Promise<DividendBySymbolItem[]> {
   const query = params ? `?year=${params.year}&month=${params.month}` : ""
-  return fetchWithAuth<DividendBySymbolItem[]>(`/api/v1/dividends/by-symbol${query}`)
+  return fetchJson<DividendBySymbolItem[]>(`/api/v1/dividends/by-symbol${query}`)
 }
 
 // Symbol-specific APIs
 export async function getHoldingBySymbol(symbol: string): Promise<Holding[]> {
-  return fetchWithAuth<Holding[]>(`/api/v1/holdings/?symbol=${encodeURIComponent(symbol)}`)
+  return fetchJson<Holding[]>(`/api/v1/holdings/?symbol=${encodeURIComponent(symbol)}`)
 }
 
 export async function updateHoldingNote(symbol: string, note: string | null): Promise<Holding> {
@@ -164,19 +122,19 @@ export async function updateHoldingNote(symbol: string, note: string | null): Pr
 }
 
 export async function getTransactionsBySymbol(symbol: string): Promise<TransactionWithPL[]> {
-  return fetchWithAuth<TransactionWithPL[]>(
+  return fetchJson<TransactionWithPL[]>(
     `/api/v1/transactions/?symbol=${encodeURIComponent(symbol)}&include_unrealized_pl=true`
   )
 }
 
 export async function getDividendsBySymbol(symbol: string): Promise<Dividend[]> {
-  return fetchWithAuth<Dividend[]>(`/api/v1/dividends/?symbol=${encodeURIComponent(symbol)}`)
+  return fetchJson<Dividend[]>(`/api/v1/dividends/?symbol=${encodeURIComponent(symbol)}`)
 }
 
 // Stock APIs
 export async function getStocks(market?: string): Promise<Stock[]> {
   const params = market ? `?market=${encodeURIComponent(market)}` : ""
-  return fetchWithAuth<Stock[]>(`/api/v1/stocks/${params}`)
+  return fetchJson<Stock[]>(`/api/v1/stocks/${params}`)
 }
 
 // Price History API
@@ -189,7 +147,7 @@ export async function getPriceHistory(
     interval,
     limit: limit.toString(),
   })
-  return fetchWithAuth<PriceHistoryResponse>(
+  return fetchJson<PriceHistoryResponse>(
     `/api/v1/symbols/${encodeURIComponent(symbol)}/price-history?${params.toString()}`
   )
 }
@@ -197,7 +155,7 @@ export async function getPriceHistory(
 // Stock Split APIs
 export async function getStockSplits(symbol?: string): Promise<StockSplit[]> {
   const params = symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""
-  return fetchWithAuth<StockSplit[]>(`/api/v1/stock-splits/${params}`)
+  return fetchJson<StockSplit[]>(`/api/v1/stock-splits/${params}`)
 }
 
 export async function createStockSplit(request: StockSplitCreate): Promise<StockSplit> {
@@ -209,7 +167,7 @@ export async function uploadCsvForPreview(file: File): Promise<ImportPreviewResp
   const formData = new FormData()
   formData.append("file", file)
 
-  return fetchWithAuth<ImportPreviewResponse>("/api/v1/transactions/import/preview", {
+  return fetchJson<ImportPreviewResponse>("/api/v1/transactions/import/preview", {
     method: "POST",
     body: formData,
   })
@@ -224,7 +182,7 @@ export async function uploadDividendCsvForPreview(file: File): Promise<DividendI
   const formData = new FormData()
   formData.append("file", file)
 
-  return fetchWithAuth<DividendImportPreviewResponse>("/api/v1/dividends/import/preview", {
+  return fetchJson<DividendImportPreviewResponse>("/api/v1/dividends/import/preview", {
     method: "POST",
     body: formData,
   })

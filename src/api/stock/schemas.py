@@ -128,12 +128,13 @@ class StockSplit(StockSplitBase):
 
 
 class UserBase(BaseModel):
+    """ユーザー登録リクエスト兼、ユーザー表現の共通項目
+
+    認証はCloudflare Accessが行うためパスワードは持たない。
+    """
+
     username: str
     email: str
-
-
-class UserCreate(UserBase):
-    password: str
 
 
 class User(UserBase):
@@ -352,21 +353,7 @@ class StockWithRelations(Stock):
     dividend: list[Dividend] = []
 
 
-class UserWithRelations(User):
-    holdings: list[Holding] = []
-    transactions: list[Transaction] = []
-    portfolio_history: list[PortfolioHistory] = []
-    dividend: list[Dividend] = []
-
-
 # APIリクエスト/レスポンスモデル
-class Token(BaseModel):
-    """JWTトークンレスポンス"""
-
-    access_token: str
-    token_type: str = "bearer"
-
-
 class StockCreate(BaseModel):
     """株式銘柄登録リクエスト"""
 
@@ -421,13 +408,6 @@ class PortfolioSummary(BaseModel):
     total_pl_percentage: float
     holdings_by_market: dict[str, float]
     holdings_by_currency: dict[str, float]
-
-
-class LoginRequest(BaseModel):
-    """ログインリクエスト用のスキーマ"""
-
-    username: str
-    password: str
 
 
 # LINE UserID登録用のスキーマを追加

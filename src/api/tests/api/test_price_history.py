@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def test_get_japanese_stock_price_history(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     mocker,
 ):
@@ -23,7 +23,7 @@ async def test_get_japanese_stock_price_history(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
@@ -87,7 +87,7 @@ async def test_get_japanese_stock_price_history(
 async def test_get_us_stock_price_history(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_us_stock_data,
     mocker,
 ):
@@ -101,7 +101,7 @@ async def test_get_us_stock_price_history(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_us_stock_data: 米国株テストデータ
         mocker: モッカー
     """
@@ -157,7 +157,7 @@ async def test_get_us_stock_price_history(
 async def test_get_price_history_with_weekly_interval(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     mocker,
 ):
@@ -170,7 +170,7 @@ async def test_get_price_history_with_weekly_interval(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
@@ -230,7 +230,7 @@ async def test_get_price_history_with_weekly_interval(
 async def test_get_price_history_with_monthly_interval(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     mocker,
 ):
@@ -243,7 +243,7 @@ async def test_get_price_history_with_monthly_interval(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
@@ -311,7 +311,7 @@ async def test_get_price_history_with_monthly_interval(
 async def test_get_price_history_stock_not_found(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
 ):
     """存在しない銘柄の株価履歴取得エラーのテスト
 
@@ -322,7 +322,7 @@ async def test_get_price_history_stock_not_found(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # APIリクエスト実行（存在しない銘柄）
     response = await client.get(
@@ -384,7 +384,7 @@ async def test_get_price_history_without_auth(
 async def test_get_price_history_with_limit(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     mocker,
 ):
@@ -397,7 +397,7 @@ async def test_get_price_history_with_limit(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株テストデータ
         mocker: モッカー
     """
@@ -442,7 +442,7 @@ async def test_get_price_history_with_limit(
 async def test_get_price_history_monthly_limit_validation(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
 ):
     """月足のlimit上限検証テスト
@@ -454,7 +454,7 @@ async def test_get_price_history_monthly_limit_validation(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株テストデータ
     """
     # limit=61でリクエスト（月足の上限60を超える）

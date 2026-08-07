@@ -8,15 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_transaction_response_datetime_is_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_transaction_response_datetime_is_jst(client: AsyncClient, db_session: AsyncSession, auth_user):
     """取引APIのレスポンスの日時がJST ISO形式であること
 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 取引データを登録（naive datetimeで送信）
     transaction_data = {
@@ -47,14 +45,14 @@ async def test_transaction_response_datetime_is_jst(
 
 @pytest.mark.asyncio
 async def test_transaction_list_response_datetime_is_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """取引一覧APIのレスポンスの日時がJST ISO形式であること
 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 取引データを登録
     transaction_data = {
@@ -82,14 +80,14 @@ async def test_transaction_list_response_datetime_is_jst(
 
 @pytest.mark.asyncio
 async def test_dividend_response_datetime_is_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """配当APIのレスポンスの日時がJST ISO形式であること
 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 配当データを登録（naive datetimeで送信）
@@ -119,14 +117,14 @@ async def test_dividend_response_datetime_is_jst(
 
 @pytest.mark.asyncio
 async def test_dividend_list_response_datetime_is_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data, create_dividend
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data, create_dividend
 ):
     """配当一覧APIのレスポンスの日時がJST ISO形式であること
 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
         create_dividend: 配当登録用フィクスチャー
     """
@@ -154,14 +152,14 @@ async def test_dividend_list_response_datetime_is_jst(
 
 @pytest.mark.asyncio
 async def test_holdings_response_datetime_is_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """保有株APIのレスポンスの日時がJST ISO形式であること
 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有株一覧を取得
@@ -176,9 +174,7 @@ async def test_holdings_response_datetime_is_jst(
 
 
 @pytest.mark.asyncio
-async def test_transaction_monthly_summary_uses_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_transaction_monthly_summary_uses_jst(client: AsyncClient, db_session: AsyncSession, auth_user):
     """月次取引集計がJST基準で集計されること
 
     JST 2024-12-01 00:00:00（= UTC 2024-11-30 15:00:00）の取引が
@@ -187,7 +183,7 @@ async def test_transaction_monthly_summary_uses_jst(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # JST 12/1 0:00 の取引を登録（JSTタイムゾーン付きで送信）
     transaction_data = {
@@ -219,9 +215,7 @@ async def test_transaction_monthly_summary_uses_jst(
 
 
 @pytest.mark.asyncio
-async def test_transaction_yearly_summary_uses_jst(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_transaction_yearly_summary_uses_jst(client: AsyncClient, db_session: AsyncSession, auth_user):
     """年次取引集計がJST基準で集計されること
 
     JST 2024-01-01 00:00:00（= UTC 2023-12-31 15:00:00）の取引が
@@ -230,7 +224,7 @@ async def test_transaction_yearly_summary_uses_jst(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # JST 2024/1/1 0:00 の取引を登録（JSTタイムゾーン付きで送信）
     transaction_data = {

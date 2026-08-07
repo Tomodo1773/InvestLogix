@@ -14,7 +14,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - 配当管理（配当履歴、月次集計、銘柄別集計）
 - ポートフォリオ分析（資産推移、通貨/市場別の分布、銘柄別配当割合、サマリー）
 - LINE通知（ポートフォリオ状況の通知）
-- 認証（JWT）
+- 認証（Cloudflare Access）
 
 ## 構成
 
@@ -26,8 +26,13 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 
 ### インフラ
 - フロントエンド: Cloudflare Workers（Static Assets）
-  - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、認証Cookieがサードパーティ扱いにならずSafari等でも通る
+  - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、APIリクエストもCloudflare Accessの保護下を通る
   - バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
+- 認証: Cloudflare Access（Zero Trust）
+  - 本人確認とログインセッションはAccessが持つ。アプリはパスワードも独自トークンも保持しない
+  - APIは全リクエストで `Cf-Access-Jwt-Assertion` の署名・issuer・audience・有効期限を検証し、Cloudflareを迂回した直アクセスを拒否する
+  - `user_id` の紐付け、管理者権限、PostgreSQL RLS はアプリ側の責務
+  - 設定手順は [`infra/README.md`](infra/README.md) を参照
 - バックエンド: Google Cloud Run
   - API は Cloud Run Service
   - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler
@@ -136,6 +141,9 @@ uv run uvicorn stock.app:app --reload --port 8000
   `src/api/.env` の `DB_PASSWORD` を合わせるか、`src/docker-compose.yaml` を修正してください。
 - CORSの設定は不要です。フロントは Vite の dev proxy（本番はCloudflare Worker）経由でAPIを叩くため、
   ブラウザから見て常に同一オリジンになります。
+- ローカルでは Cloudflare Access を経由しないため、`src/api/.env` に `DEV_AUTH_EMAIL` を設定します。
+  そのメールアドレスのユーザーとしてログイン済み扱いになります（対象ユーザーは `users` テーブルに
+  必要です）。`ENVIRONMENT=production` では設定できず、設定されていると起動時にエラーになります。
 
 ### Frontend（`src/web`）
 
@@ -148,6 +156,7 @@ pnpm check
 ## 環境変数
 
 - Backend: `src/api/.env.sample` を参考に `src/api/.env` を作成
+  - 認証: 本番は `CF_ACCESS_TEAM_DOMAIN` と `CF_ACCESS_AUD`（Cloudflare Zero Trust から取得）。ローカルは代わりに `DEV_AUTH_EMAIL` を使う
 - Frontend: 通常は設定不要。Vite の dev proxy の転送先を変える場合のみ `API_PROXY_TARGET` を指定する
 - Cloudflare Worker: バックエンドのオリジンは `API_ORIGIN`。本番は `wrangler secret put API_ORIGIN`、手元は `src/web/.dev.vars` に置く（どちらもリポジトリには入れない）
 
@@ -157,8 +166,6 @@ APIエンドポイントの一覧は手書きでは管理せず、以下を正�
 
 - `http://localhost:8000/docs`（Swagger UI）
 - `http://localhost:8000/openapi.json`（OpenAPI）
-
-※ フロントエンド側には参照用として `src/web/openapi.json` が同梱されています（生成/更新フローは今後整備予定）。
 
 ## ライセンス
 

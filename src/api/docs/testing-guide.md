@@ -17,8 +17,11 @@ AI がテストコードを実装するときに読む最小限のガイド。�
 
 ### 認証
 
-- 一般ユーザー: `auth_token` フィクスチャ / 管理者: `auth_admin_token` フィクスチャ
-- フィクスチャを引数で受け取るだけで client に Cookie がセットされ認証済みになる（ヘッダー指定は不要）
+- 一般ユーザー: `auth_user` フィクスチャ / 管理者: `auth_admin_user` フィクスチャ
+- フィクスチャを引数で受け取るだけで認証済みになる（ヘッダー指定は不要）
+- 差し替えるのは Cloudflare Access の JWT 検証（`get_access_identity`）だけ。外部 ID からアプリ内ユーザーへの解決は本番と同じ経路を通る
+- どのフィクスチャも受け取らなければ未認証になり、認証必須の確認に使える（`tests/auth/test_auth.py`）
+- JWT の署名・issuer・audience・有効期限の検証そのものは `tests/auth/test_access_token.py` で確認する
 
 ### HTTP クライアント
 

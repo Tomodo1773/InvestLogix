@@ -4,28 +4,17 @@ import useSWR, { mutate as globalMutate } from "swr"
 import { HoldingAllocationChart } from "@/components/dashboard/holding-allocation-chart"
 import { HoldingsTable } from "@/components/dashboard/holdings-table"
 import { SecurityTypeChart } from "@/components/dashboard/security-type-chart"
-import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { getHoldings, getWeeklyPerformance, recalculateAllHoldings } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
 import { downloadCsv, holdingsToCsv } from "@/lib/csv"
-import { useAuthStore } from "@/lib/stores/auth-store"
 import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 
 export default function Holdings() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const { data: holdings, isLoading, mutate } = useSWR(SWR_KEYS.holdings, getHoldings)
 
-  const {
-    data: holdings,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.holdings : null, getHoldings)
-
-  const { data: weeklyPerformance } = useSWR(
-    isAuthenticated ? SWR_KEYS.weeklyPerformance : null,
-    getWeeklyPerformance
-  )
+  const { data: weeklyPerformance } = useSWR(SWR_KEYS.weeklyPerformance, getWeeklyPerformance)
 
   const weeklyChangeMap = useMemo(() => buildWeeklyChangeMap(weeklyPerformance), [weeklyPerformance])
 
@@ -63,46 +52,39 @@ export default function Holdings() {
   }
 
   return (
-    <AuthenticatedLayout>
-      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-2xl font-bold">保有状況</h2>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRecalculate}
-              disabled={isLoading || isRecalculating}
-            >
-              <Calculator className={`h-4 w-4 ${isRecalculating ? "animate-pulse" : ""}`} />
-              {isRecalculating ? "再計算中..." : "全銘柄を再計算"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExport} disabled={exportDisabled}>
-              <Download className="h-4 w-4" />
-              CSVエクスポート
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefresh}
-              disabled={isLoading || isRecalculating}
-            >
-              <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
-              再読み込み
-            </Button>
-          </div>
+    <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-2xl font-bold">保有状況</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRecalculate}
+            disabled={isLoading || isRecalculating}
+          >
+            <Calculator className={`h-4 w-4 ${isRecalculating ? "animate-pulse" : ""}`} />
+            {isRecalculating ? "再計算中..." : "全銘柄を再計算"}
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exportDisabled}>
+            <Download className="h-4 w-4" />
+            CSVエクスポート
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading || isRecalculating}>
+            <RefreshCw className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            再読み込み
+          </Button>
         </div>
-        {recalcError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>エラー</AlertTitle>
-            <AlertDescription>{recalcError}</AlertDescription>
-          </Alert>
-        )}
-        <SecurityTypeChart data={holdings} isLoading={isLoading} />
-        <HoldingAllocationChart data={holdings} isLoading={isLoading} />
-        <HoldingsTable holdings={holdings} isLoading={isLoading} weeklyChangeMap={weeklyChangeMap} />
       </div>
-    </AuthenticatedLayout>
+      {recalcError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>エラー</AlertTitle>
+          <AlertDescription>{recalcError}</AlertDescription>
+        </Alert>
+      )}
+      <SecurityTypeChart data={holdings} isLoading={isLoading} />
+      <HoldingAllocationChart data={holdings} isLoading={isLoading} />
+      <HoldingsTable holdings={holdings} isLoading={isLoading} weeklyChangeMap={weeklyChangeMap} />
+    </div>
   )
 }

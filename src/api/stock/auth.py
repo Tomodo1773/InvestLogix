@@ -1,157 +1,95 @@
-from collections.abc import AsyncGenerator
-from datetime import timedelta
-from typing import Annotated
+"""
+FastAPI の認証依存性
 
-from fastapi import Cookie, Depends, HTTPException, status
-from jose import JWTError, jwt
+本人確認とログインセッションは Cloudflare Access に委譲している。このモジュールは
+「Access が検証した外部ID」→「アプリ内ユーザー」→「RLS 用のDBセッション」を繋ぐだけで、
+パスワードやトークンの発行は一切持たない。
+"""
+
+from collections.abc import AsyncGenerator
+
+from fastapi import Depends, HTTPException, Request, status
 from loguru import logger
-from pwdlib import PasswordHash
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from . import models, schemas
+from .cloudflare_access import ACCESS_JWT_HEADER, AccessIdentity, AccessTokenError, verify_access_token
 from .database import get_db, set_rls_user_id, settings
-from .utils.datetime import now_jst
+from .models import User
+from .services.user_service import UserService
 
-password_hash = PasswordHash.recommended()
-
-SECRET_KEY = settings.JWT_SECRET_KEY
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 1日
+# ローカル開発用の擬似Accessの issuer。実在しないドメインにして本番のIDと衝突させない
+DEV_ACCESS_ISSUER = "https://dev.invalid"
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def _unauthenticated() -> HTTPException:
+    """未認証の応答。理由（ヘッダー欠落か署名不正か）は攻撃者に手掛かりを与えないため区別しない"""
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="認証が必要です",
+    )
+
+
+async def get_access_identity(request: Request) -> AccessIdentity:
     """
-    パスワードの検証を行う
-    - plain_password: 検証対象の平文パスワード
-    - hashed_password: ハッシュ化されたパスワード
-    - 戻り値: パスワードが一致する場合True、それ以外はFalse
+    Cloudflare Access が付与したJWTを検証して外部IDを返す
+
+    アプリ全体の依存性として登録する（app.py）。個々のルートが認証を書き忘れても
+    素通りしないようにするためで、ルート側の get_current_user とは結果を共有する。
+    Cloudflare を迂回した直アクセスはヘッダーが無いか署名が不正なので、ここで落ちる。
     """
-    return password_hash.verify(plain_password, hashed_password)
+    if settings.DEV_AUTH_EMAIL:
+        # ローカル開発ではCloudflareを経由しないため、擬似的な外部IDを組み立てる。
+        # 本番でこの値が設定されていた場合は Settings の検証で起動時に失敗する
+        return AccessIdentity(
+            issuer=DEV_ACCESS_ISSUER,
+            subject=settings.DEV_AUTH_EMAIL,
+            email=settings.DEV_AUTH_EMAIL,
+        )
 
-
-def get_password_hash(password: str) -> str:
-    """
-    パスワードをハッシュ化する
-    - password: ハッシュ化する平文パスワード
-    - 戻り値: ハッシュ化されたパスワード
-    """
-    return password_hash.hash(password)
-
-
-async def get_user(db: AsyncSession, username: str):
-    """
-    ユーザー名からユーザーを取得する
-    - db: データベースセッション
-    - username: 検索対象のユーザー名
-    - 戻り値: 該当ユーザーが存在する場合はUserモデル、存在しない場合はNone
-    """
-    query = select(models.User).where(models.User.username == username)
-    result = await db.execute(query)
-    user = result.scalar_one_or_none()
-    return user
-
-
-async def authenticate_user(db: AsyncSession, username: str, password: str):
-    """
-    ユーザーの認証を行う
-    - db: データベースセッション
-    - username: 認証対象のユーザー名
-    - password: 認証対象のパスワード
-    - 戻り値: 認証成功時はUserモデル、失敗時はFalse
-    """
-    user = await get_user(db, username)
-
-    if not user:
-        return False
-
-    if not verify_password(password, user.password_hash):
-        return False
-
-    return user
-
-
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    """
-    JWTトークンを生成する
-    - data: トークンに含めるデータ（通常はユーザー名）
-    - expires_delta: トークンの有効期限（オプション）
-    - 戻り値: 生成されたJWTトークン
-    """
-    to_encode = data.copy()
-    if expires_delta:
-        expire = now_jst() + expires_delta
-    else:
-        expire = now_jst() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-
-    to_encode.update({"exp": expire})
+    token = request.headers.get(ACCESS_JWT_HEADER)
+    if not token:
+        raise _unauthenticated()
 
     try:
-        encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    except Exception as e:
-        logger.error("JWTトークンのエンコードに失敗しました action=create error={}", str(e))
-        raise
-
-    return encoded_jwt
+        return await verify_access_token(token)
+    except AccessTokenError as e:
+        logger.warning("Access JWTの検証に失敗しました action=verify reason={}", str(e))
+        raise _unauthenticated() from e
 
 
 async def get_current_user(
-    token: Annotated[str | None, Cookie()] = None,
+    identity: AccessIdentity = Depends(get_access_identity),
     db: AsyncSession = Depends(get_db),
-) -> schemas.User:
+) -> User:
     """
-    現在のユーザーをCookie認証で取得する
-    - token: Cookieに格納されたJWT
-    - 認証失敗時: 401 Unauthorized
+    認証済みの外部IDからアプリ内ユーザーを取得する
+    - アプリに登録されていない利用者の場合: 403 Forbidden
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-    )
-
-    if not token:
-        raise credentials_exception
-
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str | None = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    user = await get_user(db, username=username)
+    user = await UserService(db).resolve_by_access_identity(identity)
     if user is None:
-        raise credentials_exception
+        logger.warning("Access IDに対応するUserがいません action=select email={}", identity.email)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="このアカウントはInvestLogixに登録されていません",
+        )
     return user
 
 
-async def check_admin_privileges(current_user: schemas.User) -> bool:
-    """
-    ユーザーが管理者権限を持っているかチェックする
-    - current_user: 現在のユーザー
-    - 戻り値: 管理者の場合はTrue、それ以外はFalse
-    """
-    return current_user.is_admin
-
-
-async def get_admin_user(
-    current_user: schemas.User = Depends(get_current_user),
-) -> schemas.User:
+async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """
     管理者権限を持つユーザーを取得する
-    - 権限がない場合は403エラーを返す
+    - 権限がない場合: 403 Forbidden
     """
-    if not await check_admin_privileges(current_user):
+    if not current_user.is_admin:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to perform this action",
+            detail="管理者権限が必要です",
         )
     return current_user
 
 
 async def get_db_for_user(
-    current_user: schemas.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> AsyncGenerator[AsyncSession]:
     """

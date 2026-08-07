@@ -83,6 +83,16 @@ export async function login(username: string, password: string): Promise<TokenRe
   return response.json()
 }
 
+// 認証Cookieはhttponlyなのでクライアントからは消せない。サーバーに削除させる。
+// 204を返すのでボディのパースは行わない（fetchWithAuthは使えない）
+export async function logout(): Promise<void> {
+  const response = await fetch("/api/v1/logout", { method: "POST" })
+
+  if (!response.ok) {
+    throw new Error("Logout failed")
+  }
+}
+
 export async function getCurrentUser(): Promise<User> {
   return fetchWithAuth<User>("/api/v1/me")
 }

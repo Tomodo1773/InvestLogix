@@ -1,6 +1,7 @@
 import { LogOut } from "lucide-react"
 import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
+import { logout as logoutApi } from "@/lib/api/client"
 import { useAuthStore } from "@/lib/stores/auth-store"
 import { MobileNav } from "./mobile-nav"
 import { Sidebar } from "./sidebar"
@@ -12,7 +13,13 @@ interface AppLayoutProps {
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuthStore()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await logoutApi()
+    } catch {
+      // サーバー側のCookie削除に失敗しても、クライアント状態のリセットと遷移は行う
+      // （APIが落ちていてもUIが固まらないようにする）
+    }
     logout()
     window.location.href = "/login"
   }

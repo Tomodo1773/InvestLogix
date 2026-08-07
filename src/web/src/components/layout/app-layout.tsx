@@ -1,5 +1,5 @@
 import { LogOut } from "lucide-react"
-import type { ReactNode } from "react"
+import { type ReactNode, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { logout as logoutApi } from "@/lib/api/client"
 import { useAuthStore } from "@/lib/stores/auth-store"
@@ -12,12 +12,15 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const { user, logout } = useAuthStore()
+  // 遷移は必ず起きるので解除は不要。連打防止と「処理中」の表示のためだけに持つ
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const handleLogout = async () => {
+    setIsLoggingOut(true)
     try {
       await logoutApi()
     } catch {
-      // サーバー側のCookie削除に失敗しても、クライアント状態のリセットと遷移は行う
+      // サーバー側のCookie削除に失敗・タイムアウトしても、クライアント状態のリセットと遷移は行う
       // （APIが落ちていてもUIが固まらないようにする）
     }
     logout()
@@ -42,8 +45,8 @@ export function AppLayout({ children }: AppLayoutProps) {
             </div>
             <div className="flex items-center gap-3">
               {user && <span className="text-sm text-muted-foreground">{user.username}</span>}
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
-                <LogOut className="h-4 w-4" />
+              <Button variant="ghost" size="icon" onClick={handleLogout} disabled={isLoggingOut}>
+                <LogOut className={`h-4 w-4 ${isLoggingOut ? "animate-spin" : ""}`} />
               </Button>
             </div>
           </div>

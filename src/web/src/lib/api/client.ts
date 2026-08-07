@@ -83,10 +83,18 @@ export async function login(username: string, password: string): Promise<TokenRe
   return response.json()
 }
 
+// 応答が返らないまま固まるとログアウト処理全体が止まってしまうため、待ち時間に上限を設ける。
+// Cloud Runのコールドスタート（数秒かかることがある）を空振りさせない程度には長く取る。
+// タイムアウトすると fetch は AbortError で reject するので、呼び出し側のcatchに落ちる
+const LOGOUT_TIMEOUT_MS = 10_000
+
 // 認証Cookieはhttponlyなのでクライアントからは消せない。サーバーに削除させる。
 // 204を返すのでボディのパースは行わない（fetchWithAuthは使えない）
 export async function logout(): Promise<void> {
-  const response = await fetch("/api/v1/logout", { method: "POST" })
+  const response = await fetch("/api/v1/logout", {
+    method: "POST",
+    signal: AbortSignal.timeout(LOGOUT_TIMEOUT_MS),
+  })
 
   if (!response.ok) {
     throw new Error("Logout failed")

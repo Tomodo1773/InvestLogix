@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router"
+import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import Dividends from "./routes/Dividends"
 import HoldingDetail from "./routes/HoldingDetail"
 import Holdings from "./routes/Holdings"
@@ -12,15 +13,18 @@ import Transactions from "./routes/Transactions"
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/holdings" element={<Holdings />} />
-      <Route path="/holdings/:symbol" element={<HoldingDetail />} />
-      <Route path="/portfolio-history" element={<PortfolioHistory />} />
-      <Route path="/transactions" element={<Transactions />} />
-      <Route path="/transactions/import" element={<TransactionImport />} />
-      <Route path="/dividends" element={<Dividends />} />
-      <Route path="/stock-splits" element={<StockSplits />} />
-      <Route path="/stocks" element={<Stocks />} />
+      {/* 全ページが認証必須。ページごとに宣言すると増やしたときに書き忘れるので、ここで一度だけ掛ける */}
+      <Route element={<AuthenticatedLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/holdings" element={<Holdings />} />
+        <Route path="/holdings/:symbol" element={<HoldingDetail />} />
+        <Route path="/portfolio-history" element={<PortfolioHistory />} />
+        <Route path="/transactions" element={<Transactions />} />
+        <Route path="/transactions/import" element={<TransactionImport />} />
+        <Route path="/dividends" element={<Dividends />} />
+        <Route path="/stock-splits" element={<StockSplits />} />
+        <Route path="/stocks" element={<Stocks />} />
+      </Route>
     </Routes>
   )
 }

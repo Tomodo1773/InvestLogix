@@ -2,7 +2,6 @@ import { AlertCircle, CheckCircle2, Upload } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router"
 import { DividendImportPreviewTable } from "@/components/dividends/dividend-import-preview-table"
-import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { CsvUploadForm } from "@/components/transactions/csv-upload-form"
 import { ImportPreviewTable } from "@/components/transactions/import-preview-table"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -23,7 +22,7 @@ import type {
 
 type Step = "upload" | "preview" | "complete"
 
-function TransactionImportContent() {
+export default function TransactionImport() {
   const buildErrorItems = (errors: string[]) => {
     const counts = new Map<string, number>()
     return errors.map((message) => {
@@ -456,13 +455,5 @@ function TransactionImportContent() {
         )}
       </section>
     </div>
-  )
-}
-
-export default function TransactionImport() {
-  return (
-    <AuthenticatedLayout>
-      <TransactionImportContent />
-    </AuthenticatedLayout>
   )
 }

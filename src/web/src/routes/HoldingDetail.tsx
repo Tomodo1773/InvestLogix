@@ -5,7 +5,6 @@ import { HoldingDividendsSection } from "@/components/holding-detail/HoldingDivi
 import { HoldingNoteSection } from "@/components/holding-detail/HoldingNoteSection"
 import { HoldingStockSplitsSection } from "@/components/holding-detail/HoldingStockSplitsSection"
 import { HoldingSummarySection } from "@/components/holding-detail/HoldingSummarySection"
-import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { PriceChart } from "@/components/stock/price-chart"
 import { TransactionsTable } from "@/components/transactions/transactions-table"
 import { Button } from "@/components/ui/button"
@@ -19,7 +18,7 @@ import {
 import { SWR_KEYS } from "@/lib/api/keys"
 import { formatCurrency, formatCurrencyWithDecimals } from "@/lib/format"
 
-function HoldingDetailContent() {
+export default function HoldingDetail() {
   const { symbol } = useParams<{ symbol: string }>()
 
   const {
@@ -132,13 +131,5 @@ function HoldingDetailContent() {
       {/* 株式分割履歴 */}
       <HoldingStockSplitsSection stockSplits={stockSplits ?? undefined} isLoading={isLoadingStockSplits} />
     </div>
-  )
-}
-
-export default function HoldingDetail() {
-  return (
-    <AuthenticatedLayout>
-      <HoldingDetailContent />
-    </AuthenticatedLayout>
   )
 }

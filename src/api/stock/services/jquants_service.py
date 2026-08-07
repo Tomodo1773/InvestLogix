@@ -10,11 +10,9 @@ V2 API対応版:
 """
 
 import asyncio
-import os
 import sys
 
 import httpx
-from dotenv import load_dotenv
 from jquantsapi import ClientV2
 from loguru import logger
 
@@ -136,18 +134,9 @@ def test_api():
 
 
 if __name__ == "__main__":
-    # 環境変数の読み込み
-    load_dotenv()
-
-    # 認証情報の取得
-    api_key = os.getenv("JQUANTS_API_KEY")
-
-    if not api_key:
+    if not settings.JQUANTS_API_KEY:
         logger.error("環境変数 JQUANTS_API_KEY が未設定です action=external_io")
         sys.exit(1)
 
-    # クライアントを初期化
-    _jquants_client = JQuantsClient(api_key=api_key)
-
-    # テストの実行
+    # テストの実行（クライアントは get_jquants_client() 内で初期化される）
     test_api()

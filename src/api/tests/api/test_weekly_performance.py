@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from stock.database import settings
 from stock.schemas import StockWeeklyPerformance
 from stock.services.change_reason_service import ChangeReasonSections
 from stock.services.notification_service import (
@@ -241,7 +242,7 @@ async def test_get_weekly_performance_endpoint(
 @pytest.mark.asyncio
 async def test_send_weekly_summary_notification_combines_summary_and_rankings(monkeypatch, mocker):
     """資産サマリ・ランキング・AI解説が単一Flex Messageにまとまって送信される"""
-    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+    monkeypatch.setattr(settings, "LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
 
     mocker.patch(
         "stock.services.notification_service.NotificationService.get_line_user_id",
@@ -321,7 +322,7 @@ async def test_send_weekly_summary_notification_combines_summary_and_rankings(mo
 @pytest.mark.asyncio
 async def test_send_weekly_summary_notification_works_without_sections(monkeypatch, mocker):
     """AI解説（sections=None）でも資産サマリとランキングだけで送信が成功する"""
-    monkeypatch.setenv("LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+    monkeypatch.setattr(settings, "LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
 
     mocker.patch(
         "stock.services.notification_service.NotificationService.get_line_user_id",

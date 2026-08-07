@@ -1,17 +1,14 @@
 import logging
-import os
 from typing import Any
 
 import httpx
-from dotenv import load_dotenv
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
+from ..database import settings
 from ..utils.datetime import now_jst
 from .change_reason_service import ChangeReasonSections
-
-load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -280,7 +277,7 @@ async def send_weekly_summary_notification(
 ) -> bool:
     """資産サマリと週間騰落ランキングを単一Flex Messageで通知する"""
     try:
-        line_token = os.environ.get("LINE_CHANNEL_ACCESS_TOKEN")
+        line_token = settings.LINE_CHANNEL_ACCESS_TOKEN
         if not line_token:
             logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
             return False

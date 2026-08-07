@@ -1,18 +1,11 @@
-import os
-
-from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import ACCESS_TOKEN_EXPIRE_MINUTES, authenticate_user, create_access_token, get_current_user
-from ..database import get_db
+from ..database import get_db, settings
 from ..schemas import LoginRequest, Token, User, UserCreate
 from ..services.auth_service import AuthService
-
-# 環境変数の読み込み
-load_dotenv()
-ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
 router = APIRouter()
 
@@ -44,7 +37,7 @@ async def login_for_access_token(
         key="token",
         value=access_token,
         httponly=True,
-        secure=ENVIRONMENT.lower() == "production",
+        secure=settings.ENVIRONMENT.lower() == "production",
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,  # 分を秒に変換
         path="/",

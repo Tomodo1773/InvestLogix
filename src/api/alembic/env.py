@@ -1,28 +1,22 @@
 import os
 from logging.config import fileConfig
 
-from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from alembic import context
+from stock.database import settings
 from stock.models import Base
-
-load_dotenv()
 
 # クライアントエンコーディングを明示的に設定（UnicodeDecodeError対策）
 os.environ["PGCLIENTENCODING"] = "utf8"
 
 config = context.config
 
-# データベース接続設定のデフォルト値を設定
-db_user = os.getenv("DB_USER", "postgres")
-db_password = os.getenv("DB_PASSWORD", "postgres")
-db_host = os.getenv("DB_HOST", "localhost")
-db_port = os.getenv("DB_PORT", "5432")
-db_name = os.getenv("DB_NAME", "postgres")
-
-# 同期URLにclient_encodingオプションを追加（URLエンコード付き）
-sync_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+# alembicは同期ドライバで接続するため、Settingsから同期URLを組み立てる
+sync_url = (
+    f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}"
+    f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
+)
 config.set_main_option("sqlalchemy.url", sync_url)
 
 if config.config_file_name is not None:

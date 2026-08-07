@@ -3,6 +3,11 @@ resource "google_service_account" "api_runtime" {
   display_name = "Cloud Run Service runtime"
 }
 
+resource "google_service_account" "mcp_runtime" {
+  account_id   = var.mcp_runtime_sa_id
+  display_name = "Cloud Run MCP runtime"
+}
+
 resource "google_service_account" "jobs_runtime" {
   account_id   = var.jobs_runtime_sa_id
   display_name = "Cloud Run Jobs runtime"

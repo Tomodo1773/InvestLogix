@@ -15,6 +15,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - ポートフォリオ分析（資産推移、通貨/市場別の分布、銘柄別配当割合、サマリー）
 - LINE通知（ポートフォリオ状況の通知）
 - 認証（Cloudflare Access）
+- OAuth対応MCP（ポートフォリオ・保有銘柄・月次配当の参照）
 
 ## 構成
 
@@ -26,8 +27,8 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 
 ### インフラ
 - フロントエンド: Cloudflare Workers（Static Assets）
-  - `/api/*` は Worker が Cloud Run へプロキシする。フロントとAPIを同一オリジンにすることで、APIリクエストもCloudflare Accessの保護下を通る
-  - バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
+  - `/api/*` と `/mcp` は Worker が別々の Cloud Run サービスへプロキシする
+  - オリジンは Worker の Secret（`API_ORIGIN` / `MCP_ORIGIN`）に置くため、リポジトリにもクライアントバンドルにも現れない
 - 認証: Cloudflare Access（Zero Trust）
   - 本人確認とログインセッションはAccessが持つ。アプリはパスワードも独自トークンも保持しない
   - APIは全リクエストで `Cf-Access-Jwt-Assertion` の署名・issuer・audience・有効期限を検証し、Cloudflareを迂回した直アクセスを拒否する
@@ -35,6 +36,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
   - 設定手順は [`infra/README.md`](infra/README.md) を参照
 - バックエンド: Google Cloud Run
   - API は Cloud Run Service
+  - MCP は別の Cloud Run Service（公式Python SDK / Streamable HTTP）
   - 定時ジョブは Cloud Run Jobs ＋ Cloud Scheduler
 - DB: Supabase（マネージド PostgreSQL）
 - シークレットは事前に Secret Manager に登録
@@ -76,6 +78,16 @@ docker compose up -d --build
 - API: `http://localhost:8000`
 - APIドキュメント（Swagger）: `http://localhost:8000/docs`
 
+MCPも起動する場合:
+
+```bash
+cd src/api
+uv run uvicorn stock.mcp.app:app --reload --port 8001
+```
+
+- MCP: `http://localhost:8001/mcp`
+- `DEV_AUTH_EMAIL` のユーザーへ解決し、RESTと同じRLSを適用する
+
 停止する場合:
 
 ```bash
@@ -115,7 +127,7 @@ pnpm dev
 
 ```bash
 cd src/web
-printf 'API_ORIGIN=http://localhost:8000\n' > .dev.vars
+printf 'API_ORIGIN=http://localhost:8000\nMCP_ORIGIN=http://localhost:8001\n' > .dev.vars
 pnpm build && pnpm cf-dev
 ```
 
@@ -158,7 +170,7 @@ pnpm check
 - Backend: `src/api/.env.sample` を参考に `src/api/.env` を作成
   - 認証: 本番は `CF_ACCESS_TEAM_DOMAIN` と `CF_ACCESS_AUD`（Cloudflare Zero Trust から取得）。ローカルは代わりに `DEV_AUTH_EMAIL` を使う
 - Frontend: 通常は設定不要。Vite の dev proxy の転送先を変える場合のみ `API_PROXY_TARGET` を指定する
-- Cloudflare Worker: バックエンドのオリジンは `API_ORIGIN`。本番は `wrangler secret put API_ORIGIN`、手元は `src/web/.dev.vars` に置く（どちらもリポジトリには入れない）
+- Cloudflare Worker: オリジンは `API_ORIGIN` / `MCP_ORIGIN`。本番は `wrangler secret put`、手元は `src/web/.dev.vars` に置く（どちらもリポジトリには入れない）
 
 ## API仕様
 

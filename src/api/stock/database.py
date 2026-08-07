@@ -1,3 +1,5 @@
+from collections.abc import AsyncGenerator, AsyncIterator
+from contextlib import asynccontextmanager
 from enum import Enum
 
 from pydantic import field_validator, model_validator
@@ -148,12 +150,9 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_db():
-    """
-    データベースセッションの依存性注入
-    - 戻り値: 非同期セッション
-    - 使用例: db: AsyncSession = Depends(get_db)
-    """
+@asynccontextmanager
+async def session_scope() -> AsyncIterator[AsyncSession]:
+    """トランザクション境界を持つDBセッションを提供する。"""
     async with AsyncSessionLocal() as session:
         try:
             yield session
@@ -161,8 +160,16 @@ async def get_db():
         except Exception:
             await session.rollback()
             raise
-        finally:
-            await session.close()
+
+
+async def get_db() -> AsyncGenerator[AsyncSession]:
+    """
+    データベースセッションの依存性注入
+    - 戻り値: 非同期セッション
+    - 使用例: db: AsyncSession = Depends(get_db)
+    """
+    async with session_scope() as session:
+        yield session
 
 
 async def set_rls_user_id(session: AsyncSession, user_id: int) -> None:

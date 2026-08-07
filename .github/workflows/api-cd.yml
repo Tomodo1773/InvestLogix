@@ -15,6 +15,7 @@ env:
   IMAGE: ${{ vars.IMAGE_BASE }}:${{ github.sha }}
   REGION: ${{ vars.GCP_REGION }}
   SERVICE: ${{ vars.SERVICE_NAME }}
+  MCP_SERVICE: ${{ vars.MCP_SERVICE_NAME }}
   # infra/locals.tf の jobs map と同期させること
   JOBS: "recalc-holdings update-and-notify"
 
@@ -43,6 +44,7 @@ jobs:
       - name: Deploy Cloud Run Service & Jobs
         run: |
           gcloud run deploy "$SERVICE" --image="$IMAGE" --region="$REGION" --quiet
+          gcloud run deploy "$MCP_SERVICE" --image="$IMAGE" --region="$REGION" --quiet
           for job in $JOBS; do
             gcloud run jobs update "$job" --image="$IMAGE" --region="$REGION" --quiet
           done
@@ -62,6 +64,7 @@ jobs:
             fi
           }
           check services "$SERVICE" "spec.template.spec.containers[0].image"
+          check services "$MCP_SERVICE" "spec.template.spec.containers[0].image"
           for job in $JOBS; do
             check jobs "$job" "spec.template.spec.template.spec.containers[0].image"
           done

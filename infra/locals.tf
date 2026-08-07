@@ -24,6 +24,11 @@ locals {
     "OPENAI_API_KEY",
   ]
 
+  # MCPは参照系ツールだけを提供するため、外部APIのシークレットは渡さない。
+  mcp_secrets = [
+    "DB_PASSWORD",
+  ]
+
   jobs_secrets = [
     "DB_PASSWORD",
     "LINE_CHANNEL_ACCESS_TOKEN",
@@ -33,7 +38,7 @@ locals {
     "OPENAI_API_KEY",
   ]
 
-  all_secrets = toset(concat(local.service_secrets, local.jobs_secrets))
+  all_secrets = toset(concat(local.service_secrets, local.mcp_secrets, local.jobs_secrets))
 
   # CD 用リソースの ID。環境ごとに変える必要がないため variable ではなく local。
   artifact_registry_image_name = "investlogix/investlogix-api"

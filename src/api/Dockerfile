@@ -26,5 +26,6 @@ RUN sfw uv sync --frozen --no-dev
 
 EXPOSE 8080
 
-# Cloud RunはPORT環境変数を注入する
-CMD ["sh", "-c", "uv run uvicorn stock.app:app --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]
+# 同じイメージをAPI/MCPで使い、Cloud Run側のAPP_MODULEだけで起動対象を分ける。
+# Cloud RunはPORT環境変数を注入する。
+CMD ["sh", "-c", "uv run uvicorn ${APP_MODULE:-stock.app:app} --host 0.0.0.0 --port ${PORT:-8080} --log-level info"]

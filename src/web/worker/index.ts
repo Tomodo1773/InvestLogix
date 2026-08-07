@@ -1,5 +1,5 @@
 /**
- * フロントと同一オリジンで `/api/*` を受け、バックエンド（Cloud Run）へ転送する。
+ * `/api/*` と `/mcp` を、それぞれのCloud Runサービスへ転送する。
  *
  * 同一オリジンにすることが目的。このドメインは Cloudflare Access で保護されており、
  * Access は認証を通したリクエストにだけ `Cf-Access-Jwt-Assertion` を付けて Worker へ渡す。
@@ -12,6 +12,8 @@
 interface Env {
   /** バックエンドのオリジン。`wrangler secret put API_ORIGIN` で登録する */
   API_ORIGIN: string
+  /** MCP Cloud Runサービスのオリジン。`wrangler secret put MCP_ORIGIN` で登録する */
+  MCP_ORIGIN: string
 }
 
 /** ボディを持ちえないメソッド。これ以外はバッファに読み切ってから転送する */
@@ -20,7 +22,9 @@ const BODYLESS_METHODS = new Set(["GET", "HEAD"])
 export default {
   async fetch(request, env) {
     const url = new URL(request.url)
-    const target = new URL(url.pathname + url.search, env.API_ORIGIN)
+    const isMcpRequest = url.pathname === "/mcp" || url.pathname.startsWith("/mcp/")
+    const targetOrigin = isMcpRequest ? env.MCP_ORIGIN : env.API_ORIGIN
+    const target = new URL(url.pathname + url.search, targetOrigin)
 
     // Host は転送先URLから導出させる。Cloud Run は Host でルーティングするため、
     // 元の Host（フロントのドメイン）を引き継ぐと転送先に届かない

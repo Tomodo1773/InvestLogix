@@ -22,6 +22,9 @@ from .utils.cache import timed_cache
 # Cloudflare が Access 通過後のリクエストに付与する JWT のヘッダー名
 ACCESS_JWT_HEADER = "Cf-Access-Jwt-Assertion"
 
+# ローカル開発用の擬似Access issuer。実在しないドメインにして本番のIDと衝突させない。
+DEV_ACCESS_ISSUER = "https://dev.invalid"
+
 # Cloudflare の署名鍵は数週間単位でしか入れ替わらないため、1時間キャッシュすれば足りる
 JWKS_CACHE_SECONDS = 3600
 JWKS_TIMEOUT_SECONDS = 5.0
@@ -85,3 +88,16 @@ async def verify_access_token(token: str) -> AccessIdentity:
         raise AccessTokenError("Access JWTに sub / email が含まれていません")
 
     return AccessIdentity(issuer=issuer, subject=subject, email=email)
+
+
+async def authenticate_access_request(token: str | None) -> AccessIdentity:
+    """HTTPリクエストをAccess外部IDへ変換する。REST/MCPで同じ入口を使う。"""
+    if settings.DEV_AUTH_EMAIL:
+        return AccessIdentity(
+            issuer=DEV_ACCESS_ISSUER,
+            subject=settings.DEV_AUTH_EMAIL,
+            email=settings.DEV_AUTH_EMAIL,
+        )
+    if not token:
+        raise AccessTokenError("Access JWTがありません")
+    return await verify_access_token(token)

@@ -6,19 +6,19 @@ FastAPI の認証依存性
 パスワードやトークンの発行は一切持たない。
 """
 
-from collections.abc import AsyncGenerator
-
 from fastapi import Depends, HTTPException, Request, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .cloudflare_access import ACCESS_JWT_HEADER, AccessIdentity, AccessTokenError, verify_access_token
-from .database import get_db, set_rls_user_id, settings
+from .cloudflare_access import (
+    ACCESS_JWT_HEADER,
+    AccessIdentity,
+    AccessTokenError,
+    authenticate_access_request,
+)
+from .database import get_db
 from .models import User
-from .services.user_service import UserService
-
-# ローカル開発用の擬似Accessの issuer。実在しないドメインにして本番のIDと衝突させない
-DEV_ACCESS_ISSUER = "https://dev.invalid"
+from .user_context import UserContext, UserNotRegisteredError, create_user_context
 
 
 def _unauthenticated() -> HTTPException:
@@ -37,42 +37,35 @@ async def get_access_identity(request: Request) -> AccessIdentity:
     素通りしないようにするためで、ルート側の get_current_user とは結果を共有する。
     Cloudflare を迂回した直アクセスはヘッダーが無いか署名が不正なので、ここで落ちる。
     """
-    if settings.DEV_AUTH_EMAIL:
-        # ローカル開発ではCloudflareを経由しないため、擬似的な外部IDを組み立てる。
-        # 本番でこの値が設定されていた場合は Settings の検証で起動時に失敗する
-        return AccessIdentity(
-            issuer=DEV_ACCESS_ISSUER,
-            subject=settings.DEV_AUTH_EMAIL,
-            email=settings.DEV_AUTH_EMAIL,
-        )
-
     token = request.headers.get(ACCESS_JWT_HEADER)
-    if not token:
-        raise _unauthenticated()
-
     try:
-        return await verify_access_token(token)
+        return await authenticate_access_request(token)
     except AccessTokenError as e:
         logger.warning("Access JWTの検証に失敗しました action=verify reason={}", str(e))
         raise _unauthenticated() from e
 
 
-async def get_current_user(
+async def get_user_context(
     identity: AccessIdentity = Depends(get_access_identity),
     db: AsyncSession = Depends(get_db),
-) -> User:
+) -> UserContext:
     """
     認証済みの外部IDからアプリ内ユーザーを取得する
     - アプリに登録されていない利用者の場合: 403 Forbidden
     """
-    user = await UserService(db).resolve_by_access_identity(identity)
-    if user is None:
+    try:
+        return await create_user_context(db, identity)
+    except UserNotRegisteredError as e:
         logger.warning("Access IDに対応するUserがいません action=select email={}", identity.email)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="このアカウントはInvestLogixに登録されていません",
-        )
-    return user
+        ) from e
+
+
+async def get_current_user(context: UserContext = Depends(get_user_context)) -> User:
+    """認証・ユーザー解決済みコンテキストから利用者を返す。"""
+    return context.user
 
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
@@ -88,14 +81,10 @@ async def get_admin_user(current_user: User = Depends(get_current_user)) -> User
     return current_user
 
 
-async def get_db_for_user(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-) -> AsyncGenerator[AsyncSession]:
+async def get_db_for_user(context: UserContext = Depends(get_user_context)) -> AsyncSession:
     """
     RLS用のuser_idを設定したデータベースセッションを返す依存性注入
     - 認証済みユーザーのuser_idをPostgreSQLセッション変数に設定する
     - 使用例: db: AsyncSession = Depends(get_db_for_user)
     """
-    await set_rls_user_id(db, current_user.user_id)
-    yield db
+    return context.db

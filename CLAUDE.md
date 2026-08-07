@@ -86,7 +86,7 @@ Ruffのバージョンは `src/api/uv.lock` を唯一の情報源とします。
 
 React + Vite ベースのSPAです。Cloudflare Workers（Static Assets）でデプロイされています。
 
-`worker/index.ts` が `/api/*` を受けて Cloud Run へプロキシします。これによりフロントとAPIが同一オリジンになるため、フロント側はAPIを**常に相対パスで叩きます**（`API_BASE_URL` のような基底URLは持ちません）。バックエンドのオリジンは Worker の Secret（`API_ORIGIN`）にあり、リポジトリにもクライアントバンドルにも入れません。
+`worker/index.ts` が `/api/*` と `/mcp` を、それぞれAPI/MCP用Cloud Runへプロキシします。フロント側はAPIを**常に相対パスで叩きます**（`API_BASE_URL` のような基底URLは持ちません）。オリジンは Worker の Secret（`API_ORIGIN` / `MCP_ORIGIN`）にあり、リポジトリにもクライアントバンドルにも入れません。
 
 - Workersランタイムの型 `worker-configuration.d.ts` は生成物なのでコミットしない（gitignore済み）。14000行超あるうえ、`wrangler types` がローカルの `.dev.vars` の変数名を取り込むためマシン間で内容が一致しない。`pnpm typecheck` が毎回先頭で生成するので、手動実行は不要（単体で回したいときは `pnpm cf-typegen`）
 - `compatibility_date` は同梱 workerd がサポートする上限日以下にする。超えると `wrangler dev` が起動しない。制約は一方向（wrangler を上げると上限が上がるだけ）なので、**依存更新に追随して上げる必要はない**。日付でゲートされた挙動が欲しいときだけ意図して上げる
@@ -176,6 +176,9 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 # 開発サーバ起動
 uv run uvicorn stock.app:app --reload --port 8000
 
+# MCPサーバ起動（Streamable HTTP: http://localhost:8001/mcp）
+uv run uvicorn stock.mcp.app:app --reload --port 8001
+
 # 依存関係のインストール（Socket Firewall経由）
 sfw uv sync
 
@@ -202,13 +205,15 @@ uv run alembic downgrade -1
 
 本人確認とログインセッションは **Cloudflare Access** に委譲する。アプリはパスワードも独自トークンも持たない。判断の経緯は `docs/adr/0004-cloudflare-access-authentication.md`。
 
-処理の流れは3層に分かれる。
+処理の流れはフレームワーク非依存の中核と、REST/MCP固有の入口に分かれる。
 
 | ファイル | 責務 |
 |---------|------|
 | `stock/cloudflare_access.py` | `Cf-Access-Jwt-Assertion` の検証（JWKS取得・署名・issuer・audience・有効期限）。DBにもFastAPIにも依存しない |
 | `stock/services/user_service.py` | 検証済みの外部ID (`issuer`, `sub`) からアプリ内 `users` を解決する。未紐付けのユーザーはAccessが確認済みのメールアドレスで初回だけ紐付ける |
-| `stock/auth.py` | FastAPIの依存性。上2つを繋ぎ、RLS用の `app.current_user_id` を設定する |
+| `stock/user_context.py` | User解決とRLS設定を同じDBセッションへ束縛する。REST/MCP共通 |
+| `stock/auth.py` | FastAPIの依存性として共通コンテキストを接続する |
+| `stock/mcp/` | MCP全体へ認証を強制し、RLS済みコンテキストからService層を呼ぶ |
 
 - 認証は `FastAPI(dependencies=[Depends(get_access_identity)])` でアプリ全体に掛ける。ルート単位で書き忘れても素通りしない
 - Cloud Run の `*.run.app` は公開されたままなので、この検証がCloudflareを迂回した直アクセスの防波堤になる
@@ -216,6 +221,7 @@ uv run alembic downgrade -1
 - Swagger UI (`/docs`) が使えるのはローカルのみ。サイト側はWorkerが `/api/*` しか通さず、`*.run.app` 側はAccessのヘッダーが付かない
 - `is_admin`、データ所有権、PostgreSQL RLS はアプリ側の責務。Accessのメールアドレスやグループを検証なしに権限へ変換しない
 - 定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない
+- MCPは公式Python SDKのStreamable HTTPを使い、APIとは別のCloud Runサービスで動かす。公開ツールは参照系から始める
 
 ローカル開発とテストでの差し替えは以下。
 

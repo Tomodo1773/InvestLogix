@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from testcontainers.community.postgres import PostgresContainer
 
 from stock.app import app
-from stock.auth import get_access_identity, get_db_for_user
+from stock.auth import get_access_identity
 from stock.cloudflare_access import AccessIdentity
 from stock.database import get_db, settings
 from stock.models import Base
@@ -224,9 +224,8 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient]:
             finally:
                 await session.close()
 
-    # get_db / get_db_for_user 依存性をオーバーライド
+    # get_dbだけを差し替え、User解決とRLS設定は本番と同じ依存性を通す
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_db_for_user] = override_get_db
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

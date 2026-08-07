@@ -1,6 +1,6 @@
 # infra/ — Google Cloud インフラ (OpenTofu)
 
-InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Scheduler / Service Accounts / Secret Manager IAM）を OpenTofu で管理する。
+InvestLogix の本番 Google Cloud リソース（API/MCP Cloud Run Service / Jobs / Scheduler / Service Accounts / Secret Manager IAM）を OpenTofu で管理する。
 
 > CLI は `tofu`。HCL は Terraform 互換なので、`hashicorp/google` プロバイダ等はそのまま使える。
 
@@ -25,8 +25,9 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 | `service_accounts.tf` | ランタイム / invoker / CD deployer の Service Account と IAM |
 | `secrets.tf` | 既存シークレットの data 参照と IAM 付与 |
 | `cloud_run_service.tf` | API 用 Cloud Run Service |
-| `cloud_run_jobs.tf` | バッチジョブ × 3 と invoker IAM |
-| `cloud_scheduler.tf` | Cloud Scheduler × 3（OAuth 認証で Job をキック） |
+| `cloud_run_mcp.tf` | MCP 用 Cloud Run Service（APIと同じイメージ、別プロセス） |
+| `cloud_run_jobs.tf` | バッチジョブ × 2 と invoker IAM |
+| `cloud_scheduler.tf` | Cloud Scheduler × 2（OAuth 認証で Job をキック） |
 | `artifact_registry.tf` | コンテナイメージ置き場 |
 | `workload_identity.tf` | GitHub Actions が鍵レスで成り代わるための WIF |
 | `monitoring.tf` | Cloud Run Jobs の失敗を検知する Notification Channel と Alert Policy |
@@ -40,7 +41,7 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 - state バックエンドのバケット名は `backend.hcl`（gitignore 対象）に書き、`tofu init -backend-config=backend.hcl` で渡す。`.tf` には書かない。
 
 ### GitHub Actions CD との役割分担
-- コンテナイメージタグ (`<image>:<commit-sha>`) は GitHub Actions の `api-cd.yml` が docker push → `gcloud run deploy` / `gcloud run jobs update` で直接反映する。
+- コンテナイメージタグ (`<image>:<commit-sha>`) は GitHub Actions の `api-cd.yml` が docker push → API/MCPの `gcloud run deploy` / `gcloud run jobs update` で直接反映する。
 - OpenTofu は image を `ignore_changes` で無視する。**OpenTofu は構造（env, SA, scaling, schedule, WIF, AR）を管理、GitHub Actions は image を管理。**
 - 同じ理由で Cloud Run の `client` / `client_version` / `revision` 等の自動更新フィールドも無視する。
 
@@ -56,12 +57,24 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
   | `TF_VAR_cf_access_aud` | Zero Trust → Access → Applications → 対象アプリの **Application Audience (AUD) Tag** |
 
 - Access application を作り直すと AUD タグが変わる。変えたら `.env` を更新して `tofu apply` する。
-- 第 2 段階で MCP 用の Access application を追加するときは、application を分けて別の AUD を使う（同じ IdP とユーザー解決規則は共有する）。
+- MCP は専用ホストの `/mcp` を Worker から別Cloud Runへ転送する。Access applicationもWeb用と分け、Managed OAuthを有効にする。
+- Managed OAuthのアクセストークンはCloudflare側で利用者へ解決され、オリジンにはWebと同じ `Cf-Access-Jwt-Assertion` が届く。MCP側も署名・issuer・専用AUDを検証する。
+
+### MCPの初期構築
+
+1. MCP用ホスト名（例: `mcp.example.com`）を決め、同じWorkerのCustom Domainとして追加する。
+2. Zero Trust → Access controls → AI controls → MCP servers で `https://<MCPホスト>/mcp` を登録し、Webと同じIdP/許可ポリシーを設定する。
+3. 作成したMCP applicationのAdvanced settingsでManaged OAuthを有効化する。ローカルクライアントを使う場合はlocalhost/loopback redirectも許可する。
+4. MCP applicationのAUDを `TF_VAR_cf_access_mcp_aud` に設定し、`tofu apply` で専用Cloud RunとSAを作る。
+5. `tofu output -raw mcp_service_uri` の値を `cd src/web && pnpm wrangler secret put MCP_ORIGIN` でWorker Secretへ登録する。
+6. MCP InspectorまたはOAuth対応MCPクライアントから `https://<MCPホスト>/mcp` へ接続し、ブラウザ認証後に3つの参照ツールが見えることを確認する。
+
+MCPのAccess token lifetimeは5〜15分、grant sessionは1〜2週間を目安にする。OAuthはAccessが提供するため、MCPサーバー自身にOAuthエンドポイントやクライアントシークレットは置かない。
 
 ### CD 用リソースと GitHub Actions Variables の同期
 - WIF / Artifact Registry / Deployer SA は OpenTofu 管理下にある。
 - ワークフロー側は GCP プロジェクト ID 等の識別子を YAML に書かない（public リポのため）。`tofu output` の値を GitHub の **Settings → Secrets and variables → Actions → Variables** に手動で登録する。
-- 必要な Variables: `WIF_PROVIDER`, `DEPLOYER_SA`, `IMAGE_BASE`, `GCP_REGION`, `SERVICE_NAME`。
+- 必要な Variables: `WIF_PROVIDER`, `DEPLOYER_SA`, `IMAGE_BASE`, `GCP_REGION`, `SERVICE_NAME`, `MCP_SERVICE_NAME`。
 - 取得手順:
   ```bash
   cd infra
@@ -70,7 +83,7 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
   tofu output -raw deployer_sa_email
   tofu output -raw image_base
   ```
-  これらの値と、`var.region` (`asia-northeast1`) / `var.service_name` (`investlogix-api`) を Variables に登録する。WIF / AR / SA の構成を変えたときだけ再同期すればよい。
+  これらの値と、`var.region` (`asia-northeast1`) / `var.service_name` (`investlogix-api`) / `var.mcp_service_name` (`investlogix-mcp`) を Variables に登録する。WIF / AR / SA の構成を変えたときだけ再同期すればよい。
 
 ---
 
@@ -121,7 +134,7 @@ unset VALUE
 
 ## イメージのデプロイ
 
-main への push で `.github/workflows/api-cd.yml` が起動し、build → push → `gcloud run deploy` (Service) → `gcloud run jobs update` (Jobs) を 1 本のワークフローで実行する。OpenTofu は image を `ignore_changes` しているので何もしない。
+main への push で `.github/workflows/api-cd.yml` が起動し、build → push → `gcloud run deploy` (API/MCP) → `gcloud run jobs update` (Jobs) を 1 本のワークフローで実行する。OpenTofu は image を `ignore_changes` しているので何もしない。
 
 ## Artifact Registry の初回 import
 

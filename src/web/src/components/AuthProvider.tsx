@@ -1,40 +1,21 @@
-import { type ReactNode, useEffect } from "react"
-import { useLocation, useNavigate } from "react-router"
-import { getCurrentUser } from "@/lib/api/client"
-import { useAuthStore } from "@/lib/stores/auth-store"
+import type { ReactNode } from "react"
+import { LoginScreen } from "@/components/LoginScreen"
+import { useCurrentUser } from "@/lib/hooks/use-current-user"
 
 interface AuthProviderProps {
   children: ReactNode
 }
 
+/**
+ * ログイン中のユーザーを解決してから中身を表示する
+ *
+ * 認証そのものはCloudflare Accessがドキュメント要求の時点で終えているため、
+ * SPAが未認証のまま起動することはない。ここが確かめるのは
+ * 「Accessが通した利用者がInvestLogixに登録されているか」と「セッションが生きているか」だけ。
+ * 解決できないときはログイン画面を出す。画面遷移はしない（Accessの再認証はフルリロードで起きる）。
+ */
 export function AuthProvider({ children }: AuthProviderProps) {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const { setUser, setLoading, isLoading, isAuthenticated } = useAuthStore()
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const user = await getCurrentUser()
-        setUser(user)
-      } catch {
-        setUser(null)
-        if (location.pathname !== "/login") {
-          navigate("/login")
-        }
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkAuth()
-  }, [location.pathname, navigate, setUser, setLoading])
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated && location.pathname !== "/login") {
-      navigate("/login")
-    }
-  }, [isLoading, isAuthenticated, location.pathname, navigate])
+  const { data: user, isLoading } = useCurrentUser()
 
   if (isLoading) {
     return (
@@ -45,6 +26,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return <LoginScreen />
   }
 
   return <>{children}</>

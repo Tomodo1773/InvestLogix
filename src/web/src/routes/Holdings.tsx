@@ -10,22 +10,12 @@ import { Button } from "@/components/ui/button"
 import { getHoldings, getWeeklyPerformance, recalculateAllHoldings } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
 import { downloadCsv, holdingsToCsv } from "@/lib/csv"
-import { useAuthStore } from "@/lib/stores/auth-store"
 import { buildWeeklyChangeMap } from "@/lib/weekly-performance"
 
 export default function Holdings() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const { data: holdings, isLoading, mutate } = useSWR(SWR_KEYS.holdings, getHoldings)
 
-  const {
-    data: holdings,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.holdings : null, getHoldings)
-
-  const { data: weeklyPerformance } = useSWR(
-    isAuthenticated ? SWR_KEYS.weeklyPerformance : null,
-    getWeeklyPerformance
-  )
+  const { data: weeklyPerformance } = useSWR(SWR_KEYS.weeklyPerformance, getWeeklyPerformance)
 
   const weeklyChangeMap = useMemo(() => buildWeeklyChangeMap(weeklyPerformance), [weeklyPerformance])
 

@@ -8,23 +8,17 @@ import { AuthenticatedLayout } from "@/components/layout/authenticated-layout"
 import { Button } from "@/components/ui/button"
 import { getDividends, getDividendsMonthly } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
-import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Dividends() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [refreshCount, setRefreshCount] = useState(0)
 
-  const {
-    data: dividends,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.dividends : null, getDividends)
+  const { data: dividends, isLoading, mutate } = useSWR(SWR_KEYS.dividends, getDividends)
 
   const {
     data: dividendsMonthly,
     isLoading: monthlyLoading,
     mutate: mutateMonthly,
-  } = useSWR(isAuthenticated ? SWR_KEYS.dividendsMonthly : null, getDividendsMonthly)
+  } = useSWR(SWR_KEYS.dividendsMonthly, getDividendsMonthly)
 
   const isRefreshing = isLoading || monthlyLoading
 

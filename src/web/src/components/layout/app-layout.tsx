@@ -2,7 +2,7 @@ import { LogOut } from "lucide-react"
 import type { ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { accessLogout } from "@/lib/auth"
-import { useAuthStore } from "@/lib/stores/auth-store"
+import { useCurrentUser } from "@/lib/hooks/use-current-user"
 import { MobileNav } from "./mobile-nav"
 import { Sidebar } from "./sidebar"
 
@@ -11,7 +11,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const user = useAuthStore((state) => state.user)
+  const { data: user } = useCurrentUser()
 
   return (
     <div className="flex h-screen">

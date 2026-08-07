@@ -5,16 +5,9 @@ import { TransactionsTable } from "@/components/transactions/transactions-table"
 import { Button } from "@/components/ui/button"
 import { getTransactions } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
-import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Transactions() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-
-  const {
-    data: transactions,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.transactions : null, getTransactions)
+  const { data: transactions, isLoading, mutate } = useSWR(SWR_KEYS.transactions, getTransactions)
 
   const handleRefresh = () => {
     mutate()

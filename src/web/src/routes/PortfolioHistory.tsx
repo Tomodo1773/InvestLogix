@@ -5,16 +5,9 @@ import { PortfolioHistoryTable } from "@/components/portfolio-history/portfolio-
 import { Button } from "@/components/ui/button"
 import { getPortfolioHistory } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
-import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function PortfolioHistory() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-
-  const {
-    data: history,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.portfolioHistory : null, getPortfolioHistory)
+  const { data: history, isLoading, mutate } = useSWR(SWR_KEYS.portfolioHistory, getPortfolioHistory)
 
   const handleRefresh = () => {
     mutate()

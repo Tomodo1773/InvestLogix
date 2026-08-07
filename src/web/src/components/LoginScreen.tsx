@@ -5,10 +5,10 @@ import { startAccessLogin } from "@/lib/auth"
 /**
  * ログイン画面
  *
- * 認証はCloudflare Accessが行うため、ここには入力欄が無い。通常はAccessが手前で
- * 認証するのでこの画面には来ず、セッション切れやアカウント未登録のときだけ表示される。
+ * 認証はCloudflare Accessが行うため入力欄は無い。Accessが手前で認証するので
+ * 通常この画面には来ず、セッション切れかアカウント未登録のときだけ表示される。
  */
-export default function Login() {
+export function LoginScreen() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-lg">

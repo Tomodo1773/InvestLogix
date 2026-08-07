@@ -7,17 +7,11 @@ import { StockSplitsTable } from "@/components/stock-splits/stock-splits-table"
 import { Button } from "@/components/ui/button"
 import { getStockSplits } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
-import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function StockSplits() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
-  const {
-    data: stockSplits,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.stockSplits : null, () => getStockSplits())
+  const { data: stockSplits, isLoading, mutate } = useSWR(SWR_KEYS.stockSplits, () => getStockSplits())
 
   const handleRefresh = () => {
     mutate()

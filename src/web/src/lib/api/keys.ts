@@ -7,6 +7,7 @@
  * キーはここだけで定義する。
  */
 export const SWR_KEYS = {
+  me: "/api/v1/users/me",
   portfolioSummary: "/api/v1/portfolio/summary",
   portfolioHistory: "/api/v1/portfolio/history",
   weeklyPerformance: "/api/v1/portfolio/weekly-performance",

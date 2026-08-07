@@ -1,4 +1,5 @@
-import { useAuthStore } from "@/lib/stores/auth-store"
+import { mutate } from "swr"
+import { SWR_KEYS } from "./keys"
 import type {
   Dividend,
   DividendBySymbolItem,
@@ -36,11 +37,10 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     },
   })
 
-  // 401はCloudflare Accessのセッション切れ。ここでは認証状態を落とすだけにして、
-  // ログイン画面への遷移はルータを持つAuthProviderに任せる
-  // （window.location だとフルリロードになりSPAの状態を失う）
+  // 401はCloudflare Accessのセッション切れ。キャッシュ済みのユーザーを捨てると
+  // AuthProviderがログイン画面に切り替わる。ここで画面遷移まではしない
   if (response.status === 401) {
-    useAuthStore.getState().setUser(null)
+    mutate(SWR_KEYS.me, undefined, { revalidate: false })
     throw new Error("セッションの有効期限が切れました")
   }
 

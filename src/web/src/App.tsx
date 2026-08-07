@@ -3,7 +3,6 @@ import Dividends from "./routes/Dividends"
 import HoldingDetail from "./routes/HoldingDetail"
 import Holdings from "./routes/Holdings"
 import Home from "./routes/Home"
-import Login from "./routes/Login"
 import PortfolioHistory from "./routes/PortfolioHistory"
 import StockSplits from "./routes/StockSplits"
 import Stocks from "./routes/Stocks"
@@ -22,7 +21,6 @@ function App() {
       <Route path="/dividends" element={<Dividends />} />
       <Route path="/stock-splits" element={<StockSplits />} />
       <Route path="/stocks" element={<Stocks />} />
-      <Route path="/login" element={<Login />} />
     </Routes>
   )
 }

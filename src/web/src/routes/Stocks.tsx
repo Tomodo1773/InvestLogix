@@ -5,16 +5,9 @@ import { StocksTable } from "@/components/stocks/stocks-table"
 import { Button } from "@/components/ui/button"
 import { getStocks } from "@/lib/api/client"
 import { SWR_KEYS } from "@/lib/api/keys"
-import { useAuthStore } from "@/lib/stores/auth-store"
 
 export default function Stocks() {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-
-  const {
-    data: stocks,
-    isLoading,
-    mutate,
-  } = useSWR(isAuthenticated ? SWR_KEYS.stocks : null, () => getStocks())
+  const { data: stocks, isLoading, mutate } = useSWR(SWR_KEYS.stocks, () => getStocks())
 
   const handleRefresh = () => {
     mutate()

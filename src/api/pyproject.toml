@@ -53,6 +53,8 @@ line-length = 110
 # ruff 0.16.0でデフォルトルールが59→413に拡張された。上流のキュレーションを基本的に受け入れ、
 # プロジェクト固有の事情があるものだけ以下で調整する。判断の経緯は docs/adr/0002-ruff-default-ruleset-adoption.md
 [tool.ruff.lint]
+# TID251は設定が前提のためデフォルトでは無効。下のbanned-apiを有効化するために追加する
+extend-select = ["TID251"]
 ignore = [
     # 検出箇所はすべて外部API呼び出しやバッチのユーザー単位処理をcatchしてログ出力する意図的な境界処理。
     # ruffはログ出力の有無を判定しないため恒常的にノイズになる
@@ -65,6 +67,13 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # naive datetimeを意図的に生成して変換結果を検証するテストがあるため
 "tests/**" = ["DTZ001", "DTZ011"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# 設定値の読み込みはstock.databaseのSettingsに一本化する（Issue #437）。
+# 環境変数を直接読むと設定項目の一覧性と型検証が失われるため、機械的に禁止する
+"os.getenv".msg = "設定値は stock.database の settings 経由で読むこと。新しい項目は Settings に定義する"
+"os.environ".msg = "設定値は stock.database の settings 経由で読むこと。新しい項目は Settings に定義する"
+"dotenv.load_dotenv".msg = ".envの読み込みはSettings（pydantic-settings）が行うため不要"
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPIの依存性注入は引数デフォルトで関数を呼ぶのが公式パターンなのでB008の対象外にする。

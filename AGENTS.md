@@ -167,6 +167,7 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 ### 実装の指針
 
 - パッケージを追加するときはadd-python-packageスキルを利用すること
+- 設定値は `stock/database.py` の `Settings` に集約する
 
 ### コマンド
 

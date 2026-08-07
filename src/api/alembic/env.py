@@ -8,7 +8,8 @@ from stock.database import settings
 from stock.models import Base
 
 # クライアントエンコーディングを明示的に設定（UnicodeDecodeError対策）
-os.environ["PGCLIENTENCODING"] = "utf8"
+# 設定値の読み込みではなくドライバへの環境変数の受け渡しなのでTID251の対象外
+os.environ["PGCLIENTENCODING"] = "utf8"  # noqa: TID251
 
 config = context.config
 

@@ -14,11 +14,12 @@ from sqlalchemy.orm import sessionmaker
 from testcontainers.community.postgres import PostgresContainer
 
 from stock.app import app
-from stock.auth import get_db_for_user
-from stock.database import get_db
+from stock.auth import get_access_identity, get_db_for_user
+from stock.cloudflare_access import AccessIdentity
+from stock.database import get_db, settings
 from stock.models import Base
 from stock.schemas import UserCreate
-from stock.services.auth_service import AuthService
+from stock.services.user_service import UserService
 
 # pytest-asyncioのデフォルトスコープを設定
 pytest_asyncio.fixture_default_loop_fixture_scope = "function"
@@ -145,46 +146,54 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-async def _create_user_and_login(
-    client: AsyncClient, setup_database, username: str, email: str, password: str, is_admin: bool
-) -> None:
-    """テストユーザーをDBに作成しログインする共通ヘルパー
+TEST_ACCESS_ISSUER = "https://test.cloudflareaccess.com"
 
-    /api/v1/token のレスポンスのSet-Cookieをhttpx AsyncClientが自動保存するため、
-    呼び出し後の同clientへのリクエストはCookie認証で通る。
+
+@pytest.fixture(autouse=True)
+def disable_dev_auth(monkeypatch) -> None:
+    """開発用の認証迂回を無効化するフィクスチャー
+
+    ローカルの .env に DEV_AUTH_EMAIL があるとテストが素通りしてしまうため、
+    認証まわりのテストが手元とCIで同じ結果になるよう常に空にする。
+    """
+    monkeypatch.setattr(settings, "DEV_AUTH_EMAIL", "")
+
+
+async def _create_authenticated_user(
+    setup_database, username: str, email: str, is_admin: bool
+) -> AccessIdentity:
+    """テストユーザーをDBに作成し、Cloudflare Accessの認証済み外部IDを差し替えるヘルパー
+
+    JWTの検証（get_access_identity）だけをオーバーライドし、外部IDからアプリ内ユーザーへの
+    解決とRLS設定は本番と同じ経路を通す。
     """
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
     async with TestingSessionLocalFunc() as session:
-        await AuthService(session).create_user(
-            UserCreate(username=username, email=email, password=password), is_admin=is_admin
+        user = await UserService(session).create_user(
+            UserCreate(username=username, email=email), is_admin=is_admin
         )
+        identity = AccessIdentity(issuer=TEST_ACCESS_ISSUER, subject=f"access-{user.user_id}", email=email)
+        user.access_issuer = identity.issuer
+        user.access_subject = identity.subject
         await session.commit()
-    await client.post("/api/v1/token", json={"username": username, "password": password})
+
+    app.dependency_overrides[get_access_identity] = lambda: identity
+    return identity
 
 
 @pytest_asyncio.fixture
-async def auth_token(client: AsyncClient, setup_database) -> None:
-    """テスト用一般ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
-    await _create_user_and_login(
-        client,
-        setup_database,
-        username="testuser",
-        email="test@example.com",
-        password="testpassword",
-        is_admin=False,
+async def auth_user(client: AsyncClient, setup_database) -> AccessIdentity:
+    """テスト用一般ユーザーを作成し、認証済み状態にするフィクスチャー"""
+    return await _create_authenticated_user(
+        setup_database, username="testuser", email="test@example.com", is_admin=False
     )
 
 
 @pytest_asyncio.fixture
-async def auth_admin_token(client: AsyncClient, setup_database) -> None:
-    """テスト用管理者ユーザーを作成し、clientにCookieをセットするフィクスチャー"""
-    await _create_user_and_login(
-        client,
-        setup_database,
-        username="adminuser",
-        email="admin@example.com",
-        password="adminpassword",
-        is_admin=True,
+async def auth_admin_user(client: AsyncClient, setup_database) -> AccessIdentity:
+    """テスト用管理者ユーザーを作成し、認証済み状態にするフィクスチャー"""
+    return await _create_authenticated_user(
+        setup_database, username="adminuser", email="admin@example.com", is_admin=True
     )
 
 
@@ -448,12 +457,12 @@ async def mocker(request):
 
 
 @pytest_asyncio.fixture
-async def create_transaction(client, auth_token):
+async def create_transaction(client, auth_user):
     """取引データを登録するためのユーティリティフィクスチャー
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証フィクスチャ（clientにCookieをセットする副作用）
+        auth_user: 認証済み一般ユーザーのフィクスチャ
 
     Returns:
         function: 取引登録用の関数
@@ -468,12 +477,12 @@ async def create_transaction(client, auth_token):
 
 
 @pytest_asyncio.fixture
-async def create_dividend(client, auth_token):
+async def create_dividend(client, auth_user):
     """配当データを登録するためのユーティリティフィクスチャー
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証フィクスチャ（clientにCookieをセットする副作用）
+        auth_user: 認証済み一般ユーザーのフィクスチャ
 
     Returns:
         function: 配当登録用の関数
@@ -523,13 +532,13 @@ async def setup_dividend_data(create_dividend):
 
 
 @pytest_asyncio.fixture
-async def setup_japanese_stock_data(client, auth_token, create_transaction):
+async def setup_japanese_stock_data(client, auth_user, create_transaction):
     """日本株のテストデータをセットアップするフィクスチャー
 
     Args:
         client: 非同期HTTPクライアント
         create_transaction: 取引登録フィクスチャー
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
 
     Returns:
         dict: 取引情報
@@ -549,13 +558,13 @@ async def setup_japanese_stock_data(client, auth_token, create_transaction):
 
 
 @pytest_asyncio.fixture
-async def setup_us_stock_data(client, auth_token, create_transaction):
+async def setup_us_stock_data(client, auth_user, create_transaction):
     """米国株のテストデータをセットアップするフィクスチャー
 
     Args:
         client: 非同期HTTPクライアント
         create_transaction: 取引登録フィクスチャー
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
 
     Returns:
         dict: 取引情報

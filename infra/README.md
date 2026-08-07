@@ -44,6 +44,20 @@ InvestLogix の本番 Google Cloud リソース（Cloud Run Service / Jobs / Sch
 - OpenTofu は image を `ignore_changes` で無視する。**OpenTofu は構造（env, SA, scaling, schedule, WIF, AR）を管理、GitHub Actions は image を管理。**
 - 同じ理由で Cloud Run の `client` / `client_version` / `revision` 等の自動更新フィールドも無視する。
 
+### 認証 (Cloudflare Access)
+- Web の認証は Cloudflare Zero Trust の Access application が担当する。**Zero Trust ダッシュボードでの手動設計**で、OpenTofu 管理外（Google Cloud のリソースではないため）。
+- Access で保護するのは Cloudflare Workers 側のドメイン全体。`/api/*` も同じドメインを通るので、Worker が受け取った `Cf-Access-Jwt-Assertion` をそのまま Cloud Run へ転送する。
+- Cloud Run の `*.run.app` は公開されたままなので、**API 側が全リクエストで Access JWT の署名・issuer・audience・有効期限を検証する**。Cloudflare を迂回した直アクセスはここで 401 になる。
+- 検証に必要な 2 つの値を Cloud Run に env で渡す。秘密ではないが環境依存なので `.env` の `TF_VAR_*` で注入する:
+
+  | 変数 | 取得元 |
+  |---|---|
+  | `TF_VAR_cf_access_team_domain` | Zero Trust → Settings → Custom Pages のチームドメイン (`<team>.cloudflareaccess.com`) |
+  | `TF_VAR_cf_access_aud` | Zero Trust → Access → Applications → 対象アプリの **Application Audience (AUD) Tag** |
+
+- Access application を作り直すと AUD タグが変わる。変えたら `.env` を更新して `tofu apply` する。
+- 第 2 段階で MCP 用の Access application を追加するときは、application を分けて別の AUD を使う（同じ IdP とユーザー解決規則は共有する）。
+
 ### CD 用リソースと GitHub Actions Variables の同期
 - WIF / Artifact Registry / Deployer SA は OpenTofu 管理下にある。
 - ワークフロー側は GCP プロジェクト ID 等の識別子を YAML に書かない（public リポのため）。`tofu output` の値を GitHub の **Settings → Secrets and variables → Actions → Variables** に手動で登録する。

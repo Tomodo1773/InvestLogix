@@ -63,8 +63,7 @@ InvestLogix/
 │   └── sbi_export_file/
 │       ├── SaveFile_000001_000137.csv  # 円建て口座のサンプル(cp932エンコーディング)
 │       └── yakujo20260201135112.csv    # 外貨建て口座のサンプル(cp932エンコーディング)
-├── .github/workflows/          # CI/CD定義
-└── openapi.json                # バックエンドAPIのOpenAPI仕様
+└── .github/workflows/          # CI/CD定義
 ```
 
 ## CI/CD
@@ -201,20 +200,29 @@ uv run alembic downgrade -1
 
 ### 認証認可
 
-Cookie(httponly) ベースの認証に一本化。`/api/v1/token` がログイン成功時にCookieをセットし、以降のAPIリクエストはCookieで認証する。定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない。
+本人確認とログインセッションは **Cloudflare Access** に委譲する。アプリはパスワードも独自トークンも持たない。判断の経緯は `docs/adr/0004-cloudflare-access-authentication.md`。
 
-想定クライアントは以下
+処理の流れは3層に分かれる。
 
-| クライアント | 認証方法 | 用途 |
-|-------------|---------|------|
-| Webフロントエンド | Cookie(httponly) | ブラウザからのアクセス |
-| Swagger UI (/docs) | Cookie(httponly) | `/api/v1/token` を Try it out でログイン後、Cookieが自動付与される |
+| ファイル | 責務 |
+|---------|------|
+| `stock/cloudflare_access.py` | `Cf-Access-Jwt-Assertion` の検証（JWKS取得・署名・issuer・audience・有効期限）。DBにもFastAPIにも依存しない |
+| `stock/services/user_service.py` | 検証済みの外部ID (`issuer`, `sub`) からアプリ内 `users` を解決する。未紐付けのユーザーはAccessが確認済みのメールアドレスで初回だけ紐付ける |
+| `stock/auth.py` | FastAPIの依存性。上2つを繋ぎ、RLS用の `app.current_user_id` を設定する |
 
-### パスワードハッシュ
+- 認証は `FastAPI(dependencies=[Depends(get_access_identity)])` でアプリ全体に掛ける。ルート単位で書き忘れても素通りしない
+- Cloud Run の `*.run.app` は公開されたままなので、この検証がCloudflareを迂回した直アクセスの防波堤になる
+- 未認証は401、Access認証済みだがアプリ未登録は403
+- Swagger UI (`/docs`) はブラウザでAccessのログインを済ませていればそのまま Try it out できる（ヘッダーはCloudflareが付ける）
+- `is_admin`、データ所有権、PostgreSQL RLS はアプリ側の責務。Accessのメールアドレスやグループを検証なしに権限へ変換しない
+- 定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない
 
-- **アルゴリズム**: Argon2id（OWASP推奨）
-- **ライブラリ**: `pwdlib[argon2]`
-- **実装ファイル**: `src/api/stock/auth.py`
+ローカル開発とテストでの差し替えは以下。
+
+| 用途 | 手段 |
+|------|------|
+| ローカル開発 | `.env` の `DEV_AUTH_EMAIL`。そのメールアドレスのユーザーとして扱う。`ENVIRONMENT=production` では設定できず、設定されていると起動時に失敗する |
+| テスト | `get_access_identity` の `dependency_overrides`（`auth_user` / `auth_admin_user` フィクスチャ）。ユーザー解決とRLSは本番と同じ経路を通る |
 
 ### コーディングスタイル
 

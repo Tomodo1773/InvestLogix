@@ -18,7 +18,6 @@ import type {
   Stock,
   StockSplit,
   StockSplitCreate,
-  TokenResponse,
   Transaction,
   TransactionWithPL,
   User,
@@ -28,7 +27,7 @@ import type {
 // APIは常に同一オリジンの相対パスで叩く。本番はCloudflare Workerが、
 // 開発時はViteのdev proxyが /api/* をバックエンドへ転送する。
 // バックエンドのURLをバンドルに焼き込まないための設計。
-// 同一オリジンなので認証Cookieは既定で送られる（credentials の指定は不要）
+// 認証はCloudflare Accessがリクエストにヘッダーを付ける形で行うため、クライアント側では何も付けない
 async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(endpoint, {
     ...options,
@@ -37,7 +36,7 @@ async function fetchWithAuth<T>(endpoint: string, options: RequestInit = {}): Pr
     },
   })
 
-  // 401はセッション切れ。ここでは認証状態を落とすだけにして、
+  // 401はCloudflare Accessのセッション切れ。ここでは認証状態を落とすだけにして、
   // ログイン画面への遷移はルータを持つAuthProviderに任せる
   // （window.location だとフルリロードになりSPAの状態を失う）
   if (response.status === 401) {
@@ -63,46 +62,10 @@ async function sendJson<T>(endpoint: string, method: "POST" | "PUT", body: unkno
 }
 
 // Auth APIs
-export async function login(username: string, password: string): Promise<TokenResponse> {
-  const response = await fetch("/api/v1/token", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "Login failed" }))
-    throw new Error(typeof error.detail === "string" ? error.detail : "Login failed")
-  }
-
-  return response.json()
-}
-
-// 応答が返らないまま固まるとログアウト処理全体が止まってしまうため、待ち時間に上限を設ける。
-// Cloud Runのコールドスタート（数秒かかることがある）を空振りさせない程度には長く取る。
-// タイムアウトすると fetch は AbortError で reject するので、呼び出し側のcatchに落ちる
-const LOGOUT_TIMEOUT_MS = 10_000
-
-// 認証Cookieはhttponlyなのでクライアントからは消せない。サーバーに削除させる。
-// 204を返すのでボディのパースは行わない（fetchWithAuthは使えない）
-export async function logout(): Promise<void> {
-  const response = await fetch("/api/v1/logout", {
-    method: "POST",
-    signal: AbortSignal.timeout(LOGOUT_TIMEOUT_MS),
-  })
-
-  if (!response.ok) {
-    throw new Error("Logout failed")
-  }
-}
-
+// ログインとログアウトはCloudflare Accessが担当するため、ここにはAPIを持たない
+// （lib/auth.ts の startAccessLogin / accessLogout を使う）
 export async function getCurrentUser(): Promise<User> {
-  return fetchWithAuth<User>("/api/v1/me")
+  return fetchWithAuth<User>("/api/v1/users/me")
 }
 
 // Portfolio APIs

@@ -1,8 +1,10 @@
 /**
  * フロントと同一オリジンで `/api/*` を受け、バックエンド（Cloud Run）へ転送する。
  *
- * 同一オリジンにすることが目的。フロントとAPIが別サイトだと認証Cookieが
- * サードパーティCookieになり、SameSite=None を強制されてSafari等で遮断される。
+ * 同一オリジンにすることが目的。このドメインは Cloudflare Access で保護されており、
+ * Access は認証を通したリクエストにだけ `Cf-Access-Jwt-Assertion` を付けて Worker へ渡す。
+ * フロントとAPIが別サイトだと、APIリクエストがこの保護の外を通ってしまう。
+ * 受け取ったヘッダーはそのまま転送し、署名の検証はバックエンドが行う。
  *
  * バックエンドのURLは Secret（API_ORIGIN）から読むため、リポジトリにも
  * クライアントバンドルにも現れない。
@@ -26,7 +28,7 @@ export default {
     headers.delete("host")
 
     // ボディはストリームのままだと「リダイレクトで再送が必要になったとき」に
-    // 例外になる（GETは影響しないが、ログインやCSVインポートのPOSTが落ちる）。
+    // 例外になる（GETは影響しないが、CSVインポート等のPOSTが落ちる）。
     // 読み切ってバッファで渡すことでリダイレクトを跨げるようにする。
     // 個人利用の範囲ではアップロードサイズが小さいため全読みで問題ない
     const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer()

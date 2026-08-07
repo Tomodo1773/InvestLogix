@@ -133,7 +133,7 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
-    password: str
+    """ユーザー登録リクエスト（認証はCloudflare Accessが行うためパスワードは持たない）"""
 
 
 class User(UserBase):
@@ -360,13 +360,6 @@ class UserWithRelations(User):
 
 
 # APIリクエスト/レスポンスモデル
-class Token(BaseModel):
-    """JWTトークンレスポンス"""
-
-    access_token: str
-    token_type: str = "bearer"
-
-
 class StockCreate(BaseModel):
     """株式銘柄登録リクエスト"""
 
@@ -421,13 +414,6 @@ class PortfolioSummary(BaseModel):
     total_pl_percentage: float
     holdings_by_market: dict[str, float]
     holdings_by_currency: dict[str, float]
-
-
-class LoginRequest(BaseModel):
-    """ログインリクエスト用のスキーマ"""
-
-    username: str
-    password: str
 
 
 # LINE UserID登録用のスキーマを追加

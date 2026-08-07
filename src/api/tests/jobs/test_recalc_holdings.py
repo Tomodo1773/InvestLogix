@@ -12,7 +12,6 @@ async def _seed_user_with_holding(db: AsyncSession, symbol: str = "8058") -> Use
     user = User(
         username="job_testuser",
         email="job@example.com",
-        password_hash="dummy_hash",
         line_user_id="U_JOB",
     )
     db.add(user)

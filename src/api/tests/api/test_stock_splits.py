@@ -4,9 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_create_stock_split_and_recalculate(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_create_stock_split_and_recalculate(client: AsyncClient, db_session: AsyncSession, auth_user):
     """株式分割登録と過去取引の調整値再計算のテスト
 
     期待する動作:
@@ -16,7 +14,7 @@ async def test_create_stock_split_and_recalculate(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録（100株@10000円）
     transaction_data = {
@@ -56,7 +54,7 @@ async def test_create_stock_split_and_recalculate(
 
 
 @pytest.mark.asyncio
-async def test_holding_calculation_with_split(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_holding_calculation_with_split(client: AsyncClient, db_session: AsyncSession, auth_user):
     """分割後の保有株計算が正しいことを確認
 
     期待する動作:
@@ -67,7 +65,7 @@ async def test_holding_calculation_with_split(client: AsyncClient, db_session: A
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録（100株@10000円）
     transaction_data = {
@@ -107,7 +105,7 @@ async def test_holding_calculation_with_split(client: AsyncClient, db_session: A
 
 
 @pytest.mark.asyncio
-async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: AsyncSession, auth_user):
     """分割後の売却時に正しい実現損益が計算されることを確認
 
     期待する動作:
@@ -119,7 +117,7 @@ async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: Asy
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録（100株@10000円）
     buy_data = {
@@ -169,7 +167,7 @@ async def test_sell_after_split_realized_pl(client: AsyncClient, db_session: Asy
 
 
 @pytest.mark.asyncio
-async def test_recalculate_idempotency(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_recalculate_idempotency(client: AsyncClient, db_session: AsyncSession, auth_user):
     """調整値計算の冪等性を確認
 
     期待する動作:
@@ -178,7 +176,7 @@ async def test_recalculate_idempotency(client: AsyncClient, db_session: AsyncSes
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録
     transaction_data = {
@@ -218,7 +216,7 @@ async def test_recalculate_idempotency(client: AsyncClient, db_session: AsyncSes
 
 
 @pytest.mark.asyncio
-async def test_list_stock_splits_all(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_list_stock_splits_all(client: AsyncClient, db_session: AsyncSession, auth_user):
     """全銘柄の株式分割履歴取得のテスト
 
     期待する動作:
@@ -228,7 +226,7 @@ async def test_list_stock_splits_all(client: AsyncClient, db_session: AsyncSessi
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 0. 銘柄の取引を登録（銘柄を作成するため）
     for symbol in ["8058", "7203"]:
@@ -265,7 +263,7 @@ async def test_list_stock_splits_all(client: AsyncClient, db_session: AsyncSessi
 
 
 @pytest.mark.asyncio
-async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: AsyncSession, auth_user):
     """特定銘柄の株式分割履歴取得のテスト
 
     期待する動作:
@@ -275,7 +273,7 @@ async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: Asyn
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 0. 銘柄の取引を登録（銘柄を作成するため）
     for symbol in ["8058", "7203"]:
@@ -313,7 +311,7 @@ async def test_list_stock_splits_by_symbol(client: AsyncClient, db_session: Asyn
 
 
 @pytest.mark.asyncio
-async def test_delete_stock_split(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_delete_stock_split(client: AsyncClient, db_session: AsyncSession, auth_user):
     """株式分割削除のテスト
 
     期待する動作:
@@ -322,7 +320,7 @@ async def test_delete_stock_split(client: AsyncClient, db_session: AsyncSession,
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録
     transaction_data = {
@@ -364,7 +362,7 @@ async def test_delete_stock_split(client: AsyncClient, db_session: AsyncSession,
 
 
 @pytest.mark.asyncio
-async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, auth_user):
     """複数回の株式分割のテスト
 
     期待する動作:
@@ -374,7 +372,7 @@ async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, au
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録（100株@10000円）
     transaction_data = {
@@ -415,9 +413,7 @@ async def test_multiple_splits(client: AsyncClient, db_session: AsyncSession, au
 
 
 @pytest.mark.asyncio
-async def test_create_stock_split_rejects_duplicate(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_create_stock_split_rejects_duplicate(client: AsyncClient, db_session: AsyncSession, auth_user):
     """同一銘柄・同一分割基準日の重複登録が拒否されることを確認
 
     期待する動作:
@@ -427,7 +423,7 @@ async def test_create_stock_split_rejects_duplicate(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1. 分割前の取引を登録（100株@10000円）
     transaction_data = {
@@ -468,7 +464,7 @@ async def test_create_stock_split_rejects_duplicate(
 
 @pytest.mark.asyncio
 async def test_create_stock_split_rejects_unknown_symbol(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """銘柄マスターに未登録の銘柄コードが拒否されることを確認
 
@@ -478,7 +474,7 @@ async def test_create_stock_split_rejects_unknown_symbol(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     split_data = {
         "symbol": "9999",
@@ -491,7 +487,7 @@ async def test_create_stock_split_rejects_unknown_symbol(
 
 @pytest.mark.asyncio
 async def test_create_stock_split_rejects_non_positive_ratio(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """0以下の分割比率が拒否されることを確認
 
@@ -502,7 +498,7 @@ async def test_create_stock_split_rejects_non_positive_ratio(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     for invalid_ratio in ("0.0", "-2.0"):
         response = await client.post(

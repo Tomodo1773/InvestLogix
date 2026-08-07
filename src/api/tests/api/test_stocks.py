@@ -6,7 +6,7 @@ from stock.schemas import StockCreate
 
 
 @pytest.mark.asyncio
-async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSession, auth_user):
     """日本株銘柄登録のテスト
 
     期待する動作:
@@ -16,7 +16,7 @@ async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSessi
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # テストデータ準備
     stock_data = StockCreate(symbol="8058")  # 三菱商事のシンボル
@@ -34,9 +34,7 @@ async def test_create_japanese_stock(client: AsyncClient, db_session: AsyncSessi
 
 
 @pytest.mark.asyncio
-async def test_create_us_stock(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
-):
+async def test_create_us_stock(client: AsyncClient, db_session: AsyncSession, auth_user, mock_external_apis):
     """米国株銘柄登録のテスト（AlphaVantage APIをモック使用）
 
     期待する動作:
@@ -47,7 +45,7 @@ async def test_create_us_stock(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         mock_external_apis: モック化されたAPI
     """
     # テストデータ準備
@@ -70,9 +68,7 @@ async def test_create_us_stock(
 
 
 @pytest.mark.asyncio
-async def test_create_us_etf(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
-):
+async def test_create_us_etf(client: AsyncClient, db_session: AsyncSession, auth_user, mock_external_apis):
     """米国ETF銘柄登録のテスト（AlphaVantage APIをモック使用）
 
     期待する動作:
@@ -83,7 +79,7 @@ async def test_create_us_etf(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         mock_external_apis: モック化されたAPI
     """
     # OVERVIEWのモックを空のレスポンスに設定（ETFの場合）
@@ -109,7 +105,7 @@ async def test_create_us_etf(
 
 
 @pytest.mark.asyncio
-async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSession, auth_user):
     """投資信託登録のテスト
 
     期待する動作:
@@ -119,7 +115,7 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # テストデータ準備
     stock_data = StockCreate(symbol="JP90C000J569")  # 投資信託のシンボル
@@ -137,7 +133,7 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_create_duplicate_stock(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+    client: AsyncClient, db_session: AsyncSession, auth_user, mock_external_apis
 ):
     """銘柄の重複登録テスト
 
@@ -149,7 +145,7 @@ async def test_create_duplicate_stock(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         mock_external_apis: モック化されたAPI
     """
     # 米国株で検証（APIコールの検証が可能）
@@ -187,7 +183,7 @@ async def test_create_duplicate_stock(
 
 
 @pytest.mark.asyncio
-async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, auth_token: str):
+async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, auth_user):
     """銘柄一覧取得テスト
 
     期待する動作:
@@ -197,7 +193,7 @@ async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, 
     Args:
         client: 非同期HTTPクライアント
         setup_portfolio_test_data: 事前に設定されたテストデータ
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # setup_portfolio_test_dataにより既に日本株と米国株が登録されている
 
@@ -230,9 +226,7 @@ async def test_get_stocks(client: AsyncClient, setup_portfolio_test_data: dict, 
 
 
 @pytest.mark.asyncio
-async def test_refresh_us_stock(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
-):
+async def test_refresh_us_stock(client: AsyncClient, db_session: AsyncSession, auth_user, mock_external_apis):
     """米国株の情報更新テスト
 
     期待する動作:
@@ -260,7 +254,7 @@ async def test_refresh_us_stock(
 
 
 @pytest.mark.asyncio
-async def test_refresh_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_refresh_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_user):
     """未登録銘柄の更新で404が返ること"""
     response = await client.put("/api/v1/stocks/ZZZZ")
     assert response.status_code == 404

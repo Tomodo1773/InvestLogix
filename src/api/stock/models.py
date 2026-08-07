@@ -129,10 +129,14 @@ class User(Base):
     user_id: ユーザーID
     username: ユーザー名
     email: メールアドレス
-    password_hash: パスワードのハッシュ値
+    access_issuer: Cloudflare Access の issuer
+    access_subject: Cloudflare Access の利用者ID (sub)
     created_at: 登録日時
     line_user_id: LINE UserID（通知送信先）
     is_admin: 管理者権限フラグ
+
+    認証はCloudflare Accessに委譲しているため、パスワードは保持しない。
+    (access_issuer, access_subject) が外部IDとの紐付けキーで、初回ログイン時に設定される。
     """
 
     __tablename__ = "users"
@@ -140,10 +144,13 @@ class User(Base):
     user_id = Column(Integer, primary_key=True)  # [SYSTEM] ユーザーID
     username = Column(String(50), unique=True, nullable=False)  # [USER_INPUT] ユーザー名
     email = Column(String(100), unique=True, nullable=False)  # [USER_INPUT] メールアドレス
-    password_hash = Column(String(255), nullable=False)  # [SYSTEM] パスワードのハッシュ値
+    access_issuer = Column(String(255))  # [SYSTEM] Cloudflare Access の issuer
+    access_subject = Column(String(255))  # [SYSTEM] Cloudflare Access の利用者ID (sub)
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
     line_user_id = Column(String(100), unique=True)  # [USER_INPUT] LINE UserID
     is_admin = Column(Boolean, default=False)  # [SYSTEM] 管理者権限フラグ
+
+    __table_args__ = (UniqueConstraint("access_issuer", "access_subject", name="uq_users_access_identity"),)
 
     holdings = relationship("Holding", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")

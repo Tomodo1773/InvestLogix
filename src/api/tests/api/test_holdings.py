@@ -11,7 +11,7 @@ from ..conftest import MOCK_JAPAN_STOCK_PRICE_UPDATED, MOCK_US_STOCK_PRICE_UPDAT
 
 @pytest.mark.asyncio
 async def test_recalculate_holding_pl_japanese_stock(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """日本株の保有損益再計算テスト
 
@@ -22,7 +22,7 @@ async def test_recalculate_holding_pl_japanese_stock(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
     """
     # 保有損益再計算APIを呼び出し
@@ -43,7 +43,7 @@ async def test_recalculate_holding_pl_japanese_stock(
 
 @pytest.mark.asyncio
 async def test_recalculate_holding_pl_us_stock(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_us_stock_data, mock_external_apis
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_us_stock_data, mock_external_apis
 ):
     """米国株の保有損益再計算テスト
 
@@ -55,7 +55,7 @@ async def test_recalculate_holding_pl_us_stock(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_us_stock_data: 米国株のテストデータ
         mock_external_apis: モック化されたAPI
     """
@@ -81,7 +81,7 @@ async def test_recalculate_holding_pl_us_stock(
 async def test_list_holdings(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     create_transaction,
 ):
@@ -94,7 +94,7 @@ async def test_list_holdings(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
     """
     await create_transaction(
@@ -144,7 +144,7 @@ async def test_list_holdings(
 
 @pytest.mark.asyncio
 async def test_list_holdings_returns_country_and_sector_for_us(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_us_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_us_stock_data
 ):
     """USD建ての米国株は country=="US"、AlphaVantage から取得した gics_sector が sector_name に入る"""
     response = await client.get("/api/v1/holdings/")
@@ -160,7 +160,7 @@ async def test_list_holdings_returns_country_and_sector_for_us(
 async def test_recalculate_all_holdings_pl(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     setup_us_stock_data,
 ):
@@ -174,7 +174,7 @@ async def test_recalculate_all_holdings_pl(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_japanese_stock_data: 日本株のテストデータ
         setup_us_stock_data: 米国株のテストデータ
     """
@@ -217,7 +217,7 @@ async def test_recalculate_all_holdings_pl(
 async def test_recalculate_holding_pl_updates_realized_pl(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     create_transaction,
 ):
     """再計算APIがホールディングの実現損益を更新することを検証する"""
@@ -269,7 +269,7 @@ async def test_recalculate_holding_pl_updates_realized_pl(
 async def test_recalculate_holding_pl_delisted_stock(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     create_transaction,
     create_dividend,
     mocker,
@@ -285,7 +285,7 @@ async def test_recalculate_holding_pl_delisted_stock(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         create_transaction: 取引作成フィクスチャ
         create_dividend: 配当作成フィクスチャ
         mocker: モックフィクスチャ
@@ -379,7 +379,7 @@ async def test_recalculate_holding_pl_delisted_stock(
 
 @pytest.mark.asyncio
 async def test_update_holding_note(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """保有銘柄のメモ更新テスト
 
@@ -408,7 +408,7 @@ async def test_update_holding_note(
 
 @pytest.mark.asyncio
 async def test_update_holding_note_clear(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, setup_japanese_stock_data
+    client: AsyncClient, db_session: AsyncSession, auth_user, setup_japanese_stock_data
 ):
     """メモにnullを送るとクリアできることを検証する"""
     # 一旦書き込み
@@ -428,7 +428,7 @@ async def test_update_holding_note_clear(
 
 
 @pytest.mark.asyncio
-async def test_update_holding_note_not_found(client: AsyncClient, auth_token: str):
+async def test_update_holding_note_not_found(client: AsyncClient, auth_user):
     """未保有銘柄に対するメモ更新は404"""
     response = await client.put(
         "/api/v1/holdings/UNKNOWN/note",
@@ -441,7 +441,7 @@ async def test_update_holding_note_not_found(client: AsyncClient, auth_token: st
 async def test_update_all_holdings_pl_returns_failed_symbols(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_japanese_stock_data,
     setup_us_stock_data,
     mocker,
@@ -454,7 +454,7 @@ async def test_update_all_holdings_pl_returns_failed_symbols(
     # 米国株の価格取得を失敗させる
     mocker.patch("stock.services.holding_service.get_us_stock_price", return_value=(0.0, None))
 
-    # auth_token フィクスチャで作成済みのテストユーザ ID を取得
+    # auth_user フィクスチャで作成済みのテストユーザ ID を取得
     result = await db_session.execute(select(User).where(User.username == "testuser"))
     user_id = result.scalar_one().user_id
 
@@ -470,7 +470,7 @@ async def test_update_all_holdings_pl_returns_failed_symbols(
 async def test_update_all_holdings_pl_skips_zero_quantity(
     client: AsyncClient,
     db_session: AsyncSession,
-    auth_token: str,
+    auth_user,
     setup_us_stock_data,
     create_transaction,
     mocker,

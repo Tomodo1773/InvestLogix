@@ -18,6 +18,16 @@ variable "db_host" {
   description = "Supabase の pooler ホスト。"
 }
 
+variable "cf_access_team_domain" {
+  type        = string
+  description = "Cloudflare Zero Trust のチームドメイン (例: example.cloudflareaccess.com)。API が Access JWT の JWKS と issuer を導出するのに使う。"
+}
+
+variable "cf_access_aud" {
+  type        = string
+  description = "Web 用 Cloudflare Access application の Audience タグ。他アプリ向けに発行された Access JWT の使い回しを防ぐ。"
+}
+
 variable "region" {
   type        = string
   default     = "asia-northeast1"

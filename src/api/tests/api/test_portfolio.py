@@ -41,7 +41,7 @@ async def setup_portfolio_test_data(
 
 
 @pytest.mark.asyncio
-async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_data):
+async def test_get_portfolio_summary(client, auth_user, setup_portfolio_test_data):
     """ポートフォリオサマリー取得APIのテスト
 
     期待する動作:
@@ -51,7 +51,7 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_portfolio_test_data: テストデータ準備用フィクスチャー
     """
     # APIリクエスト実行
@@ -92,7 +92,7 @@ async def test_get_portfolio_summary(client, auth_token, setup_portfolio_test_da
 
 @pytest.mark.asyncio
 async def test_portfolio_update_with_price_changes(
-    client, auth_token, setup_japanese_stock_data, setup_us_stock_data, create_dividend
+    client, auth_user, setup_japanese_stock_data, setup_us_stock_data, create_dividend
 ):
     """ポートフォリオ更新機能のテスト (POST /api/v1/portfolio/summary)
 
@@ -163,7 +163,7 @@ async def test_portfolio_update_with_price_changes(
 
 
 @pytest.mark.asyncio
-async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_data):
+async def test_get_portfolio_history(client, auth_user, setup_portfolio_test_data):
     """ポートフォリオ履歴取得APIのテスト
 
     期待する動作:
@@ -175,7 +175,7 @@ async def test_get_portfolio_history(client, auth_token, setup_portfolio_test_da
 
     Args:
         client: 非同期HTTPクライアント
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         setup_portfolio_test_data: テストデータ準備用フィクスチャー
     """
     # まず複数の履歴データを作成（3回ポートフォリオを更新）

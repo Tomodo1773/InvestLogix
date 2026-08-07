@@ -13,9 +13,11 @@ os.environ["PGCLIENTENCODING"] = "utf8"  # noqa: TID251
 
 config = context.config
 
-# alembicは同期ドライバで接続するため、Settingsから同期URLを組み立てる
+# alembicは同期ドライバで接続するため、Settingsから同期URLを組み立てる。
+# ドライバ指定なしの postgresql:// は psycopg2 を要求するが、本プロジェクトが持つのは
+# psycopg3 なので明示する
 sync_url = (
-    f"postgresql://{settings.DB_USER}:{settings.DB_PASSWORD}"
+    f"postgresql+psycopg://{settings.DB_USER}:{settings.DB_PASSWORD}"
     f"@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 )
 config.set_main_option("sqlalchemy.url", sync_url)

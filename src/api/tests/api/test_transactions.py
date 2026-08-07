@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 @pytest.mark.asyncio
-async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSession, auth_user):
     """株式購入取引の登録テスト
 
     期待する動作:
@@ -15,7 +15,7 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # テストデータ準備
     transaction_data = {
@@ -52,7 +52,7 @@ async def test_create_buy_transaction(client: AsyncClient, db_session: AsyncSess
 
 
 @pytest.mark.asyncio
-async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSession, auth_user):
     """株式売却取引の登録テスト
 
     期待する動作:
@@ -62,7 +62,7 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 事前に購入取引を登録
     buy_transaction = {
@@ -110,7 +110,7 @@ async def test_create_sell_transaction(client: AsyncClient, db_session: AsyncSes
 
 @pytest.mark.asyncio
 async def test_create_transaction_insufficient_shares(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """保有株数不足による売却取引の失敗テスト
 
@@ -121,7 +121,7 @@ async def test_create_transaction_insufficient_shares(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 売却取引のテストデータ準備（保有数量ゼロで売却）
     transaction_data = {
@@ -144,9 +144,7 @@ async def test_create_transaction_insufficient_shares(
 
 
 @pytest.mark.asyncio
-async def test_create_transaction_stock_not_found(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_create_transaction_stock_not_found(client: AsyncClient, db_session: AsyncSession, auth_user):
     """存在しない銘柄による取引の失敗テスト
 
     期待する動作:
@@ -156,7 +154,7 @@ async def test_create_transaction_stock_not_found(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # テストデータ準備
     transaction_data = {
@@ -180,7 +178,7 @@ async def test_create_transaction_stock_not_found(
 
 @pytest.mark.asyncio
 async def test_multiple_buy_transactions_average_cost(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """複数回の購入取引による平均取得単価の計算テスト
 
@@ -193,7 +191,7 @@ async def test_multiple_buy_transactions_average_cost(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 1回目の購入取引データ準備（10株@3000円）
     first_buy = {
@@ -235,9 +233,7 @@ async def test_multiple_buy_transactions_average_cost(
 
 
 @pytest.mark.asyncio
-async def test_buy_and_partial_sell_calculation(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_buy_and_partial_sell_calculation(client: AsyncClient, db_session: AsyncSession, auth_user):
     """購入後の一部売却時の売却益と保有株数の計算テスト
 
     期待する動作:
@@ -251,7 +247,7 @@ async def test_buy_and_partial_sell_calculation(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 購入取引データ準備（100株@1000円）
     buy_transaction = {
@@ -303,7 +299,7 @@ async def test_buy_and_partial_sell_calculation(
 
 @pytest.mark.asyncio
 async def test_create_transaction_with_usd_price(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str, mock_external_apis
+    client: AsyncClient, db_session: AsyncSession, auth_user, mock_external_apis
 ):
     """USD価格を含む取引の登録テスト
 
@@ -315,7 +311,7 @@ async def test_create_transaction_with_usd_price(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
         mock_external_apis: モック化されたAPI
     """
     # テストデータ準備
@@ -346,7 +342,7 @@ async def test_create_transaction_with_usd_price(
 
 
 @pytest.mark.asyncio
-async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, auth_token: str):
+async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, auth_user):
     """取引履歴取得を確認するテスト
 
     期待する動作:
@@ -356,7 +352,7 @@ async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, 
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 事前に購入取引を登録
     transaction_data = {
@@ -382,9 +378,7 @@ async def test_list_transactions(client: AsyncClient, db_session: AsyncSession, 
 
 
 @pytest.mark.asyncio
-async def test_list_transactions_with_unrealized_pl(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
-):
+async def test_list_transactions_with_unrealized_pl(client: AsyncClient, db_session: AsyncSession, auth_user):
     """買付取引に未実現損益を含めて取得するテスト
 
     期待する動作:
@@ -394,7 +388,7 @@ async def test_list_transactions_with_unrealized_pl(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 事前に購入取引を登録
     buy_transaction = {
@@ -449,7 +443,7 @@ async def test_list_transactions_with_unrealized_pl(
 
 @pytest.mark.asyncio
 async def test_list_transactions_without_unrealized_pl(
-    client: AsyncClient, db_session: AsyncSession, auth_token: str
+    client: AsyncClient, db_session: AsyncSession, auth_user
 ):
     """include_unrealized_pl未指定時のテスト（デフォルトはfalse）
 
@@ -459,7 +453,7 @@ async def test_list_transactions_without_unrealized_pl(
     Args:
         client: 非同期HTTPクライアント
         db_session: テスト用DBセッション
-        auth_token: 認証トークン
+        auth_user: 認証済み一般ユーザーのフィクスチャ
     """
     # 事前に購入取引を登録
     transaction_data = {

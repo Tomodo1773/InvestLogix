@@ -213,7 +213,7 @@ uv run alembic downgrade -1
 - 認証は `FastAPI(dependencies=[Depends(get_access_identity)])` でアプリ全体に掛ける。ルート単位で書き忘れても素通りしない
 - Cloud Run の `*.run.app` は公開されたままなので、この検証がCloudflareを迂回した直アクセスの防波堤になる
 - 未認証は401、Access認証済みだがアプリ未登録は403
-- Swagger UI (`/docs`) はブラウザでAccessのログインを済ませていればそのまま Try it out できる（ヘッダーはCloudflareが付ける）
+- Swagger UI (`/docs`) が使えるのはローカルのみ。サイト側はWorkerが `/api/*` しか通さず、`*.run.app` 側はAccessのヘッダーが付かない
 - `is_admin`、データ所有権、PostgreSQL RLS はアプリ側の責務。Accessのメールアドレスやグループを検証なしに権限へ変換しない
 - 定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない
 

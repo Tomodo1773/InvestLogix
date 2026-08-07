@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import schemas
 from ..auth import get_current_user, get_db_for_user
+from ..models import User
 from ..services.stock_split_service import StockSplitService
 
 router = APIRouter()
@@ -11,7 +12,7 @@ router = APIRouter()
 @router.post("/", response_model=schemas.StockSplit, status_code=status.HTTP_201_CREATED)
 async def create_stock_split(
     split: schemas.StockSplitCreate,
-    current_user: schemas.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """
@@ -36,7 +37,7 @@ async def create_stock_split(
 @router.get("/", response_model=list[schemas.StockSplit])
 async def list_stock_splits(
     symbol: str | None = Query(None, description="銘柄コード（未指定の場合は全銘柄）"),
-    current_user: schemas.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """
@@ -57,7 +58,7 @@ async def list_stock_splits(
 @router.delete("/{split_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_stock_split(
     split_id: int,
-    current_user: schemas.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """
@@ -83,7 +84,7 @@ async def delete_stock_split(
 @router.post("/{symbol}/recalculate", status_code=status.HTTP_204_NO_CONTENT)
 async def recalculate_adjusted_values(
     symbol: str,
-    current_user: schemas.User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db_for_user),
 ):
     """

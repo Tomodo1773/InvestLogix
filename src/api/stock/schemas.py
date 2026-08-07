@@ -128,12 +128,13 @@ class StockSplit(StockSplitBase):
 
 
 class UserBase(BaseModel):
+    """ユーザー登録リクエスト兼、ユーザー表現の共通項目
+
+    認証はCloudflare Accessが行うためパスワードは持たない。
+    """
+
     username: str
     email: str
-
-
-class UserCreate(UserBase):
-    """ユーザー登録リクエスト（認証はCloudflare Accessが行うためパスワードは持たない）"""
 
 
 class User(UserBase):
@@ -346,13 +347,6 @@ class DividendBySymbol(BaseModel):
 class StockWithRelations(Stock):
     jpx_detail: StockJPXDetail | None = None
     us_detail: StockUSDetail | None = None
-    holdings: list[Holding] = []
-    transactions: list[Transaction] = []
-    portfolio_history: list[PortfolioHistory] = []
-    dividend: list[Dividend] = []
-
-
-class UserWithRelations(User):
     holdings: list[Holding] = []
     transactions: list[Transaction] = []
     portfolio_history: list[PortfolioHistory] = []

@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..cloudflare_access import AccessIdentity
 from ..models import User, get_jst_now
-from ..schemas import UserCreate
+from ..schemas import UserBase
 
 
 class UserService:
@@ -37,7 +37,7 @@ class UserService:
         logger.info("UserをAccess IDへ紐付けました action=update user_id={}", user.user_id)
         return user
 
-    async def create_user(self, user: UserCreate, is_admin: bool = False) -> User:
+    async def create_user(self, user: UserBase, is_admin: bool = False) -> User:
         """
         新規ユーザーを作成する
         - user: ユーザー作成情報

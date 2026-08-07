@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_admin_user, get_current_user
 from ..database import get_db
 from ..models import User
-from ..schemas import LineUserIdUpdate, UserCreate
+from ..schemas import LineUserIdUpdate, UserBase
 from ..schemas import User as UserSchema
 from ..services.user_service import UserService
 
@@ -51,7 +51,7 @@ async def update_line_user_id(
 
 @router.post("/", response_model=UserSchema)
 async def create_user(
-    user: UserCreate,
+    user: UserBase,
     db: AsyncSession = Depends(get_db),
     admin_user: User = Depends(get_admin_user),
 ):

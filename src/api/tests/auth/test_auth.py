@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from stock.app import app
 from stock.auth import get_access_identity
 from stock.cloudflare_access import AccessIdentity
-from stock.schemas import UserCreate
+from stock.schemas import UserBase
 from stock.services.user_service import UserService
 from tests.conftest import TEST_ACCESS_ISSUER
 
@@ -51,7 +51,7 @@ async def test_unregistered_access_user_is_rejected(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_first_login_links_access_identity(client: AsyncClient, db_session: AsyncSession):
     """初回ログインでAccessの外部IDが紐付き、以降はメールアドレスに依存せず解決されること"""
-    await UserService(db_session).create_user(UserCreate(username="newcomer", email="newcomer@example.com"))
+    await UserService(db_session).create_user(UserBase(username="newcomer", email="newcomer@example.com"))
     await db_session.commit()
 
     # 初回はAccessが確認済みのメールアドレスで紐付く

@@ -6,7 +6,6 @@ from datetime import date, timedelta
 import psycopg
 import pytest
 import pytest_asyncio
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
@@ -18,7 +17,7 @@ from stock.auth import get_access_identity, get_db_for_user
 from stock.cloudflare_access import AccessIdentity
 from stock.database import get_db, settings
 from stock.models import Base
-from stock.schemas import UserCreate
+from stock.schemas import UserBase
 from stock.services.user_service import UserService
 
 # pytest-asyncioのデフォルトスコープを設定
@@ -170,7 +169,7 @@ async def _create_authenticated_user(
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
     async with TestingSessionLocalFunc() as session:
         user = await UserService(session).create_user(
-            UserCreate(username=username, email=email), is_admin=is_admin
+            UserBase(username=username, email=email), is_admin=is_admin
         )
         identity = AccessIdentity(issuer=TEST_ACCESS_ISSUER, subject=f"access-{user.user_id}", email=email)
         user.access_issuer = identity.issuer
@@ -231,37 +230,6 @@ async def client(setup_database) -> AsyncGenerator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-    app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def sync_client(setup_database) -> Generator[TestClient]:
-    """同期HTTPクライアントのフィクスチャー
-
-    テスト用のデータベース接続をオーバーライドした同期HTTPクライアントを提供します。
-
-    Args:
-        setup_database: データベースセットアップのフィクスチャー
-
-    Yields:
-        TestClient: 同期HTTPクライアントインスタンス
-    """
-
-    def override_get_db():
-        async def _override_get_db():
-            # setup_databaseから新しいセッションファクトリを作成
-            TestingSessionLocalFunction = sessionmaker(
-                setup_database, class_=AsyncSession, expire_on_commit=False
-            )
-            async with TestingSessionLocalFunction() as session:
-                yield session
-
-        return _override_get_db()
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_db_for_user] = override_get_db
-    with TestClient(app=app) as client:
-        yield client
     app.dependency_overrides.clear()
 
 

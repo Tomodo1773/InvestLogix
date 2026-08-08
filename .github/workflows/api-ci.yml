@@ -39,10 +39,11 @@ jobs:
           mode: firewall
 
       # ruffのバージョンはuv.lockを唯一の情報源とする（CI・pre-commit・ローカルで揃える）
+      # --locked で pyproject.toml と uv.lock の不整合を検出する。
       # リント目的なのでランタイム依存は入れず、ruffを含むdevグループのみ同期する
       - name: Install Ruff
         working-directory: src/api
-        run: sfw uv sync --frozen --only-group dev
+        run: sfw uv sync --locked --only-group dev
 
       # --no-sync がないと uv run が完全な依存に同期し直し、上の --only-group dev が無駄になる
       # line-lengthはpyproject.tomlの[tool.ruff]から読まれる

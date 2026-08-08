@@ -44,8 +44,9 @@ jobs:
 
       - name: Sync dependencies
         working-directory: src/api
-        run: sfw uv sync --frozen
+        run: sfw uv sync --locked
 
+      # 同期済みの環境を使い、uv run による再同期やlockfile更新を防ぐ
       - name: Run pytest (parallel)
         working-directory: src/api
-        run: uv run pytest -n auto
+        run: uv run --no-sync pytest -n auto

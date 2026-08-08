@@ -15,22 +15,14 @@ from stock.mcp.app import mcp_http_app
 from stock.mcp.middleware import AccessUserContextMiddleware
 from stock.schemas import UserBase
 from stock.services.user_service import UserService
-from tests.conftest import TEST_ACCESS_ISSUER
 
 
 async def _create_user(engine: AsyncEngine, username: str, email: str) -> AccessIdentity:
     session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
     async with session_factory() as session:
-        user = await UserService(session).create_user(UserBase(username=username, email=email))
-        identity = AccessIdentity(
-            issuer=TEST_ACCESS_ISSUER,
-            subject=f"access-{user.user_id}",
-            email=email,
-        )
-        user.access_issuer = identity.issuer
-        user.access_subject = identity.subject
+        await UserService(session).create_user(UserBase(username=username, email=email))
         await session.commit()
-    return identity
+    return AccessIdentity(email=email)
 
 
 def _session_scope_factory(engine: AsyncEngine):
@@ -75,11 +67,7 @@ async def test_mcp_rejects_request_without_access_jwt(setup_database: AsyncEngin
 
 @pytest.mark.asyncio
 async def test_mcp_rejects_unregistered_access_user(setup_database: AsyncEngine):
-    identity = AccessIdentity(
-        issuer=TEST_ACCESS_ISSUER,
-        subject="unknown-subject",
-        email="unknown@example.com",
-    )
+    identity = AccessIdentity(email="unknown@example.com")
     transport = httpx2.ASGITransport(app=_mcp_app(setup_database, identity))
 
     async with httpx2.AsyncClient(

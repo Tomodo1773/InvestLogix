@@ -145,9 +145,6 @@ async def db_session(setup_database) -> AsyncGenerator[AsyncSession]:
         yield session
 
 
-TEST_ACCESS_ISSUER = "https://test.cloudflareaccess.com"
-
-
 @pytest.fixture(autouse=True)
 def disable_dev_auth(monkeypatch) -> None:
     """開発用の認証迂回を無効化するフィクスチャー
@@ -161,21 +158,17 @@ def disable_dev_auth(monkeypatch) -> None:
 async def _create_authenticated_user(
     setup_database, username: str, email: str, is_admin: bool
 ) -> AccessIdentity:
-    """テストユーザーをDBに作成し、Cloudflare Accessの認証済み外部IDを差し替えるヘルパー
+    """テストユーザーをDBに作成し、Cloudflare Accessの認証済み利用者IDを差し替えるヘルパー
 
-    JWTの検証（get_access_identity）だけをオーバーライドし、外部IDからアプリ内ユーザーへの
+    JWTの検証（get_access_identity）だけをオーバーライドし、利用者IDからアプリ内ユーザーへの
     解決とRLS設定は本番と同じ経路を通す。
     """
     TestingSessionLocalFunc = sessionmaker(setup_database, class_=AsyncSession, expire_on_commit=False)
     async with TestingSessionLocalFunc() as session:
-        user = await UserService(session).create_user(
-            UserBase(username=username, email=email), is_admin=is_admin
-        )
-        identity = AccessIdentity(issuer=TEST_ACCESS_ISSUER, subject=f"access-{user.user_id}", email=email)
-        user.access_issuer = identity.issuer
-        user.access_subject = identity.subject
+        await UserService(session).create_user(UserBase(username=username, email=email), is_admin=is_admin)
         await session.commit()
 
+    identity = AccessIdentity(email=email)
     app.dependency_overrides[get_access_identity] = lambda: identity
     return identity
 

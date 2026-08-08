@@ -210,7 +210,7 @@ uv run alembic downgrade -1
 | ファイル | 責務 |
 |---------|------|
 | `stock/cloudflare_access.py` | `Cf-Access-Jwt-Assertion` の検証（JWKS取得・署名・issuer・audience・有効期限）。DBにもFastAPIにも依存しない |
-| `stock/services/user_service.py` | 検証済みの外部ID (`issuer`, `sub`) からアプリ内 `users` を解決する。未紐付けのユーザーはAccessが確認済みのメールアドレスで初回だけ紐付ける |
+| `stock/services/user_service.py` | Accessが確認済みのメールアドレスからアプリ内 `users` を解決する。JWTの `sub` はAccess applicationごとに変わりうるため紐付けキーにしない |
 | `stock/user_context.py` | User解決とRLS設定を同じDBセッションへ束縛する。REST/MCP共通 |
 | `stock/auth.py` | FastAPIの依存性として共通コンテキストを接続する |
 | `stock/mcp/` | MCP全体へ認証を強制し、RLS済みコンテキストからService層を呼ぶ |
@@ -218,7 +218,7 @@ uv run alembic downgrade -1
 - 認証は `FastAPI(dependencies=[Depends(get_access_identity)])` でアプリ全体に掛ける。ルート単位で書き忘れても素通りしない
 - Cloud Run の `*.run.app` は公開されたままなので、この検証がCloudflareを迂回した直アクセスの防波堤になる
 - 未認証は401、Access認証済みだがアプリ未登録は403
-- Swagger UI (`/docs`) が使えるのはローカルのみ。サイト側はWorkerが `/api/*` しか通さず、`*.run.app` 側はAccessのヘッダーが付かない
+- Swagger UI (`/docs`) が使えるのはローカルのみ。サイト側はWorkerが `/api/*` と `/mcp` しか通さず、`*.run.app` 側はAccessのヘッダーが付かない
 - `is_admin`、データ所有権、PostgreSQL RLS はアプリ側の責務。Accessのメールアドレスやグループを検証なしに権限へ変換しない
 - 定期ジョブはGoogle Cloud Run JobsでDB直結のため、HTTP経由のAPI認証経路は持たない
 - MCPは公式Python SDKのStreamable HTTPを使い、APIとは別のCloud Runサービスで動かす。公開ツールは参照系から始める

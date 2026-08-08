@@ -38,7 +38,7 @@ InvestLogix の本番 Google Cloud リソース（API/MCP Cloud Run Service / Jo
 ### 公開リポジトリ向けの秘匿
 - プロジェクト ID・Supabase ホスト等の識別子は `variable` 化し、`infra/.env` に書いた `TF_VAR_*` を `set -a; source .env; set +a` で読み込んで注入する（`TF_VAR_*` は OpenTofu でもそのまま読まれる）。
 - Secret 値は Secret Manager に置き、`data "google_secret_manager_secret"` で参照のみ。state には機密値が乗らない（state 自体も非公開 GCS バケットに置く）。
-- state バックエンドのバケット名は `backend.hcl`（gitignore 対象）に書き、`tofu init -backend-config=backend.hcl` で渡す。`.tf` には書かない。
+- state バックエンドのバケット名は `backend.hcl`（gitignore 対象）に書き、`tofu init -backend-config backend.hcl` で渡す。`.tf` には書かない。PowerShell は `-flag=value` を2つの引数に割ってしまうため、`=` ではなくスペースで区切る。
 
 ### GitHub Actions CD との役割分担
 - コンテナイメージタグ (`<image>:<commit-sha>`) は GitHub Actions の `api-cd.yml` が docker push → API/MCPの `gcloud run deploy` / `gcloud run jobs update` で直接反映する。

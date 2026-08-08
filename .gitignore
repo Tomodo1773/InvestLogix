@@ -4,6 +4,10 @@
 __pycache__
 .secrets
 
+# 一時作業メモ。本番のドメイン名・プロジェクトIDなど公開リポジトリに出せない
+# 識別子を書くことがあるため、手元専用にしてコミットさせない
+docs/tmp-*
+
 # Python packaging
 *.egg-info/
 *.egg

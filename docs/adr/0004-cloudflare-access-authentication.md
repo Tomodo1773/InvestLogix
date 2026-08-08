@@ -26,7 +26,7 @@ OAuth だけを別に用意すると、同じ利用者に対して認証主体�
 **Web と MCP の認証を Cloudflare Access に委譲する。アプリケーション内の認可は InvestLogix に残す。**
 
 - Cloudflare Access は本人確認、ログインセッション、MCP の OAuth フローを担当する
-- InvestLogix は Access が発行した署名済み JWT を検証し、`iss` と `sub` から内部の `user_id` を解決する
+- InvestLogix は Access が発行した署名済み JWT を検証し、確認済みのメールアドレスから内部の `user_id` を解決する
 - `is_admin`、データ所有権、PostgreSQL RLS は引き続き InvestLogix が判定する
 - Access のメールアドレスやグループを、検証なしにアプリケーション権限へ直接変換しない
 

@@ -69,11 +69,9 @@ def access_env(mocker):
 
 @pytest.mark.asyncio
 async def test_verify_valid_token(access_env: str):
-    """正しく署名されたトークンから外部IDを取り出せること"""
+    """正しく署名されたトークンから利用者IDを取り出せること"""
     identity = await verify_access_token(_issue_token(access_env))
 
-    assert identity.issuer == ISSUER
-    assert identity.subject == "access-user-uuid"
     assert identity.email == "user@example.com"
 
 

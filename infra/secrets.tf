@@ -16,6 +16,16 @@ resource "google_secret_manager_secret_iam_member" "api_runtime" {
   member    = "serviceAccount:${google_service_account.api_runtime.email}"
 }
 
+# MCPランタイムには参照ツールに必要なDB接続シークレットだけを許可する。
+resource "google_secret_manager_secret_iam_member" "mcp_runtime" {
+  for_each = toset(local.mcp_secrets)
+
+  project   = data.google_secret_manager_secret.all[each.value].project
+  secret_id = data.google_secret_manager_secret.all[each.value].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.mcp_runtime.email}"
+}
+
 # Cloud Run Jobs ランタイム SA に対し、Jobs が参照する全シークレットの読取権限を付与
 resource "google_secret_manager_secret_iam_member" "jobs_runtime" {
   for_each = toset(local.jobs_secrets)

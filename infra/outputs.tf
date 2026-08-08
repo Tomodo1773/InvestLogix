@@ -7,6 +7,15 @@ output "service_runtime_sa_email" {
   value = google_service_account.api_runtime.email
 }
 
+output "mcp_service_uri" {
+  value     = google_cloud_run_v2_service.mcp.uri
+  sensitive = true
+}
+
+output "mcp_runtime_sa_email" {
+  value = google_service_account.mcp_runtime.email
+}
+
 output "jobs_runtime_sa_email" {
   value = google_service_account.jobs_runtime.email
 }

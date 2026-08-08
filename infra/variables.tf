@@ -28,6 +28,11 @@ variable "cf_access_aud" {
   description = "Web 用 Cloudflare Access application の Audience タグ。他アプリ向けに発行された Access JWT の使い回しを防ぐ。"
 }
 
+variable "cf_access_mcp_aud" {
+  type        = string
+  description = "MCP用Cloudflare Access applicationのAudienceタグ。Web用とは別の値を設定する。"
+}
+
 variable "region" {
   type        = string
   default     = "asia-northeast1"
@@ -49,9 +54,19 @@ variable "service_name" {
   default = "investlogix-api"
 }
 
+variable "mcp_service_name" {
+  type    = string
+  default = "investlogix-mcp"
+}
+
 variable "service_runtime_sa_id" {
   type    = string
   default = "investlogix-api-runtime"
+}
+
+variable "mcp_runtime_sa_id" {
+  type    = string
+  default = "investlogix-mcp-runtime"
 }
 
 variable "jobs_runtime_sa_id" {

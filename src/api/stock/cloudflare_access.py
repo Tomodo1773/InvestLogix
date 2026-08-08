@@ -34,15 +34,11 @@ class AccessTokenError(Exception):
 @dataclass(frozen=True)
 class AccessIdentity:
     """
-    Access が保証する外部ID
+    Access が保証する利用者ID
 
-    - issuer: Access チームのURL（例: https://example.cloudflareaccess.com）
-    - subject: Access が採番する利用者ID。IdP側でメールが変わっても不変
-    - email: IdP が確認済みのメールアドレス
+    - email: IdP が確認済みのメールアドレス。これがアプリ内ユーザーとの紐付けキー
     """
 
-    issuer: str
-    subject: str
     email: str
 
 
@@ -78,10 +74,18 @@ async def verify_access_token(token: str) -> AccessIdentity:
     except (JWTError, httpx.HTTPError) as e:
         raise AccessTokenError(str(e)) from e
 
-    subject = claims.get("sub")
     email = claims.get("email")
-    if not subject or not email:
-        # サービストークンでの認証は sub / email を持たない。第1段階では利用者ログインのみ扱う
-        raise AccessTokenError("Access JWTに sub / email が含まれていません")
+    if not email:
+        # サービストークンでの認証は email を持たない。第1段階では利用者ログインのみ扱う
+        raise AccessTokenError("Access JWTにemailが含まれていません")
 
-    return AccessIdentity(issuer=issuer, subject=subject, email=email)
+    return AccessIdentity(email=email)
+
+
+async def authenticate_access_request(token: str | None) -> AccessIdentity:
+    """HTTPリクエストをAccess利用者IDへ変換する。REST/MCPで同じ入口を使う。"""
+    if settings.DEV_AUTH_EMAIL:
+        return AccessIdentity(email=settings.DEV_AUTH_EMAIL)
+    if not token:
+        raise AccessTokenError("Access JWTがありません")
+    return await verify_access_token(token)

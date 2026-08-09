@@ -71,6 +71,8 @@ InvestLogix の本番 Google Cloud リソース（API/MCP Cloud Run Service / Jo
 
 MCPのAccess token lifetimeは5〜15分、grant sessionは1〜2週間を目安にする。OAuthはAccessが提供するため、MCPサーバー自身にOAuthエンドポイントやクライアントシークレットは置かない。
 
+Zero Trustダッシュボード側のツール一覧は約2時間ごとのバックグラウンド同期で更新されるため、登録直後は空のことがある。空のままなら、サーバーのステータスとCloud Runのログ（401ならJWT検証、403なら`users`未登録）を確認する。
+
 ### CD 用リソースと GitHub Actions Variables の同期
 - WIF / Artifact Registry / Deployer SA は OpenTofu 管理下にある。
 - ワークフロー側は GCP プロジェクト ID 等の識別子を YAML に書かない（public リポのため）。`tofu output` の値を GitHub の **Settings → Secrets and variables → Actions → Variables** に手動で登録する。

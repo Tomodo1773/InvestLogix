@@ -67,7 +67,7 @@ InvestLogix の本番 Google Cloud リソース（API/MCP Cloud Run Service / Jo
 3. 作成したMCP applicationのAdvanced settingsでManaged OAuthを有効化する。ローカルクライアントを使う場合はlocalhost/loopback redirectも許可する。
 4. MCP applicationのAUDを `TF_VAR_cf_access_mcp_aud` に設定し、`tofu apply` で専用Cloud RunとSAを作る。
 5. `tofu output -raw mcp_service_uri` の値を `cd src/web && pnpm wrangler secret put MCP_ORIGIN` でWorker Secretへ登録する。
-6. MCP InspectorまたはOAuth対応MCPクライアントから `https://<MCPホスト>/mcp` へ接続し、ブラウザ認証後に3つの参照ツールが見えることを確認する。
+6. MCP InspectorまたはOAuth対応MCPクライアントから `https://<MCPホスト>/mcp` へ接続し、ブラウザ認証後に2つの参照ツールが見えることを確認する。
 
 MCPのAccess token lifetimeは5〜15分、grant sessionは1〜2週間を目安にする。OAuthはAccessが提供するため、MCPサーバー自身にOAuthエンドポイントやクライアントシークレットは置かない。
 

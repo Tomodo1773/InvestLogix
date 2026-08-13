@@ -19,6 +19,8 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 
 ## 構成
 
+![本番環境の構成図](docs/architecture/architecture.svg)
+
 ### アプリ
 - フロントエンド: React（Vite）
 - バックエンド: FastAPI（Python 3.13）

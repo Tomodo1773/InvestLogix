@@ -11,19 +11,19 @@ dependencies = [
     "python-jose[cryptography]>=3.5.0",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.32",
-    "alembic>=1.18.5",
+    "alembic>=1.19.1",
     "asyncpg>=0.28.0",
     "pytz>=2026.3.post1",
     "aiosqlite>=0.21.0",
-    "pydantic-settings>=2.14.1",
-    "jquants-api-client>=2.3.0",
+    "pydantic-settings>=2.15.0",
+    "jquants-api-client>=2.4.0",
     "httpx>=0.28.1",
     "beautifulsoup4>=4.15.0",
     "pandas>=2.2.3",
     "psycopg[binary]>=3.3.4",
     "loguru>=0.7.3",
     "setuptools>=83.0.0",
-    "openai>=2.52.0",
+    "openai>=2.53.0",
     "mcp>=2.0.0",
 ]
 
@@ -42,7 +42,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.16.1",
+    "ruff>=0.16.2",
     "testcontainers[postgres]>=4.15.0",
 ]
 

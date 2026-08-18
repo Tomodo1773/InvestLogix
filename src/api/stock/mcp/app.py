@@ -11,7 +11,7 @@ mcp = MCPServer(
     title="InvestLogix",
     description="認証した利用者自身の投資ポートフォリオを参照するMCPサーバー",
     instructions="参照系ツールだけを提供します。金額は特記がなければ日本円です。",
-    version="1.0.0",
+    version="2.0.0",
 )
 register_tools(mcp)
 

@@ -81,7 +81,7 @@ async def test_mcp_rejects_unregistered_access_user(setup_database: AsyncEngine)
 
 
 @pytest.mark.asyncio
-async def test_mcp_lists_read_only_tools_and_keeps_user_data_separate(
+async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
     client,
     auth_user: AccessIdentity,
     create_transaction,
@@ -100,14 +100,30 @@ async def test_mcp_lists_read_only_tools_and_keeps_user_data_separate(
             "transaction_date": "2024-01-01T00:00:00+09:00",
         }
     )
+    await create_transaction(
+        {
+            "symbol": "AAPL",
+            "transaction_type": "buy",
+            "quantity": 10,
+            "price": 36000,
+            "usd_price": 240,
+            "account_type": "特定",
+            "fee": 0,
+            "tax": 0,
+            "transaction_date": "2024-01-01T00:00:00+09:00",
+        }
+    )
+
+    assert (await client.post("/api/v1/holdings/8058/recalculate")).status_code == 200
+    assert (await client.post("/api/v1/holdings/AAPL/recalculate")).status_code == 200
     await create_dividend(
         {
             "symbol": "8058",
             "payment_date": "2024-03-01T00:00:00+09:00",
             "shares_owned": 100,
-            "total_amount": 2000,
-            "tax": 400,
-            "fee": 100,
+            "total_amount": 15000,
+            "tax": 4000,
+            "fee": 1000,
         }
     )
 
@@ -118,7 +134,7 @@ async def test_mcp_lists_read_only_tools_and_keeps_user_data_separate(
         json={
             "symbol": "AAPL",
             "transaction_type": "buy",
-            "quantity": 10,
+            "quantity": 1000,
             "price": 36000,
             "usd_price": 240,
             "account_type": "NISA(成長投資枠)",
@@ -128,6 +144,7 @@ async def test_mcp_lists_read_only_tools_and_keeps_user_data_separate(
         },
     )
     assert response.status_code == 200
+    api_app.dependency_overrides[get_access_identity] = lambda: auth_user
 
     mcp_app = _mcp_app(setup_database, auth_user)
     transport = httpx2.ASGITransport(app=mcp_app)
@@ -141,20 +158,131 @@ async def test_mcp_lists_read_only_tools_and_keeps_user_data_separate(
         Client(streamable_http_client("http://test/mcp", http_client=http_client)) as mcp_client,
     ):
         tools = await mcp_client.list_tools()
-        holdings_result = await mcp_client.call_tool("list_holdings")
-        summary_result = await mcp_client.call_tool("get_portfolio_summary")
-        dividends_result = await mcp_client.call_tool("get_monthly_dividends")
+        results = {}
+        for sort_by in (
+            "market_value",
+            "unrealized_pl",
+            "unrealized_pl_percentage",
+            "total_pl",
+            "total_pl_percentage",
+        ):
+            for order in ("asc", "desc"):
+                results[(sort_by, order)] = await mcp_client.call_tool(
+                    "list_holdings",
+                    {"sort_by": sort_by, "order": order},
+                )
+        detail_result = await mcp_client.call_tool("get_holding", {"symbol": " aapl "})
 
-    assert {tool.name for tool in tools.tools} == {
-        "get_portfolio_summary",
-        "list_holdings",
-        "get_monthly_dividends",
-    }
+        sell_response = await client.post(
+            "/api/v1/transactions/",
+            json={
+                "symbol": "8058",
+                "transaction_type": "sell",
+                "quantity": 100,
+                "price": 3200,
+                "account_type": "NISA(成長投資枠)",
+                "fee": 0,
+                "tax": 0,
+                "transaction_date": "2024-04-01T00:00:00+09:00",
+            },
+        )
+        assert sell_response.status_code == 200
+        sell_response = await client.post(
+            "/api/v1/transactions/",
+            json={
+                "symbol": "AAPL",
+                "transaction_type": "sell",
+                "quantity": 10,
+                "price": 40000,
+                "usd_price": 260,
+                "account_type": "特定",
+                "fee": 0,
+                "tax": 0,
+                "transaction_date": "2024-04-01T00:00:00+09:00",
+            },
+        )
+        assert sell_response.status_code == 200
+        sold_holdings_result = await mcp_client.call_tool("list_holdings")
+        sold_detail_result = await mcp_client.call_tool("get_holding", {"symbol": "8058"})
+        other_user_detail_result = await mcp_client.call_tool("get_holding", {"symbol": "AAPL"})
+
+    tools_by_name = {tool.name: tool for tool in tools.tools}
+    assert set(tools_by_name) == {"list_holdings", "get_holding"}
     assert all(tool.annotations and tool.annotations.read_only_hint for tool in tools.tools)
-    holdings = holdings_result.structured_content["result"]
-    assert [holding["symbol"] for holding in holdings] == ["8058"]
-    assert "user_id" not in holdings[0]
-    assert summary_result.structured_content["total_cost"] == 300000
-    assert dividends_result.structured_content["result"] == [
-        {"year": 2024, "month": 3, "total_dividend": 1500.0}
-    ]
+
+    list_tool = tools_by_name["list_holdings"]
+    assert set(list_tool.input_schema["properties"]) == {"sort_by", "order"}
+    assert list_tool.input_schema["properties"]["sort_by"]["default"] == "market_value"
+    assert list_tool.input_schema["properties"]["order"]["default"] == "desc"
+    assert set(list_tool.input_schema["properties"]["sort_by"]["enum"]) == {
+        "market_value",
+        "unrealized_pl",
+        "unrealized_pl_percentage",
+        "total_pl",
+        "total_pl_percentage",
+    }
+    assert set(list_tool.input_schema["properties"]["order"]["enum"]) == {"asc", "desc"}
+    assert set(list_tool.output_schema["properties"]) == {"holdings"}
+    item_reference = list_tool.output_schema["properties"]["holdings"]["items"]["$ref"]
+    item_schema = list_tool.output_schema["$defs"][item_reference.rsplit("/", maxsplit=1)[-1]]
+    expected_list_fields = {
+        "symbol",
+        "stock_name",
+        "market_value",
+        "unrealized_pl",
+        "unrealized_pl_percentage",
+        "total_pl",
+        "total_pl_percentage",
+    }
+    assert set(item_schema["properties"]) == expected_list_fields
+
+    descending_expectations = {
+        "market_value": ["AAPL", "8058"],
+        "unrealized_pl": ["AAPL", "8058"],
+        "unrealized_pl_percentage": ["AAPL", "8058"],
+        "total_pl": ["8058", "AAPL"],
+        "total_pl_percentage": ["8058", "AAPL"],
+    }
+    for sort_by, expected_symbols in descending_expectations.items():
+        descending = results[(sort_by, "desc")].structured_content["holdings"]
+        ascending = results[(sort_by, "asc")].structured_content["holdings"]
+        assert [holding["symbol"] for holding in descending] == expected_symbols
+        assert [holding["symbol"] for holding in ascending] == list(reversed(expected_symbols))
+        assert set(descending[0]) == expected_list_fields
+        assert "result" not in results[(sort_by, "desc")].structured_content
+
+    detail = detail_result.structured_content
+    expected_detail_fields = {
+        "symbol",
+        "stock_name",
+        "security_type",
+        "currency",
+        "country",
+        "sector_name",
+        "quantity",
+        "average_cost",
+        "total_cost",
+        "current_price",
+        "current_price_usd",
+        "market_value",
+        "market_value_usd",
+        "unrealized_pl",
+        "unrealized_pl_percentage",
+        "realized_pl",
+        "total_dividend",
+        "total_pl",
+        "total_pl_percentage",
+        "account_holdings",
+        "note",
+        "last_updated",
+    }
+    assert set(tools_by_name["get_holding"].output_schema["properties"]) == expected_detail_fields
+    assert set(detail) == expected_detail_fields
+    assert detail["symbol"] == "AAPL"
+    assert detail["quantity"] == 10
+    assert detail["account_holdings"] == [{"account_type": "特定", "quantity": 10.0}]
+    assert detail["last_updated"].endswith("+09:00")
+    assert "user_id" not in detail
+    assert sold_holdings_result.structured_content == {"holdings": []}
+    assert sold_detail_result.is_error
+    assert other_user_detail_result.is_error

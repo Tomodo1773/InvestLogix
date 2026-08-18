@@ -537,15 +537,23 @@ async def enrich_holdings_with_account_holdings(
     return holdings
 
 
-async def list_holdings(db: AsyncSession, user_id: int, symbol: str | None = None) -> list[Holding]:
+async def list_holdings(
+    db: AsyncSession,
+    user_id: int,
+    symbol: str | None = None,
+    *,
+    active_only: bool = False,
+) -> list[Holding]:
     """
     ユーザーの保有銘柄一覧を銘柄名、証券種別、通貨、国、セクターと共に取得します。
     symbolが指定された場合は、その銘柄の情報のみを返します。
+    active_onlyがTrueの場合は、数量が正の現在保有中の銘柄だけを返します。
 
     Args:
         db (AsyncSession): 非同期データベースセッション
         user_id (int): ユーザーID
         symbol (str, optional): 銘柄コード。指定された場合はその銘柄の情報のみを返します。
+        active_only: 数量が正の銘柄だけに限定するか。
 
     Returns:
         List[Holding]: 銘柄名、証券種別、通貨、国、セクター名を含む保有銘柄情報のリスト
@@ -562,6 +570,8 @@ async def list_holdings(db: AsyncSession, user_id: int, symbol: str | None = Non
     # symbolが指定された場合は、条件を追加
     if symbol:
         query = query.where(Holding.symbol == symbol)
+    if active_only:
+        query = query.where(Holding.quantity > 0)
 
     result = await db.execute(query)
     holdings = result.scalars().all()

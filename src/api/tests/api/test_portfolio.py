@@ -24,7 +24,7 @@ async def setup_portfolio_test_data(
         "shares_owned": "100.0",
         "total_amount": "1000.0",
         "tax": "200.0",
-        "fee": "0.0",
+        "fee": "100.0",
     }
     await create_dividend(japan_dividend)
 
@@ -35,7 +35,7 @@ async def setup_portfolio_test_data(
         "shares_owned": "10.0",
         "total_amount": "1500.0",
         "tax": "300.0",
-        "fee": "0.0",
+        "fee": "50.0",
     }
     await create_dividend(us_dividend)
 
@@ -70,10 +70,10 @@ async def test_get_portfolio_summary(client, auth_user, setup_portfolio_test_dat
     assert data["total_unrealized_pl"] is not None
     assert float(data["total_realized_pl"]) == 0.0
 
-    # 配当総額のチェック（税引後）
-    # 日本株: 1000円 - 200円 = 800円
-    # 米国株: 1500円 - 300円 = 1200円
-    assert float(data["total_dividend"]) == 2000.0
+    # 配当総額のチェック（税・手数料控除後）
+    # 日本株: 1000円 - 200円 - 100円 = 700円
+    # 米国株: 1500円 - 300円 - 50円 = 1150円
+    assert float(data["total_dividend"]) == 1850.0
 
     # total_plとtotal_pl_percentageの存在確認
     assert data["total_pl"] is not None
@@ -112,7 +112,7 @@ async def test_portfolio_update_with_price_changes(
         "shares_owned": "100.0",
         "total_amount": "1000.0",
         "tax": "200.0",
-        "fee": "0.0",
+        "fee": "100.0",
     }
     us_dividend = {
         "symbol": "AAPL",
@@ -120,7 +120,7 @@ async def test_portfolio_update_with_price_changes(
         "shares_owned": "10.0",
         "total_amount": "1500.0",
         "tax": "300.0",
-        "fee": "0.0",
+        "fee": "50.0",
     }
     await create_dividend(japan_dividend)
     await create_dividend(us_dividend)
@@ -140,7 +140,8 @@ async def test_portfolio_update_with_price_changes(
     assert abs(float(created_summary["total_market_value"]) - 685000.00) < 1.0  # 310,000 + 375,000
     assert abs(float(created_summary["total_cost"]) - 660540.00) < 1.0  # 取得価額の合計
     assert abs(float(created_summary["total_unrealized_pl"]) - 24460.00) < 1.0  # 685,000 - 660,540
-    assert abs(float(created_summary["total_dividend"]) - 2000.00) < 1.0  # (1000 - 200) + (1500 - 300)
+    assert abs(float(created_summary["total_dividend"]) - 1850.00) < 1.0
+    assert abs(float(created_summary["total_pl"]) - 26310.00) < 1.0  # 24,460 + 1,850
 
     # 市場別保有額の確認
     assert "JPX" in created_summary["holdings_by_market"]
@@ -221,4 +222,4 @@ async def test_get_portfolio_history(client, auth_user, setup_portfolio_test_dat
     assert abs(float(latest_record["total_cost"]) - 660540.00) < 1.0
     assert abs(float(latest_record["total_market_value"]) - 685000.00) < 1.0
     assert abs(float(latest_record["total_unrealized_pl"]) - 24460.00) < 1.0
-    assert abs(float(latest_record["total_dividend"]) - 2000.00) < 1.0
+    assert abs(float(latest_record["total_dividend"]) - 1850.00) < 1.0

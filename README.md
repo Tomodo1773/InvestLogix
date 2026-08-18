@@ -48,8 +48,19 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - アプリのデプロイ: フロントは `web-cd.yml` による Cloudflare Workers 自動デプロイ、バックエンドは Cloud Build による Cloud Run 自動デプロイ
 - インフラ構造の変更: `infra/*.tf` を編集して `tofu apply`
 - シークレット値の更新: `gcloud secrets versions add`（Terraform は値を持たない）
-- Cloud Run Jobs のイメージ更新: main マージ後に `scripts/update-cloud-run-jobs.sh`
+- Cloud Run Jobs のイメージ更新: mainマージ時に `api-cd.yml` がAPIと同じイメージへ更新
 - 株価データは `price_history` テーブルから読み込む。日次バッチ `recalc-holdings` が冒頭で直近2週間分を upsert する。新規環境やマイグレーション直後はテーブルが空でダッシュボードに評価額が出ないため、`gcloud run jobs execute recalc-holdings` で手動実行するか翌朝のスケジュール実行を待つ
+
+### Slack通知へ切り替えるときの順序
+
+`main` へのマージでAPIとCloud Run Jobsが自動デプロイされるため、次の順序で準備する。
+
+1. `slack-app-manifest.yaml` からSlackアプリを作成・インストールし、Bot User OAuth Tokenを取得する
+2. `SLACK_BOT_TOKEN` をSecret Managerへ追加し、このブランチの `infra/` で `tofu apply` してCloud Run Service / Jobsへ紐付ける
+3. 本番DBの認証情報を設定した環境で、このブランチの `src/api` から `uv run alembic upgrade head` を実行する
+4. ローカルでSlack通知を確認してからマージし、デプロイ後は `update-and-notify` Jobを手動実行してSlackアプリとのDMへの到着を確認する
+
+このマイグレーションは `line_user_id` を削除して `slack_user_id` を追加する。LINEとSlackのIDに互換性はない。
 
 ### 依存関係の防御
 サプライチェーン攻撃対策として [Socket Firewall Free](https://docs.socket.dev/docs/socket-firewall-free) を導入しています。依存関係を取得するときは `sfw` 経由で実行します。

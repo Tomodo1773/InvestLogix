@@ -1,6 +1,6 @@
 """
 ジョブ共通ランナー
-- LINE連携済みユーザーを対象に、ユーザー単位でDBセッションを発行して処理を実行する
+- 対象ユーザーごとにDBセッションを発行して処理を実行する
 - 1ユーザーの失敗は記録して次のユーザーへ進む
 - ユーザー単位の失敗、または銘柄レベルの価格取得失敗が1件でもあれば終了コード1で終了する
 """
@@ -8,6 +8,7 @@
 import asyncio
 import sys
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 from loguru import logger
 from sqlalchemy import select
@@ -16,22 +17,39 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..database import AsyncSessionLocal, set_rls_user_id
 from ..models import User
 
-UserAction = Callable[[AsyncSession, User], Awaitable[list[str] | None]]
+
+@dataclass(frozen=True)
+class JobActionResult:
+    """ユーザー単位の処理結果。外部通知失敗と銘柄単位失敗を区別して返す。"""
+
+    succeeded: bool = True
+    failed_symbols: tuple[str, ...] = ()
+
+
+UserAction = Callable[[AsyncSession, User], Awaitable[JobActionResult]]
 
 # サマリログに含める失敗銘柄の最大数。これを超えた分は省略件数として記録する
 MAX_FAILED_SYMBOLS_IN_LOG = 50
 
 
-async def _fetch_target_users() -> list[User]:
-    """LINE連携済みユーザーを対象ユーザーとして取得する"""
+async def _fetch_target_users(notification_users_only: bool) -> list[User]:
+    """全ユーザー、またはSlack通知先を登録済みのユーザーを取得する。"""
     async with AsyncSessionLocal() as session:
-        result = await session.execute(select(User).where(User.line_user_id.is_not(None)))
+        query = select(User)
+        if notification_users_only:
+            query = query.where(User.slack_user_id.is_not(None))
+        result = await session.execute(query)
         return list(result.scalars().all())
 
 
-async def _run_for_each_user(job_name: str, action: UserAction) -> tuple[int, set[str]]:
+async def _run_for_each_user(
+    job_name: str,
+    action: UserAction,
+    *,
+    notification_users_only: bool,
+) -> tuple[int, set[str]]:
     """対象ユーザー全員に対して action を実行し、ユーザー失敗数と失敗銘柄集合を返す"""
-    users = await _fetch_target_users()
+    users = await _fetch_target_users(notification_users_only)
     logger.info("ジョブを開始します job={} target_users={}", job_name, len(users))
 
     failure_count = 0
@@ -42,9 +60,12 @@ async def _run_for_each_user(job_name: str, action: UserAction) -> tuple[int, se
                 await set_rls_user_id(session, user.user_id)
                 result = await action(session, user)
                 await session.commit()
-                if result:
-                    failed_symbols.update(result)
-                logger.info("ユーザー処理が完了しました job={} user_id={}", job_name, user.user_id)
+                failed_symbols.update(result.failed_symbols)
+                if result.succeeded:
+                    logger.info("ユーザー処理が完了しました job={} user_id={}", job_name, user.user_id)
+                else:
+                    failure_count += 1
+                    logger.error("ユーザー処理が失敗しました job={} user_id={}", job_name, user.user_id)
             except Exception:
                 await session.rollback()
                 failure_count += 1
@@ -73,8 +94,10 @@ def _log_summary(job_name: str, target_users: int, failure_count: int, failed_sy
     )
 
 
-def run_job(job_name: str, action: UserAction) -> None:
+def run_job(job_name: str, action: UserAction, *, notification_users_only: bool = False) -> None:
     """ジョブのエントリポイント。ユーザー失敗または失敗銘柄があれば非ゼロで終了する"""
-    failure_count, failed_symbols = asyncio.run(_run_for_each_user(job_name, action))
+    failure_count, failed_symbols = asyncio.run(
+        _run_for_each_user(job_name, action, notification_users_only=notification_users_only)
+    )
     if failure_count > 0 or failed_symbols:
         sys.exit(1)

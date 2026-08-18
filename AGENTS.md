@@ -36,7 +36,7 @@
 
 ## プロジェクト概要
 
-InvestLogixは、日本株と米国株のポートフォリオを管理するためのWebアプリケーションです。取引記録、保有株管理、配当管理、ポートフォリオ分析、LINE通知などの機能を提供します。
+InvestLogixは、日本株と米国株のポートフォリオを管理するためのWebアプリケーションです。取引記録、保有株管理、配当管理、ポートフォリオ分析、Slack通知などの機能を提供します。
 
 - **バックエンド (src/api)**: FastAPIベースのREST API
 - **フロントエンド (src/web)**: React + Vite ベースのSPA
@@ -243,7 +243,7 @@ uv run alembic downgrade -1
 | ジョブ | 説明 |
 |--------|------|
 | `recalc_holdings` | 保有銘柄の最新価格を取得して `price_history` に upsert し、全 holdings の損益を再計算 |
-| `update_and_notify` | ポートフォリオ全体を更新して履歴に保存し、LINE 通知を送信 |
+| `update_and_notify` | ポートフォリオ全体を更新して履歴に保存し、Slack 通知を送信 |
 
 ローカルで Docker Compose 起動中に手動実行する場合は、`src` ディレクトリで以下を実行します。
 

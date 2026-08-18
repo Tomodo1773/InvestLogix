@@ -1,6 +1,6 @@
 # Diagram asset sources
 
-Retrieved on 2026-08-13.
+Initial inventory retrieved on 2026-08-13. Slack asset updated on 2026-08-18.
 
 | Asset | Owner | Official source | Direct asset | Usage notes |
 | --- | --- | --- | --- | --- |
@@ -14,6 +14,6 @@ Retrieved on 2026-08-13.
 | Alpha Vantage | Alpha Vantage | https://www.alphavantage.co/ | https://www.alphavantage.co/static/img/favicon.ico | Official site favicon used because no separate diagram asset pack is published |
 | Tiingo | Tiingo | https://www.tiingo.com/ | https://www.tiingo.com/favicon.svg | Official site favicon; preserved unchanged |
 | OpenAI | OpenAI | https://openai.com/brand/ | https://images.ctfassets.net/kftzwdyauwt9/2fkAIT3PbTRytKTBx9cx8o/229bc28cb338565fe735d8935abc801f/OpenAI_Wordmark_Gif.gif?fm=webp&q=90&w=640 | Official wordmark image; used only to identify the OpenAI API dependency and preserved unchanged |
-| LINE | LY Corporation | https://www.line.me/en/logo | https://www.line.me/static/logo/top/LINE_Brand_icon.zip | `LINE_Brand_icon.png`; official brand icon, minimum size and isolation guidance observed |
+| Slack | Slack Technologies, LLC | https://slack.com/media-kit | https://a.slack-edge.com/80588/marketing/img/meta/slack_hash_256.png | Official Slack site social image; current multicolor hash artwork preserved unchanged |
 
 All trademarks remain the property of their respective owners. Their appearance identifies an architectural dependency and does not imply endorsement.

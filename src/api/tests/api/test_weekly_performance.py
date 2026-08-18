@@ -1,4 +1,4 @@
-"""週間騰落率および統合LINE通知のテスト"""
+"""週間騰落率および統合Slack通知のテスト"""
 
 import json
 from unittest.mock import AsyncMock, MagicMock
@@ -9,9 +9,9 @@ from stock.database import settings
 from stock.schemas import StockWeeklyPerformance
 from stock.services.change_reason_service import ChangeReasonSections
 from stock.services.notification_service import (
-    COLOR_LOSS,
-    COLOR_PROFIT,
-    _build_ranking_row,
+    SLACK_OPEN_DM_URL,
+    SLACK_POST_MESSAGE_URL,
+    _build_ranking_block,
     send_weekly_summary_notification,
 )
 from stock.services.weekly_performance_service import get_top_bottom_performers
@@ -71,36 +71,39 @@ class TestGetTopBottomPerformers:
         assert bottom == []
 
 
-class TestBuildRankingRow:
-    """ランキング行ビルダー関数のユニットテスト"""
+class TestBuildRankingBlock:
+    """Slackランキングブロックのユニットテスト"""
 
-    def test_positive_change_rate_uses_green_color(self):
-        """騰落率がプラスの場合、緑色が使用されること"""
-        row = _build_ranking_row(
-            rank=1,
-            name="テスト株",
-            symbol="TEST1",
-            change_rate=10.00,
+    def test_positive_change_rate_uses_up_marker(self):
+        block = _build_ranking_block(
+            [
+                StockWeeklyPerformance(
+                    symbol="TEST1",
+                    name="テスト株",
+                    latest_price=110.0,
+                    old_price=100.0,
+                    change_rate=10.0,
+                )
+            ]
         )
 
-        # 騰落率テキストが緑色であること
-        change_rate_text = row["contents"][2]
-        assert change_rate_text["color"] == COLOR_PROFIT
-        assert change_rate_text["text"] == "+10.00%"
+        assert block["fields"][0]["text"] == "*1. テスト株*\n`TEST1`"
+        assert block["fields"][1]["text"] == "*騰落率*\n▲ +10.00%"
 
-    def test_negative_change_rate_uses_red_color(self):
-        """騰落率がマイナスの場合、赤色が使用されること"""
-        row = _build_ranking_row(
-            rank=1,
-            name="テスト株",
-            symbol="TEST1",
-            change_rate=-5.50,
+    def test_negative_change_rate_uses_down_marker(self):
+        block = _build_ranking_block(
+            [
+                StockWeeklyPerformance(
+                    symbol="TEST1",
+                    name="テスト株",
+                    latest_price=94.5,
+                    old_price=100.0,
+                    change_rate=-5.5,
+                )
+            ]
         )
 
-        # 騰落率テキストが赤色であること
-        change_rate_text = row["contents"][2]
-        assert change_rate_text["color"] == COLOR_LOSS
-        assert change_rate_text["text"] == "-5.50%"
+        assert block["fields"][1]["text"] == "*騰落率*\n▼ -5.50%"
 
 
 @pytest.mark.asyncio
@@ -241,21 +244,23 @@ async def test_get_weekly_performance_endpoint(
 
 @pytest.mark.asyncio
 async def test_send_weekly_summary_notification_combines_summary_and_rankings(monkeypatch, mocker):
-    """資産サマリ・ランキング・AI解説が単一Flex Messageにまとまって送信される"""
-    monkeypatch.setattr(settings, "LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+    """資産サマリ・ランキング・AI解説が単一Block Kitメッセージで送信される"""
+    monkeypatch.setattr(settings, "SLACK_BOT_TOKEN", "dummy-token")
 
     mocker.patch(
-        "stock.services.notification_service.NotificationService.get_line_user_id",
+        "stock.services.notification_service._get_slack_user_id",
         new_callable=AsyncMock,
         return_value="U1234567890",
     )
 
-    mock_line_response = MagicMock()
-    mock_line_response.status_code = 200
+    open_response = MagicMock(status_code=200)
+    open_response.json.return_value = {"ok": True, "channel": {"id": "D1234567890"}}
+    post_response = MagicMock(status_code=200)
+    post_response.json.return_value = {"ok": True, "ts": "123.456"}
     mock_post = mocker.patch(
         "httpx.AsyncClient.post",
         new_callable=AsyncMock,
-        return_value=mock_line_response,
+        side_effect=[open_response, post_response],
     )
 
     portfolio_data = {
@@ -294,16 +299,20 @@ async def test_send_weekly_summary_notification_combines_summary_and_rankings(mo
 
     assert result is True
 
-    posted = mock_post.call_args.kwargs["json"]
-    assert len(posted["messages"]) == 1
-    assert posted["messages"][0]["type"] == "flex"
+    assert mock_post.call_args_list[0].args[0] == SLACK_OPEN_DM_URL
+    assert mock_post.call_args_list[0].kwargs["json"] == {"users": "U1234567890"}
+    assert mock_post.call_args_list[1].args[0] == SLACK_POST_MESSAGE_URL
+    posted = mock_post.call_args_list[1].kwargs["json"]
+    assert posted["channel"] == "D1234567890"
+    assert posted["text"].startswith("InvestLogix 週次レポート")
 
-    body_json = json.dumps(posted["messages"][0]["contents"], ensure_ascii=False)
+    body_json = json.dumps(posted["blocks"], ensure_ascii=False)
     # 資産サマリ
     assert "資産サマリ" in body_json
     assert "1,000,000円" in body_json
     assert "1,200,000円" in body_json
-    assert "200,000円 (20.00%)" in body_json
+    assert "200,000円" in body_json
+    assert "+20.00%" in body_json
     assert "+15,000円" in body_json
     # ランキング
     assert "上昇トップ5" in body_json
@@ -322,20 +331,22 @@ async def test_send_weekly_summary_notification_combines_summary_and_rankings(mo
 @pytest.mark.asyncio
 async def test_send_weekly_summary_notification_works_without_sections(monkeypatch, mocker):
     """AI解説（sections=None）でも資産サマリとランキングだけで送信が成功する"""
-    monkeypatch.setattr(settings, "LINE_CHANNEL_ACCESS_TOKEN", "dummy-token")
+    monkeypatch.setattr(settings, "SLACK_BOT_TOKEN", "dummy-token")
 
     mocker.patch(
-        "stock.services.notification_service.NotificationService.get_line_user_id",
+        "stock.services.notification_service._get_slack_user_id",
         new_callable=AsyncMock,
         return_value="U1234567890",
     )
 
-    mock_line_response = MagicMock()
-    mock_line_response.status_code = 200
+    open_response = MagicMock(status_code=200)
+    open_response.json.return_value = {"ok": True, "channel": {"id": "D1234567890"}}
+    post_response = MagicMock(status_code=200)
+    post_response.json.return_value = {"ok": True, "ts": "123.456"}
     mock_post = mocker.patch(
         "httpx.AsyncClient.post",
         new_callable=AsyncMock,
-        return_value=mock_line_response,
+        side_effect=[open_response, post_response],
     )
 
     portfolio_data = {
@@ -363,11 +374,9 @@ async def test_send_weekly_summary_notification_works_without_sections(monkeypat
     )
 
     assert result is True
-    posted = mock_post.call_args.kwargs["json"]
-    assert len(posted["messages"]) == 1
-    assert posted["messages"][0]["type"] == "flex"
+    posted = mock_post.call_args_list[1].kwargs["json"]
 
-    body_json = json.dumps(posted["messages"][0]["contents"], ensure_ascii=False)
+    body_json = json.dumps(posted["blocks"], ensure_ascii=False)
     assert "資産サマリ" in body_json
     assert "上昇トップ5" in body_json
     assert "下落ワースト5" in body_json
@@ -375,3 +384,27 @@ async def test_send_weekly_summary_notification_works_without_sections(monkeypat
     assert "マーケット概況" not in body_json
     # 前週比なしの場合、行自体が出ない
     assert "前週比" not in body_json
+
+
+@pytest.mark.asyncio
+async def test_send_weekly_summary_notification_handles_slack_api_error(monkeypatch, mocker):
+    """Slack APIがHTTP 200でエラー本文を返した場合も失敗として扱う"""
+    monkeypatch.setattr(settings, "SLACK_BOT_TOKEN", "dummy-token")
+    mocker.patch(
+        "stock.services.notification_service._get_slack_user_id",
+        new_callable=AsyncMock,
+        return_value="U1234567890",
+    )
+    error_response = MagicMock(status_code=200)
+    error_response.json.return_value = {"ok": False, "error": "invalid_auth"}
+    mocker.patch("httpx.AsyncClient.post", new_callable=AsyncMock, return_value=error_response)
+
+    result = await send_weekly_summary_notification(
+        user_id=1,
+        portfolio_data={},
+        top_performers=[],
+        bottom_performers=[],
+        sections=None,
+    )
+
+    assert result is False

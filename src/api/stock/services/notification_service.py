@@ -1,3 +1,4 @@
+import html
 import logging
 from typing import Any
 
@@ -7,306 +8,242 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .. import models
 from ..database import settings
+from ..schemas import StockWeeklyPerformance
 from ..utils.datetime import now_jst
 from .change_reason_service import ChangeReasonSections
 
 logger = logging.getLogger(__name__)
 
-LINE_PUSH_URL = "https://api.line.me/v2/bot/message/push"
-
-# Flex Message 用カラー定数。損益・騰落率の方向色はバブル内で統一する。
-COLOR_PROFIT = "#1DB446"
-COLOR_LOSS = "#DB2C2C"
-COLOR_TEXT_PRIMARY = "#111111"
-COLOR_TEXT_SECONDARY = "#555555"
-COLOR_TEXT_MUTED = "#999999"
-COLOR_HEADING = "#333333"
-COLOR_SEPARATOR = "#E0E0E0"
-COLOR_BACKGROUND = "#FFFFFF"
+SLACK_OPEN_DM_URL = "https://slack.com/api/conversations.open"
+SLACK_POST_MESSAGE_URL = "https://slack.com/api/chat.postMessage"
+SLACK_REQUEST_TIMEOUT_SECONDS = 30.0
 
 
-class NotificationService:
-    """LINE通知サービス（ユーザーIDの解決などの共通処理を提供）"""
+async def _get_slack_user_id(user_id: int, db: AsyncSession | None = None) -> str | None:
+    """ユーザーに登録されたSlack通知先を取得する。"""
+    if db is None:
+        return None
 
-    @staticmethod
-    async def get_line_user_id(user_id: int, db: AsyncSession = None) -> str | None:
-        """指定されたユーザーIDに対応するLINE UserIDを取得する"""
-        if db is None:
-            return None
-
-        query = select(models.User).where(models.User.user_id == user_id)
-        result = await db.execute(query)
-        user = result.scalar_one_or_none()
-
-        if not user or not user.line_user_id:
-            return None
-
-        return user.line_user_id
+    result = await db.execute(select(models.User).where(models.User.user_id == user_id))
+    user = result.scalar_one_or_none()
+    return user.slack_user_id if user and user.slack_user_id else None
 
 
-def _format_currency(value: float) -> str:
-    if value is None:
-        return "0"
-    return f"{int(value):,}"
+def _escape(text: str) -> str:
+    """Slack mrkdwnで特別扱いされる文字をエスケープする。"""
+    return html.escape(text, quote=False)
 
 
-def _format_decimal(value: float) -> str:
-    if value is None:
-        return "0.00"
-    return f"{value:.2f}"
+def _format_currency(value: float | None) -> str:
+    return f"{int(value or 0):,}円"
 
 
-def _get_profit_loss_color(percentage: float) -> str:
-    if percentage > 0:
-        return COLOR_PROFIT
-    if percentage < 0:
-        return COLOR_LOSS
-    return COLOR_TEXT_PRIMARY
+def _format_percentage(value: float | None) -> str:
+    return f"{value or 0:.2f}%"
 
 
-def _build_ranking_row(rank: int, name: str, symbol: str, change_rate: float) -> dict:
-    """ランキングの1行分のFlex Boxを作成する"""
-    sign = "+" if change_rate >= 0 else ""
-
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {"type": "text", "text": f"{rank}.", "size": "sm", "flex": 0, "color": COLOR_TEXT_SECONDARY},
-            {
-                "type": "text",
-                "text": f"{name}({symbol})",
-                "size": "sm",
-                "flex": 3,
-                "margin": "sm",
-                "color": COLOR_HEADING,
-            },
-            {
-                "type": "text",
-                "text": f"{sign}{change_rate:.2f}%",
-                "size": "sm",
-                "align": "end",
-                "color": _get_profit_loss_color(change_rate),
-                "weight": "bold",
-                "flex": 1,
-            },
-        ],
-        "margin": "md",
-    }
+def _direction(value: float) -> str:
+    if value > 0:
+        return "▲"
+    if value < 0:
+        return "▼"
+    return "―"
 
 
-def _section_heading(text: str) -> dict:
-    return {
-        "type": "text",
-        "text": text,
-        "weight": "bold",
-        "size": "md",
-        "margin": "lg",
-        "color": COLOR_HEADING,
-    }
+def _signed_currency(value: float) -> str:
+    sign = "+" if value >= 0 else "-"
+    return f"{_direction(value)} {sign}{_format_currency(abs(value))}"
 
 
-def _section_body(text: str, margin: str = "md") -> dict:
-    return {
-        "type": "text",
-        "text": text,
-        "wrap": True,
-        "size": "sm",
-        "margin": margin,
-        "color": COLOR_TEXT_SECONDARY,
-    }
+def _signed_percentage(value: float) -> str:
+    sign = "+" if value >= 0 else ""
+    return f"{_direction(value)} {sign}{value:.2f}%"
 
 
-def _ranking_contents(performers: list) -> list[dict]:
-    if not performers:
-        return [
-            {
-                "type": "text",
-                "text": "データなし",
-                "size": "sm",
-                "color": COLOR_TEXT_SECONDARY,
-                "margin": "md",
-            }
-        ]
-    return [_build_ranking_row(i, p.name, p.symbol, p.change_rate) for i, p in enumerate(performers, 1)]
+def _field(label: str, value: str) -> dict[str, Any]:
+    return {"type": "mrkdwn", "text": f"*{label}*\n{value}"}
 
 
-def _summary_row(label: str, value: str, value_color: str = COLOR_TEXT_PRIMARY) -> dict:
-    return {
-        "type": "box",
-        "layout": "horizontal",
-        "contents": [
-            {"type": "text", "text": label, "size": "sm", "color": COLOR_TEXT_SECONDARY},
-            {"type": "text", "text": value, "size": "sm", "color": value_color, "align": "end"},
-        ],
-    }
+def _section_title(text: str) -> dict[str, Any]:
+    return {"type": "section", "text": {"type": "mrkdwn", "text": f"*{text}*"}}
 
 
-def _build_summary_contents(portfolio_data: dict[str, Any]) -> list[dict]:
-    """資産サマリ部分のFlexコンテンツを作成する"""
-    total_cost = _format_currency(portfolio_data["total_cost"])
-    total_market_value = _format_currency(portfolio_data["total_market_value"])
-    total_pl = _format_currency(portfolio_data["total_pl"])
-    total_pl_percentage = _format_decimal(portfolio_data["total_pl_percentage"])
-    total_realized_pl = _format_currency(portfolio_data["total_realized_pl"])
-    total_dividend = _format_currency(portfolio_data["total_dividend"])
-
-    rows: list[dict] = [
-        _summary_row("取得価格", f"{total_cost}円"),
-        _summary_row("時価総額", f"{total_market_value}円"),
+def _build_summary_fields(portfolio_data: dict[str, Any]) -> list[dict[str, Any]]:
+    total_pl = float(portfolio_data["total_pl"])
+    total_pl_percentage = float(portfolio_data["total_pl_percentage"])
+    fields = [
+        _field("取得価格", _format_currency(portfolio_data["total_cost"])),
+        _field("時価総額", _format_currency(portfolio_data["total_market_value"])),
     ]
 
     weekly_change = portfolio_data.get("weekly_change")
     if weekly_change is not None:
-        formatted_change = _format_currency(abs(weekly_change))
-        sign = "+" if weekly_change >= 0 else "-"
-        rows.append(
-            _summary_row("前週比", f"{sign}{formatted_change}円", _get_profit_loss_color(weekly_change))
-        )
+        fields.append(_field("前週比", _signed_currency(float(weekly_change))))
 
-    rows.append(
-        _summary_row(
-            "総損益",
-            f"{total_pl}円 ({total_pl_percentage}%)",
-            _get_profit_loss_color(float(portfolio_data["total_pl_percentage"])),
-        )
+    fields.extend(
+        [
+            _field(
+                "総損益",
+                f"{_signed_currency(total_pl)} ({_signed_percentage(total_pl_percentage)})",
+            ),
+            _field("実現損益", _format_currency(portfolio_data["total_realized_pl"])),
+            _field("配当総額", _format_currency(portfolio_data["total_dividend"])),
+        ]
     )
-    rows.append(_summary_row("実現損益", f"{total_realized_pl}円"))
-    rows.append(_summary_row("配当総額", f"{total_dividend}円"))
-
-    return rows
+    return fields
 
 
-def _build_combined_flex(
+def _build_ranking_block(performers: list[StockWeeklyPerformance]) -> dict[str, Any]:
+    if not performers:
+        return {"type": "section", "text": {"type": "mrkdwn", "text": "データなし"}}
+
+    fields: list[dict[str, Any]] = []
+    for rank, performer in enumerate(performers[:5], 1):
+        fields.extend(
+            [
+                _field(f"{rank}. {_escape(performer.name)}", f"`{_escape(performer.symbol)}`"),
+                _field("騰落率", _signed_percentage(performer.change_rate)),
+            ]
+        )
+    return {"type": "section", "fields": fields}
+
+
+def _commentary_block(text: str) -> dict[str, Any]:
+    return {"type": "section", "text": {"type": "mrkdwn", "text": _escape(text)}}
+
+
+def _build_weekly_report_blocks(
     portfolio_data: dict[str, Any],
-    top_performers: list,
-    bottom_performers: list,
+    top_performers: list[StockWeeklyPerformance],
+    bottom_performers: list[StockWeeklyPerformance],
     sections: ChangeReasonSections | None,
-) -> dict:
-    """資産サマリ・週間騰落ランキング・AI解説を単一バブルにまとめたFlex Messageを作成する"""
-    today = now_jst().strftime("%Y/%m/%d")
-
-    separator = {"type": "separator", "margin": "xl", "color": COLOR_SEPARATOR}
-
-    body_contents: list[dict] = [
-        _section_heading("資産サマリ"),
+) -> list[dict[str, Any]]:
+    """週次レポートをSlack Block Kitのメッセージに変換する。"""
+    blocks: list[dict[str, Any]] = [
+        {"type": "header", "text": {"type": "plain_text", "text": "InvestLogix 週次レポート"}},
         {
-            "type": "box",
-            "layout": "vertical",
-            "margin": "sm",
-            "spacing": "sm",
-            "contents": _build_summary_contents(portfolio_data),
+            "type": "context",
+            "elements": [
+                {"type": "mrkdwn", "text": now_jst().strftime("%Y/%m/%d 時点")},
+            ],
         },
-        separator,
+        {"type": "divider"},
+        _section_title("資産サマリ"),
+        {"type": "section", "fields": _build_summary_fields(portfolio_data)},
     ]
 
     if sections:
-        body_contents.extend(
+        blocks.extend(
             [
-                _section_heading("マーケット概況"),
-                _section_body(sections.market_overview),
-                separator,
+                {"type": "divider"},
+                _section_title("マーケット概況"),
+                _commentary_block(sections.market_overview),
             ]
         )
 
-    body_contents.append(_section_heading("上昇トップ5"))
-    body_contents.append(
-        {"type": "box", "layout": "vertical", "contents": _ranking_contents(top_performers), "margin": "sm"}
+    blocks.extend(
+        [
+            {"type": "divider"},
+            _section_title("上昇トップ5"),
+            _build_ranking_block(top_performers),
+        ]
     )
     if sections:
-        body_contents.append(_section_body(sections.top_commentary, margin="lg"))
+        blocks.append(_commentary_block(sections.top_commentary))
 
-    body_contents.append(separator)
-
-    body_contents.append(_section_heading("下落ワースト5"))
-    body_contents.append(
-        {
-            "type": "box",
-            "layout": "vertical",
-            "contents": _ranking_contents(bottom_performers),
-            "margin": "sm",
-        }
+    blocks.extend(
+        [
+            {"type": "divider"},
+            _section_title("下落ワースト5"),
+            _build_ranking_block(bottom_performers),
+        ]
     )
     if sections:
-        body_contents.append(_section_body(sections.bottom_commentary, margin="lg"))
+        blocks.append(_commentary_block(sections.bottom_commentary))
 
-    return {
-        "type": "bubble",
-        "size": "giga",
-        "header": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": "InvestLogix",
-                    "weight": "bold",
-                    "size": "sm",
-                    "color": COLOR_PROFIT,
-                },
-                {
-                    "type": "text",
-                    "text": "週次レポート",
-                    "weight": "bold",
-                    "size": "xl",
-                    "margin": "sm",
-                    "color": COLOR_HEADING,
-                },
-                {"type": "text", "text": today, "size": "xs", "color": COLOR_TEXT_MUTED, "margin": "sm"},
-            ],
-            "paddingAll": "20px",
-            "backgroundColor": COLOR_BACKGROUND,
-        },
-        "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": body_contents,
-            "paddingAll": "20px",
-            "backgroundColor": COLOR_BACKGROUND,
-        },
-    }
+    return blocks
+
+
+async def _call_slack_api(
+    client: httpx.AsyncClient,
+    url: str,
+    token: str,
+    payload: dict[str, Any],
+) -> dict[str, Any] | None:
+    response = await client.post(
+        url,
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        json=payload,
+    )
+    if response.status_code != 200:
+        logger.error("Slack APIがHTTPエラーを返しました status_code=%s", response.status_code)
+        return None
+
+    try:
+        body = response.json()
+    except ValueError:
+        logger.error("Slack APIレスポンスをJSONとして解析できませんでした")
+        return None
+
+    if not body.get("ok"):
+        logger.error("Slack APIがエラーを返しました error=%s", body.get("error", "unknown"))
+        return None
+    return body
 
 
 async def send_weekly_summary_notification(
     user_id: int,
     portfolio_data: dict[str, Any],
-    top_performers: list,
-    bottom_performers: list,
+    top_performers: list[StockWeeklyPerformance],
+    bottom_performers: list[StockWeeklyPerformance],
     sections: ChangeReasonSections | None,
-    db: AsyncSession = None,
+    db: AsyncSession | None = None,
 ) -> bool:
-    """資産サマリと週間騰落ランキングを単一Flex Messageで通知する"""
+    """週次レポートをSlackアプリとのDMへ送信する。"""
+    token = settings.SLACK_BOT_TOKEN
+    if not token:
+        logger.error("SLACK_BOT_TOKENが設定されていません")
+        return False
+
+    slack_user_id = await _get_slack_user_id(user_id, db)
+    if not slack_user_id:
+        logger.error("Slack User IDが設定されていません user_id=%s", user_id)
+        return False
+
     try:
-        line_token = settings.LINE_CHANNEL_ACCESS_TOKEN
-        if not line_token:
-            logger.error("LINE_CHANNEL_ACCESS_TOKEN が設定されていません")
-            return False
+        async with httpx.AsyncClient(timeout=SLACK_REQUEST_TIMEOUT_SECONDS) as client:
+            open_result = await _call_slack_api(
+                client,
+                SLACK_OPEN_DM_URL,
+                token,
+                {"users": slack_user_id},
+            )
+            channel_id = open_result.get("channel", {}).get("id") if open_result else None
+            if not channel_id:
+                logger.error("Slack DMのChannel IDを取得できませんでした user_id=%s", user_id)
+                return False
 
-        line_user_id = await NotificationService.get_line_user_id(user_id, db)
-        if not line_user_id:
-            logger.error(f"ユーザーID {user_id} のLINE UserIDが設定されていません")
-            return False
-
-        flex_contents = _build_combined_flex(portfolio_data, top_performers, bottom_performers, sections)
-        flex_message = {
-            "type": "flex",
-            "altText": "週次レポート（資産サマリと週間騰落ランキング）",
-            "contents": flex_contents,
-        }
-
-        headers = {"Authorization": f"Bearer {line_token}", "Content-Type": "application/json"}
-        data = {"to": line_user_id, "messages": [flex_message]}
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(LINE_PUSH_URL, headers=headers, json=data)
-
-        if response.status_code == 200:
-            logger.info("週次レポートのLINE通知が正常に送信されました")
-            return True
-        logger.error(f"LINE通知の送信に失敗しました。ステータスコード: {response.status_code}")
-        logger.error(f"レスポンス: {response.text}")
+            today = now_jst().strftime("%Y/%m/%d")
+            post_result = await _call_slack_api(
+                client,
+                SLACK_POST_MESSAGE_URL,
+                token,
+                {
+                    "channel": channel_id,
+                    "text": f"InvestLogix 週次レポート（{today}）",
+                    "blocks": _build_weekly_report_blocks(
+                        portfolio_data,
+                        top_performers,
+                        bottom_performers,
+                        sections,
+                    ),
+                },
+            )
+    except httpx.HTTPError:
+        logger.exception("Slack通知の通信に失敗しました user_id=%s", user_id)
         return False
 
-    except Exception as e:
-        logger.error(f"LINE通知の送信中にエラーが発生しました: {e!s}")
-        return False
+    if post_result:
+        logger.info("週次レポートをSlackへ送信しました user_id=%s", user_id)
+        return True
+    return False

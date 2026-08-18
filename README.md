@@ -13,7 +13,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - 保有株管理（平均取得単価・口座種別ごとの保有数量の自動計算、評価損益）
 - 配当管理（配当履歴、月次集計、銘柄別集計）
 - ポートフォリオ分析（資産推移、通貨/市場別の分布、銘柄別配当割合、サマリー）
-- LINE通知（ポートフォリオ状況の通知）
+- Slack通知（カスタムアプリとのDMへ送る週次レポート）
 - 認証（Cloudflare Access）
 - OAuth対応MCP（保有銘柄の一覧・並び替え・詳細参照）
 
@@ -107,9 +107,17 @@ cd src
 # 保有銘柄の株価履歴を更新し、損益を再計算
 docker compose exec api uv run python -m stock.jobs.recalc_holdings
 
-# ポートフォリオ履歴を保存し、LINE通知を送信
+# ポートフォリオ履歴を保存し、Slack通知を送信
 docker compose exec api uv run python -m stock.jobs.update_and_notify
 ```
+
+### Slack通知の初期設定
+
+1. [`slack-app-manifest.yaml`](slack-app-manifest.yaml) を使ってSlackカスタムアプリを作成する
+2. アプリをワークスペースへインストールし、Bot User OAuth Tokenを`SLACK_BOT_TOKEN`として保存する
+3. Slackプロフィールの「メンバーID」を`PUT /api/v1/users/me/slack-user-id`で登録する
+
+LINEのUser IDとSlackのUser IDに互換性はないため、デプロイ後に通知先の再登録が必要です。
 
 ### 3) Web を起動
 

@@ -157,7 +157,7 @@ class PortfolioService:
     async def update_and_notify(self, user_id: int) -> dict:
         """
         ポートフォリオの全銘柄を更新し、履歴を保存し、
-        資産サマリ＋週間騰落ランキング＋AI解説を1通のLINE Flex Messageで通知する
+        資産サマリ＋週間騰落ランキング＋AI解説を1通のSlack Block Kitメッセージで通知する
         """
         # update_all_holdings_pl が holdings を in-place で書き換える前提で、
         # 同じリストを履歴保存・サマリー集計まで使い回し、再フェッチを避ける

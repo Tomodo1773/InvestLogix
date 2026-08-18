@@ -20,7 +20,7 @@ locals {
     "JQUANTS_API_KEY",
     "ALPHAVANTAGE_API_KEY",
     "TIINGO_API_KEY",
-    "LINE_CHANNEL_ACCESS_TOKEN",
+    "SLACK_BOT_TOKEN",
     "OPENAI_API_KEY",
   ]
 
@@ -31,7 +31,7 @@ locals {
 
   jobs_secrets = [
     "DB_PASSWORD",
-    "LINE_CHANNEL_ACCESS_TOKEN",
+    "SLACK_BOT_TOKEN",
     "JQUANTS_API_KEY",
     "ALPHAVANTAGE_API_KEY",
     "TIINGO_API_KEY",

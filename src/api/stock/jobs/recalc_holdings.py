@@ -17,7 +17,7 @@ from ..schemas import SecurityType
 from ..services import price_history_repo
 from ..services.holding_service import update_all_holdings_pl
 from ..services.stock_price_fetcher import refresh_price_history
-from ._runner import run_job
+from ._runner import JobActionResult, run_job
 
 # price_history で保持する最大カレンダー日数（14営業日 + 余裕分）
 PRICE_HISTORY_KEEP_DAYS = 21
@@ -52,7 +52,7 @@ async def _refresh_one_symbol(db: AsyncSession, symbol: str) -> bool:
         return False
 
 
-async def _action(db: AsyncSession, user: User) -> list[str]:
+async def _action(db: AsyncSession, user: User) -> JobActionResult:
     symbols = await _list_active_symbols(db, user.user_id)
 
     failed_symbols: set[str] = set()
@@ -66,7 +66,7 @@ async def _action(db: AsyncSession, user: User) -> list[str]:
     _, holding_failed = await update_all_holdings_pl(db, user.user_id)
     failed_symbols.update(holding_failed)
 
-    return sorted(failed_symbols)
+    return JobActionResult(failed_symbols=tuple(sorted(failed_symbols)))
 
 
 def main() -> None:

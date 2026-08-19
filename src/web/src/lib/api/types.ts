@@ -4,7 +4,7 @@ export interface User {
   username: string
   email: string
   created_at: string
-  line_user_id: string | null
+  slack_user_id: string | null
   is_admin: boolean
 }
 

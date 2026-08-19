@@ -57,8 +57,8 @@ class Settings(BaseSettings):
     # OpenAI API設定
     OPENAI_API_KEY: str = ""
 
-    # LINE通知設定
-    LINE_CHANNEL_ACCESS_TOKEN: str = ""
+    # Slack通知設定
+    SLACK_BOT_TOKEN: str = ""
 
     # サーバー設定
     ENVIRONMENT: str = "development"

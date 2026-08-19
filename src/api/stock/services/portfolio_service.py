@@ -157,7 +157,7 @@ class PortfolioService:
     async def update_and_notify(self, user_id: int) -> dict:
         """
         ポートフォリオの全銘柄を更新し、履歴を保存し、
-        資産サマリ＋週間騰落ランキング＋AI解説を1通のLINE Flex Messageで通知する
+        資産サマリ＋週間騰落ランキング＋AI解説を1通のSlack Block Kitメッセージで通知する
         """
         # update_all_holdings_pl が holdings を in-place で書き換える前提で、
         # 同じリストを履歴保存・サマリー集計まで使い回し、再フェッチを避ける
@@ -188,10 +188,18 @@ class PortfolioService:
             "total_realized_pl": portfolio_history.total_realized_pl,
             "total_dividend": portfolio_history.total_dividend,
             "weekly_change": weekly_change,
+            # レポートの対象期間を「前週の基準日 → 当日」で表示するために渡す
+            "previous_date": prev_history.date if prev_history else None,
         }
 
         performances = await calculate_weekly_performance(self.db, user_id)
         top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
+
+        # 変動理由の生成は外部APIへの問い合わせで数分かかる。トランザクションを開いたまま
+        # 待つとDB接続がアイドル切断されるため、ここで確定させて接続を手放す。
+        # NullPool構成なので、通知フェーズの最初のクエリで接続が張り直される
+        await self.db.commit()
+
         sections = await generate_change_reasons(top_performers, bottom_performers)
 
         notification_sent = await send_weekly_summary_notification(

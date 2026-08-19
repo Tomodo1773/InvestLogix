@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import get_admin_user, get_current_user
 from ..database import get_db
 from ..models import User
-from ..schemas import LineUserIdUpdate, UserBase
+from ..schemas import SlackUserIdUpdate, UserBase
 from ..schemas import User as UserSchema
 from ..services.user_service import UserService
 
@@ -22,21 +22,21 @@ async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.put("/me/line-user-id", response_model=UserSchema)
-async def update_line_user_id(
-    line_data: LineUserIdUpdate,
+@router.put("/me/slack-user-id", response_model=UserSchema)
+async def update_slack_user_id(
+    slack_data: SlackUserIdUpdate,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """
-    現在ログインしているユーザーのLINE UserIDを更新する
-    - line_data: 更新するLINE UserID情報
+    現在ログインしているユーザーのSlack User IDを更新する
+    - slack_data: 更新するSlack User ID情報
     - 戻り値: 更新されたユーザー情報
     """
     stmt = (
         update(User)
         .where(User.user_id == current_user.user_id)
-        .values(line_user_id=line_data.line_user_id)
+        .values(slack_user_id=slack_data.slack_user_id)
         .returning(User)
     )
 

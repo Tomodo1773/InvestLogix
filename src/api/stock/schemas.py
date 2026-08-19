@@ -140,7 +140,7 @@ class UserBase(BaseModel):
 class User(UserBase):
     user_id: int
     created_at: datetime
-    line_user_id: str | None = None
+    slack_user_id: str | None = None
     is_admin: bool = False
     model_config = ConfigDict(from_attributes=True)
 
@@ -410,11 +410,10 @@ class PortfolioSummary(BaseModel):
     holdings_by_currency: dict[str, float]
 
 
-# LINE UserID登録用のスキーマを追加
-class LineUserIdUpdate(BaseModel):
-    """LINE UserID更新リクエスト"""
+class SlackUserIdUpdate(BaseModel):
+    """Slack User ID更新リクエスト"""
 
-    line_user_id: str
+    slack_user_id: str = Field(min_length=2, max_length=100)
 
 
 # 週間騰落率通知用のスキーマ

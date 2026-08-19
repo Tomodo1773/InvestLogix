@@ -12,7 +12,6 @@ async def _seed_user_with_holding(db: AsyncSession, symbol: str = "8058") -> Use
     user = User(
         username="job_testuser",
         email="job@example.com",
-        line_user_id="U_JOB",
     )
     db.add(user)
     await db.flush()
@@ -45,9 +44,9 @@ async def test_action_refreshes_price_history(db_session: AsyncSession, mock_ext
     """ジョブ実行で price_history に複数日のレコードが入ること"""
     user = await _seed_user_with_holding(db_session, symbol="8058")
 
-    failed = await _action(db_session, user)
+    result = await _action(db_session, user)
 
-    assert failed == []
+    assert result.failed_symbols == ()
     rows = await price_history_repo.get_recent_prices(db_session, "8058", days_back=30)
     assert len(rows) >= 6  # MOCK_JQUANTS_PRICE_DATA は 7 日分
 
@@ -58,5 +57,5 @@ async def test_action_marks_failed_symbol_on_external_api_error(db_session: Asyn
     user = await _seed_user_with_holding(db_session, symbol="8058")
     mock_external_apis["jquants_client"].get_prices.side_effect = Exception("simulated error")
 
-    failed = await _action(db_session, user)
-    assert "8058" in failed
+    result = await _action(db_session, user)
+    assert "8058" in result.failed_symbols

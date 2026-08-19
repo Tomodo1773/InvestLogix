@@ -74,10 +74,10 @@ async def update_portfolio_and_notify(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
-    ポートフォリオの更新とLINE通知を実行する
+    ポートフォリオの更新とSlack通知を実行する
     - 全銘柄の株価を最新に更新
     - ポートフォリオの現在の状態をデータベースに保存
-    - LINEにポートフォリオの状態を通知
+    - Slackにポートフォリオの状態を通知
     - 以下の情報を返却:
         - 更新された銘柄数
         - 最新のポートフォリオサマリー
@@ -93,7 +93,7 @@ async def get_weekly_performance(
     current_user: Annotated[User, Depends(get_current_user)], db: AsyncSession = Depends(get_db_for_user)
 ):
     """
-    週間騰落率を取得する（画面表示用、LINE通知は行わない）
+    週間騰落率を取得する（画面表示用、Slack通知は行わない）
     - 保有銘柄の週間騰落率を計算（保有数量が0の銘柄は除外）
     - 投資信託（FUND）は対象外
     - 騰落率の上位・下位5位を抽出

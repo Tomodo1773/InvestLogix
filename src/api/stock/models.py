@@ -130,7 +130,7 @@ class User(Base):
     username: ユーザー名
     email: メールアドレス
     created_at: 登録日時
-    line_user_id: LINE UserID（通知送信先）
+    slack_user_id: Slack User ID（通知送信先）
     is_admin: 管理者権限フラグ
 
     認証はCloudflare Accessに委譲しているため、パスワードは保持しない。
@@ -143,7 +143,7 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False)  # [USER_INPUT] ユーザー名
     email = Column(String(100), unique=True, nullable=False)  # [USER_INPUT] メールアドレス
     created_at = Column(DateTime(timezone=True), default=get_jst_now)  # [SYSTEM] 登録日時（JST）
-    line_user_id = Column(String(100), unique=True)  # [USER_INPUT] LINE UserID
+    slack_user_id = Column(String(100), unique=True)  # [USER_INPUT] Slack User ID
     is_admin = Column(Boolean, default=False)  # [SYSTEM] 管理者権限フラグ
 
     holdings = relationship("Holding", back_populates="user")

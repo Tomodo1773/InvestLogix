@@ -188,6 +188,8 @@ class PortfolioService:
             "total_realized_pl": portfolio_history.total_realized_pl,
             "total_dividend": portfolio_history.total_dividend,
             "weekly_change": weekly_change,
+            # レポートの対象期間を「前週の基準日 → 当日」で表示するために渡す
+            "previous_date": prev_history.date if prev_history else None,
         }
 
         performances = await calculate_weekly_performance(self.db, user_id)

@@ -12,7 +12,6 @@ from stock.services.notification_service import (
     AI_UNAVAILABLE_NOTICE,
     SLACK_OPEN_DM_URL,
     SLACK_POST_MESSAGE_URL,
-    _build_ranking_block,
     send_weekly_summary_notification,
 )
 from stock.services.weekly_performance_service import get_top_bottom_performers
@@ -70,41 +69,6 @@ class TestGetTopBottomPerformers:
 
         assert top == []
         assert bottom == []
-
-
-class TestBuildRankingBlock:
-    """Slackランキングブロックのユニットテスト"""
-
-    def test_positive_change_rate_uses_up_marker(self):
-        block = _build_ranking_block(
-            [
-                StockWeeklyPerformance(
-                    symbol="TEST1",
-                    name="テスト株",
-                    latest_price=110.0,
-                    old_price=100.0,
-                    change_rate=10.0,
-                )
-            ]
-        )
-
-        assert block["fields"][0]["text"] == "*1. テスト株*\n`TEST1`"
-        assert block["fields"][1]["text"] == "*騰落率*\n▲ +10.00%"
-
-    def test_negative_change_rate_uses_down_marker(self):
-        block = _build_ranking_block(
-            [
-                StockWeeklyPerformance(
-                    symbol="TEST1",
-                    name="テスト株",
-                    latest_price=94.5,
-                    old_price=100.0,
-                    change_rate=-5.5,
-                )
-            ]
-        )
-
-        assert block["fields"][1]["text"] == "*騰落率*\n▼ -5.50%"
 
 
 @pytest.mark.asyncio
@@ -305,11 +269,12 @@ async def test_send_weekly_summary_notification_combines_summary_and_rankings(mo
     assert mock_post.call_args_list[1].args[0] == SLACK_POST_MESSAGE_URL
     posted = mock_post.call_args_list[1].kwargs["json"]
     assert posted["channel"] == "D1234567890"
-    assert posted["text"].startswith("InvestLogix 週次レポート")
+    # プッシュ通知だけで結論が分かるよう、fallbackに地合いの絵文字と前週比が載ること
+    assert posted["text"] == ":chart_with_upwards_trend: InvestLogix 週次レポート ｜ 前週比 +15,000円"
 
     body_json = json.dumps(posted["blocks"], ensure_ascii=False)
     # 資産サマリ
-    assert "資産サマリ" in body_json
+    assert "時価総額" in body_json
     assert "1,000,000円" in body_json
     assert "1,200,000円" in body_json
     assert "200,000円" in body_json
@@ -378,7 +343,7 @@ async def test_send_weekly_summary_notification_works_without_sections(monkeypat
     posted = mock_post.call_args_list[1].kwargs["json"]
 
     body_json = json.dumps(posted["blocks"], ensure_ascii=False)
-    assert "資産サマリ" in body_json
+    assert "時価総額" in body_json
     assert "上昇トップ5" in body_json
     assert "下落ワースト5" in body_json
     # AI解説セクションが含まれないこと

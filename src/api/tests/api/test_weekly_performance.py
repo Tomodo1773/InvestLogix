@@ -9,6 +9,7 @@ from stock.database import settings
 from stock.schemas import StockWeeklyPerformance
 from stock.services.change_reason_service import ChangeReasonSections
 from stock.services.notification_service import (
+    AI_UNAVAILABLE_NOTICE,
     SLACK_OPEN_DM_URL,
     SLACK_POST_MESSAGE_URL,
     _build_ranking_block,
@@ -382,6 +383,8 @@ async def test_send_weekly_summary_notification_works_without_sections(monkeypat
     assert "下落ワースト5" in body_json
     # AI解説セクションが含まれないこと
     assert "マーケット概況" not in body_json
+    # 解説が消えた原因を受け手が判別できるよう、取得失敗の注記が入ること
+    assert AI_UNAVAILABLE_NOTICE in body_json
     # 前週比なしの場合、行自体が出ない
     assert "前週比" not in body_json
 

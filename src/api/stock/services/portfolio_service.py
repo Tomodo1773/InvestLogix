@@ -192,6 +192,12 @@ class PortfolioService:
 
         performances = await calculate_weekly_performance(self.db, user_id)
         top_performers, bottom_performers = get_top_bottom_performers(performances, n=5)
+
+        # 変動理由の生成は外部APIへの問い合わせで数分かかる。トランザクションを開いたまま
+        # 待つとDB接続がアイドル切断されるため、ここで確定させて接続を手放す。
+        # NullPool構成なので、通知フェーズの最初のクエリで接続が張り直される
+        await self.db.commit()
+
         sections = await generate_change_reasons(top_performers, bottom_performers)
 
         notification_sent = await send_weekly_summary_notification(

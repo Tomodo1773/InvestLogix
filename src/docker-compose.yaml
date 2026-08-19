@@ -29,9 +29,10 @@ services:
     image: investlogix-api
     container_name: investlogix-api
     env_file:
+      # 接続先はここに一本化する。composeでDB_HOSTを上書きすると、
+      # .envのクラウド向け認証情報とローカルdbのホストが混ざって認証に失敗する。
+      # ローカルdbを使うときは .env 側を DB_HOST=db に書き換える
       - ./api/.env
-    environment:
-      DB_HOST: db
     volumes:
       - ./api:/src
       - ./api/.dockervenv:/src/.venv

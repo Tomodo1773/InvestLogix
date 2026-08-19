@@ -18,6 +18,9 @@ SLACK_OPEN_DM_URL = "https://slack.com/api/conversations.open"
 SLACK_POST_MESSAGE_URL = "https://slack.com/api/chat.postMessage"
 SLACK_REQUEST_TIMEOUT_SECONDS = 30.0
 
+# 変動理由の生成に失敗したときにレポートへ差し込む注記
+AI_UNAVAILABLE_NOTICE = ":warning: AI解説を取得できませんでした（サマリと騰落ランキングのみ表示しています）"
+
 
 async def _get_slack_user_id(user_id: int, db: AsyncSession | None = None) -> str | None:
     """ユーザーに登録されたSlack通知先を取得する。"""
@@ -138,6 +141,18 @@ def _build_weekly_report_blocks(
                 {"type": "divider"},
                 _section_title("マーケット概況"),
                 _commentary_block(sections.market_overview),
+            ]
+        )
+    else:
+        # 生成に失敗した旨を明示する。これがないと解説が消えた原因が
+        # 外部APIの失敗なのか実装の欠落なのかレポートから判別できない
+        blocks.extend(
+            [
+                {"type": "divider"},
+                {
+                    "type": "context",
+                    "elements": [{"type": "mrkdwn", "text": AI_UNAVAILABLE_NOTICE}],
+                },
             ]
         )
 

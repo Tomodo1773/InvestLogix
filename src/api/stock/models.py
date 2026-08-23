@@ -219,7 +219,15 @@ class Transaction(Base):
     user = relationship("User", back_populates="transactions")
     stock = relationship("Stock", back_populates="transactions")
 
-    __table_args__ = (Index("ix_transactions_user_symbol_account_type", "user_id", "symbol", "account_type"),)
+    __table_args__ = (
+        Index("ix_transactions_user_symbol_account_type", "user_id", "symbol", "account_type"),
+        Index(
+            "ix_transactions_user_id_transaction_date_transaction_id",
+            "user_id",
+            "transaction_date",
+            "transaction_id",
+        ),
+    )
 
 
 class PortfolioHistory(Base):
@@ -286,3 +294,12 @@ class Dividend(Base):
 
     user = relationship("User", back_populates="dividend")
     stock = relationship("Stock", back_populates="dividend")
+
+    __table_args__ = (
+        Index(
+            "ix_dividend_user_id_payment_date_dividend_id",
+            "user_id",
+            "payment_date",
+            "dividend_id",
+        ),
+    )

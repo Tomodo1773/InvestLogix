@@ -63,7 +63,9 @@ class DividendService:
 
         return db_dividend
 
-    async def list_dividends(self, user_id: int, symbol: str | None = None) -> list[models.Dividend]:
+    async def list_dividends(
+        self, user_id: int, symbol: str | None = None, *, limit: int | None = None
+    ) -> list[models.Dividend]:
         query = (
             select(models.Dividend, models.Stock.name)
             .join(models.Stock, models.Dividend.symbol == models.Stock.symbol)
@@ -74,7 +76,10 @@ class DividendService:
         if symbol:
             query = query.where(models.Dividend.symbol == symbol)
 
-        query = query.order_by(models.Dividend.payment_date.desc())
+        query = query.order_by(models.Dividend.payment_date.desc(), models.Dividend.dividend_id.desc())
+        if limit is not None:
+            query = query.limit(limit)
+
         result = await self.db.execute(query)
         dividends = []
         for row in result:

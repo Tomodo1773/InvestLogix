@@ -16,6 +16,32 @@ from stock.mcp.middleware import AccessUserContextMiddleware
 from stock.schemas import UserBase
 from stock.services.user_service import UserService
 
+TRANSACTION_HISTORY_FIELDS = {
+    "symbol",
+    "stock_name",
+    "transaction_type",
+    "quantity",
+    "price",
+    "usd_price",
+    "adjusted_price",
+    "adjusted_quantity",
+    "account_type",
+    "fee",
+    "tax",
+    "realized_pl",
+    "transaction_date",
+}
+DIVIDEND_HISTORY_FIELDS = {
+    "symbol",
+    "stock_name",
+    "payment_date",
+    "shares_owned",
+    "total_amount",
+    "tax",
+    "fee",
+    "net_amount",
+}
+
 
 async def _create_user(engine: AsyncEngine, username: str, email: str) -> AccessIdentity:
     session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -81,7 +107,7 @@ async def test_mcp_rejects_unregistered_access_user(setup_database: AsyncEngine)
 
 
 @pytest.mark.asyncio
-async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
+async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sorting(
     client,
     auth_user: AccessIdentity,
     create_transaction,
@@ -144,6 +170,18 @@ async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
         },
     )
     assert response.status_code == 200
+    response = await client.post(
+        "/api/v1/dividends/",
+        json={
+            "symbol": "AAPL",
+            "payment_date": "2024-04-02T00:00:00+09:00",
+            "shares_owned": 1000,
+            "total_amount": 99999,
+            "tax": 0,
+            "fee": 0,
+        },
+    )
+    assert response.status_code == 200
     api_app.dependency_overrides[get_access_identity] = lambda: auth_user
 
     mcp_app = _mcp_app(setup_database, auth_user)
@@ -172,6 +210,10 @@ async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
                     {"sort_by": sort_by, "order": order},
                 )
         detail_result = await mcp_client.call_tool("get_holding", {"symbol": " aapl "})
+        transactions_result = await mcp_client.call_tool("list_transactions", {"limit": 1})
+        filtered_transactions_result = await mcp_client.call_tool("list_transactions", {"symbol": " 8058 "})
+        dividends_result = await mcp_client.call_tool("list_dividends", {"limit": 1})
+        filtered_dividends_result = await mcp_client.call_tool("list_dividends", {"symbol": " aapl "})
 
         sell_response = await client.post(
             "/api/v1/transactions/",
@@ -207,7 +249,12 @@ async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
         other_user_detail_result = await mcp_client.call_tool("get_holding", {"symbol": "AAPL"})
 
     tools_by_name = {tool.name: tool for tool in tools.tools}
-    assert set(tools_by_name) == {"list_holdings", "get_holding"}
+    assert set(tools_by_name) == {
+        "list_holdings",
+        "get_holding",
+        "list_transactions",
+        "list_dividends",
+    }
     assert all(tool.annotations and tool.annotations.read_only_hint for tool in tools.tools)
 
     list_tool = tools_by_name["list_holdings"]
@@ -235,6 +282,26 @@ async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
         "total_pl_percentage",
     }
     assert set(item_schema["properties"]) == expected_list_fields
+
+    history_tool_fields = {
+        "list_transactions": TRANSACTION_HISTORY_FIELDS,
+        "list_dividends": DIVIDEND_HISTORY_FIELDS,
+    }
+    for tool_name, expected_fields in history_tool_fields.items():
+        history_tool = tools_by_name[tool_name]
+        input_properties = history_tool.input_schema["properties"]
+        assert set(input_properties) == {"limit", "symbol"}
+        assert input_properties["limit"]["default"] == 20
+        assert input_properties["limit"]["minimum"] == 1
+        assert input_properties["limit"]["maximum"] == 100
+        assert input_properties["symbol"]["default"] is None
+
+        collection_name = tool_name.removeprefix("list_")
+        assert set(history_tool.output_schema["properties"]) == {collection_name}
+        item_reference = history_tool.output_schema["properties"][collection_name]["items"]["$ref"]
+        item_schema = history_tool.output_schema["$defs"][item_reference.rsplit("/", maxsplit=1)[-1]]
+        assert set(item_schema["properties"]) == expected_fields
+        assert set(item_schema["required"]) == expected_fields
 
     descending_expectations = {
         "market_value": ["AAPL", "8058"],
@@ -286,3 +353,19 @@ async def test_mcp_exposes_holdings_tools_with_fixed_schemas_and_sorting(
     assert sold_holdings_result.structured_content == {"holdings": []}
     assert sold_detail_result.is_error
     assert other_user_detail_result.is_error
+
+    transactions = transactions_result.structured_content["transactions"]
+    assert len(transactions) == 1
+    assert set(transactions[0]) == TRANSACTION_HISTORY_FIELDS
+    assert transactions[0]["symbol"] == "AAPL"
+    assert transactions[0]["quantity"] == 10
+    assert transactions[0]["transaction_date"].endswith("+09:00")
+    assert filtered_transactions_result.structured_content["transactions"][0]["symbol"] == "8058"
+
+    dividends = dividends_result.structured_content["dividends"]
+    assert len(dividends) == 1
+    assert set(dividends[0]) == DIVIDEND_HISTORY_FIELDS
+    assert dividends[0]["symbol"] == "8058"
+    assert dividends[0]["net_amount"] == 10000
+    assert dividends[0]["payment_date"].endswith("+09:00")
+    assert filtered_dividends_result.structured_content == {"dividends": []}

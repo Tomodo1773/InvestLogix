@@ -11,7 +11,9 @@ from mcp.types import ToolAnnotations
 
 from .. import models
 from ..schemas import AccountType
+from ..services.dividend_service import DividendService
 from ..services.holding_service import list_holdings as list_holdings_service
+from ..services.transaction_service import TransactionService
 from ..utils.datetime import to_jst
 from .middleware import get_user_context_from_mcp
 
@@ -86,6 +88,58 @@ class HoldingDetailOutput(BaseModel):
         return to_jst(value).isoformat()
 
 
+class TransactionListItem(BaseModel):
+    """取引履歴として公開する値。"""
+
+    symbol: str
+    stock_name: str | None
+    transaction_type: str
+    quantity: float
+    price: float
+    usd_price: float | None
+    adjusted_price: float | None
+    adjusted_quantity: float | None
+    account_type: AccountType
+    fee: float
+    tax: float
+    realized_pl: float | None
+    transaction_date: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+    @field_serializer("transaction_date")
+    def serialize_transaction_date(self, value: datetime) -> str:
+        return to_jst(value).isoformat()
+
+
+class ListTransactionsOutput(BaseModel):
+    """取引履歴一覧の出力。"""
+
+    transactions: list[TransactionListItem]
+
+
+class DividendListItem(BaseModel):
+    """配当履歴として公開する値。"""
+
+    symbol: str
+    stock_name: str | None
+    payment_date: datetime
+    shares_owned: float
+    total_amount: float
+    tax: float | None
+    fee: float | None
+    net_amount: float
+
+    @field_serializer("payment_date")
+    def serialize_payment_date(self, value: datetime) -> str:
+        return to_jst(value).isoformat()
+
+
+class ListDividendsOutput(BaseModel):
+    """配当履歴一覧の出力。"""
+
+    dividends: list[DividendListItem]
+
+
 def _sort_holdings(
     holdings: list[models.Holding], sort_by: HoldingSortField, order: SortOrder
 ) -> list[models.Holding]:
@@ -141,3 +195,67 @@ def register_tools(server: MCPServer) -> None:
         if not holdings:
             raise ValueError(f"現在保有している銘柄が見つかりません: {normalized_symbol}")
         return HoldingDetailOutput.model_validate(holdings[0])
+
+    @server.tool(annotations=READ_ONLY)
+    async def list_transactions(
+        ctx: Context,
+        limit: Annotated[int, Field(ge=1, le=100, description="取得件数")] = 20,
+        symbol: Annotated[
+            str | None,
+            Field(description="絞り込む銘柄コードまたはティッカーシンボル"),
+        ] = None,
+    ) -> ListTransactionsOutput:
+        """最近の取引履歴を取得する。usd_priceはUSD、それ以外の金額はJPY。"""
+        user_context = get_user_context_from_mcp(ctx)
+        normalized_symbol = None
+        if symbol is not None:
+            normalized_symbol = symbol.strip().upper()
+            if not normalized_symbol:
+                raise ValueError("symbolには空白以外の文字を指定してください")
+
+        transactions = await TransactionService(user_context.db).list_transactions(
+            user_context.user_id,
+            symbol=normalized_symbol,
+            limit=limit,
+        )
+        return ListTransactionsOutput(
+            transactions=[TransactionListItem.model_validate(transaction) for transaction in transactions]
+        )
+
+    @server.tool(annotations=READ_ONLY)
+    async def list_dividends(
+        ctx: Context,
+        limit: Annotated[int, Field(ge=1, le=100, description="取得件数")] = 20,
+        symbol: Annotated[
+            str | None,
+            Field(description="絞り込む銘柄コードまたはティッカーシンボル"),
+        ] = None,
+    ) -> ListDividendsOutput:
+        """最近の配当履歴を取得する。金額はすべてJPY。"""
+        user_context = get_user_context_from_mcp(ctx)
+        normalized_symbol = None
+        if symbol is not None:
+            normalized_symbol = symbol.strip().upper()
+            if not normalized_symbol:
+                raise ValueError("symbolには空白以外の文字を指定してください")
+
+        dividends = await DividendService(user_context.db).list_dividends(
+            user_context.user_id,
+            symbol=normalized_symbol,
+            limit=limit,
+        )
+        return ListDividendsOutput(
+            dividends=[
+                DividendListItem(
+                    symbol=dividend.symbol,
+                    stock_name=dividend.stock_name,
+                    payment_date=dividend.payment_date,
+                    shares_owned=dividend.shares_owned,
+                    total_amount=dividend.total_amount,
+                    tax=dividend.tax,
+                    fee=dividend.fee,
+                    net_amount=dividend.total_amount - (dividend.tax or 0) - (dividend.fee or 0),
+                )
+                for dividend in dividends
+            ]
+        )

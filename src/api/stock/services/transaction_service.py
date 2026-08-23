@@ -139,7 +139,12 @@ class TransactionService:
         )
 
     async def list_transactions(
-        self, user_id: int, symbol: str | None = None, include_unrealized_pl: bool = False
+        self,
+        user_id: int,
+        symbol: str | None = None,
+        include_unrealized_pl: bool = False,
+        *,
+        limit: int | None = None,
     ) -> list[models.Transaction] | list[schemas.TransactionWithPL]:
         # 銘柄名を取得するためにStockテーブルを結合
         query = (
@@ -152,7 +157,12 @@ class TransactionService:
         if symbol:
             query = query.where(models.Transaction.symbol == symbol)
 
-        query = query.order_by(models.Transaction.transaction_date.desc())
+        query = query.order_by(
+            models.Transaction.transaction_date.desc(), models.Transaction.transaction_id.desc()
+        )
+        if limit is not None:
+            query = query.limit(limit)
+
         result = await self.db.execute(query)
         transactions = []
         for row in result:

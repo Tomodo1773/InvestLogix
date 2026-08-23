@@ -15,7 +15,7 @@ InvestLogixは、日本株・米国株の取引/保有/配当を記録し、ポ�
 - ポートフォリオ分析（資産推移、通貨/市場別の分布、銘柄別配当割合、サマリー）
 - Slack通知（カスタムアプリとのDMへ送る週次レポート）
 - 認証（Cloudflare Access）
-- OAuth対応MCP（保有銘柄の一覧・並び替え・詳細参照）
+- OAuth対応MCP（参照専用。認証ユーザー本人の保有銘柄を `list_holdings` / `get_holding`、直近の取引・配当履歴を `list_transactions` / `list_dividends` で参照）
 
 ## 構成
 

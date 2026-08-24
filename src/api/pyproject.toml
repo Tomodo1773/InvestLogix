@@ -6,8 +6,8 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi>=0.141.1",
-    "sqlalchemy>=2.0.50",
-    "uvicorn>=0.52.1",
+    "sqlalchemy>=2.0.52",
+    "uvicorn>=0.52.3",
     "python-jose[cryptography]>=3.5.0",
     "pydantic>=2.13.4",
     "python-multipart>=0.0.32",
@@ -22,8 +22,8 @@ dependencies = [
     "pandas>=2.2.3",
     "psycopg[binary]>=3.3.4",
     "loguru>=0.7.3",
-    "setuptools>=83.0.0",
-    "openai>=2.53.0",
+    "setuptools>=84.0.0",
+    "openai>=2.54.0",
     "mcp>=2.0.0",
 ]
 
@@ -32,17 +32,17 @@ package = false
 exclude-newer = "7 days"
 
 [build-system]
-requires = ["setuptools>=83.0.0"]
+requires = ["setuptools>=84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
 dev = [
-    "pre-commit>=4.6.1",
+    "pre-commit>=4.6.2",
     "pytest>=9.1.0",
     "pytest-asyncio>=1.4.0",
     "pytest-mock>=3.14.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.16.2",
+    "ruff>=0.16.3",
     "testcontainers[postgres]>=4.15.0",
 ]
 

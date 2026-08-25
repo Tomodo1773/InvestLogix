@@ -3,6 +3,7 @@
 - ステータス: Accepted
 - 日付: 2026-08-07
 - 関連: Issue #441
+- 更新: 2026-08-25（IdP の選択を追記）
 
 ## 背景
 
@@ -53,6 +54,27 @@ Web 用と MCP 用の Access application は分ける。同じ IdP とユーザ�
 MCP サーバーは公式 Python SDK と Streamable HTTP を使用し、既存の Service 層と RLS を再利用する。
 Cloudflare Workers に業務ロジックや MCP ツールを複製しない。
 
+### IdP の選択
+
+**Cloudflare as identity provider を使い、Restrict to account members を有効にする。**
+
+利用者は自分の Cloudflare アカウントでサインインする。この構成を選ぶ理由は次の3点。
+
+- 許可された本人だけが使うアプリであり、その本人は Zero Trust を運用する当事者でもある。
+  ブラウザに Cloudflare のセッションが残っているため、再認証がリダイレクトだけで完了する
+- One-time PIN と違い、認証のたびにメールクライアントへ往復する必要がない
+- Google や GitHub と違い、Cloudflare 側に OAuth クライアントを別途作らなくてよい
+
+Access application のトークンは、IdP ログインである限り `email` クレームを含む。これが
+`users.email` との紐付けキーになる。`email` を持たないのはサービストークン認証の場合だけで、
+その場合は `common_name` が入る。`stock/cloudflare_access.py` は `email` が無ければ
+`AccessTokenError` として扱うため、想定外のトークンでアプリ内ユーザーが解決されることはない。
+
+MCP 側の Managed OAuth は IdP を限定しない。発行されるのは JWT ではなく不透明トークンで、
+Cloudflare がそれを利用者の識別情報へ解決し、オリジンには Web と同じ `Cf-Access-Jwt-Assertion`
+を転送する。したがって IdP の選択は MCP サーバーの実装から見て透過であり、Web と MCP で
+IdP を揃えられる。
+
 ### 導入単位
 
 導入は次の2段階とする。
@@ -77,6 +99,17 @@ Web と MCP で認証主体とユーザー紐付けが分かれ、ログアウ�
 
 セルフサインアップや組織・テナント管理を行う一般向け SaaS には適している。現在は許可された本人だけが使う
 アプリであり、追加サービスと運用が過剰なため採用しない。一般公開へ方針転換した場合は再検討する。
+
+### One-time PIN を継続する
+
+IdP を一切設定せずに済むが、認証のたびにメールクライアントへ往復する必要があり、
+再認証の体験が悪い。セッション期間を延ばしても1回あたりの負担は変わらないため採用しない。
+
+### Google または GitHub を IdP にする
+
+どちらも実用に足りるが、Cloudflare 側で OAuth クライアントの作成が必要になる。また利用者が
+複数アカウントにログインしている場合、目的のアカウントを選び直す手間が残る。Cloudflare
+アカウントで完結する構成の方が単純なため採用しない。
 
 ### Cloud Run IAM だけで MCP を保護する
 
@@ -107,4 +140,6 @@ Google Cloud 内部のサービス間認証には適しているが、一般的�
 
 - [Cloudflare Access: Managed OAuth](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/managed-oauth/)
 - [Cloudflare Access: Validate JWTs](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/)
+- [Cloudflare Access: Cloudflare as identity provider](https://developers.cloudflare.com/cloudflare-one/integrations/identity-providers/cloudflare/)
+- [Cloudflare Access: Application token](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/)
 - [Model Context Protocol Python SDK](https://github.com/modelcontextprotocol/python-sdk)

@@ -88,9 +88,9 @@ React + Vite ベースのSPAです。Cloudflare Workers（Static Assets）でデ
 
 `worker/index.ts` が `/api/*` と `/mcp` を、それぞれAPI/MCP用Cloud Runへプロキシします。フロント側はAPIを**常に相対パスで叩きます**（`API_BASE_URL` のような基底URLは持ちません）。オリジンは Worker の Secret（`API_ORIGIN` / `MCP_ORIGIN`）にあり、リポジトリにもクライアントバンドルにも入れません。
 
-- Workersランタイムの型 `worker-configuration.d.ts` は生成物なのでコミットしない（gitignore済み）。14000行超あるうえ、`wrangler types` がローカルの `.dev.vars` の変数名を取り込むためマシン間で内容が一致しない。`pnpm typecheck` が毎回先頭で生成するので、手動実行は不要（単体で回したいときは `pnpm cf-typegen`）
+- Workersランタイムの型 `worker-configuration.d.ts` は生成物なのでコミットしない（gitignore済み）。14000行超あるうえ、`wrangler types` がローカルの `.dev.vars` の変数名を取り込むためマシン間で内容が一致しない。`sfw pnpm typecheck` が毎回先頭で生成するので、手動実行は不要（単体で回したいときは `sfw pnpm cf-typegen`）
 - `compatibility_date` は同梱 workerd がサポートする上限日以下にする。超えると `wrangler dev` が起動しない。制約は一方向（wrangler を上げると上限が上がるだけ）なので、**依存更新に追随して上げる必要はない**。日付でゲートされた挙動が欲しいときだけ意図して上げる
-- `worker/` は Workers ランタイム、`src/` は DOM で型が衝突するため tsconfig を分けている。`pnpm typecheck` は両方を検査する
+- `worker/` は Workers ランタイム、`src/` は DOM で型が衝突するため tsconfig を分けている。`sfw pnpm typecheck` は両方を検査する
 
 ### 実装手順
 
@@ -98,8 +98,8 @@ React + Vite ベースのSPAです。Cloudflare Workers（Static Assets）でデ
 2. コードを実装する
 3. `sfw pnpm install` でSocket Firewallを通して依存関係を更新する
 4. テストコードを実装する（`src/web/docs/testing-guide.md`を参照）
-5. `pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
-6. `pnpm test`でテストを実行する
+5. `sfw pnpm check` を実行し、lint/format/typecheck/knipが通ることを確認する
+6. `sfw pnpm test`でテストを実行する
 7. ドキュメント(AGENTS.md/CLAUDE.md, README.md)を更新する
 8. コミットする
 
@@ -135,13 +135,13 @@ pnpm dev
 sfw pnpm install
 
 # ビルド
-pnpm build
+sfw pnpm build
 
 # 型チェック、リンティング、フォーマット、依存関係チェック
-pnpm check
+sfw pnpm check
 
 # テスト実行
-pnpm test
+sfw pnpm test
 
 # プレビュー(ビルド後)
 pnpm preview
@@ -157,8 +157,8 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 2. コードを実装する
 3. `sfw uv sync` でSocket Firewallを通して依存関係をインストールし、仮想環境を有効化する
 4. テストコードを実装する（`src/api/docs/testing-guide.md`を参照）
-5. `uv run ruff format` でコードを整形する
-6. `uv run ruff check --fix` でコードスタイルを整える
+5. `sfw uv run ruff format` でコードを整形する
+6. `sfw uv run ruff check --fix` でコードスタイルを整える
 7. api-test-runnerサブエージェントでテストを行う
 8. ドキュメント(AGENTS.md/CLAUDE.md, README.md)を更新する
 9. コミットする
@@ -183,22 +183,22 @@ uv run uvicorn stock.mcp.app:app --reload --port 8001
 sfw uv sync
 
 # テスト実行（api-test-runnerサブエージェントに任せることを推奨）
-uv run pytest
+sfw uv run pytest
 
 # リントチェック
-uv run ruff check --fix
+sfw uv run ruff check --fix
 
 # フォーマット
-uv run ruff format
+sfw uv run ruff format
 
 # マイグレーション作成
-uv run alembic revision --autogenerate -m "説明"
+sfw uv run alembic revision --autogenerate -m "説明"
 
 # マイグレーション適用
-uv run alembic upgrade head
+sfw uv run alembic upgrade head
 
 # マイグレーションロールバック
-uv run alembic downgrade -1
+sfw uv run alembic downgrade -1
 ```
 
 ### 認証認可

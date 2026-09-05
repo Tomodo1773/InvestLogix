@@ -14,6 +14,11 @@
   // 日付でゲートされた新しい挙動が欲しいときだけ、意図して上げること
   // （上げるのはランタイムの意味論を変える行為なので自動化しない）
   "compatibility_date": "2026-07-29",
+  // workers.devの自動ホスト名とプレビューURLを無効にする。
+  // Custom Domain以外の公開名を増やさないため（Accessの掛け忘れが起きる面を減らす）。
+  "workers_dev": false,
+  "preview_urls": false,
+
   "assets": {
     "directory": "./dist",
     // SPAのルートを index.html に落とす（クライアントルーティングを直リロードでも通す）

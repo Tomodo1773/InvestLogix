@@ -47,7 +47,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.2",
-    "happy-dom": "^20.14.6",
+    "happy-dom": "^21.0.4",
     "knip": "^6.41.0",
     "postcss": "^8.5",
     "postcss-load-config": "^6.0.1",

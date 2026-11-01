@@ -5,25 +5,25 @@ description = "Investment Management API"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "fastapi>=0.146.0",
-    "sqlalchemy[asyncio]>=2.1.5",
+    "fastapi>=0.162.0",
+    "sqlalchemy[asyncio]>=2.1.6",
     "uvicorn>=0.54.0",
     "python-jose[cryptography]>=3.5.0",
     "pydantic>=2.14.1",
     "python-multipart>=0.0.32",
-    "alembic>=1.20.0",
+    "alembic>=1.20.1",
     "asyncpg>=0.32.0",
     "pytz>=2026.5",
     "aiosqlite>=0.21.0",
-    "pydantic-settings>=2.16.0",
+    "pydantic-settings>=2.16.1",
     "jquants-api-client>=2.8.0",
     "httpx>=0.28.1",
     "beautifulsoup4>=4.15.0",
-    "pandas>=3.0.6",
+    "pandas>=3.1.0",
     "psycopg[binary]>=3.3.6",
     "loguru>=0.7.3",
-    "setuptools>=84.0.0",
-    "openai>=3.35.1",
+    "setuptools>=84.2.1",
+    "openai>=3.37.0",
     "mcp>=2.3.0",
 ]
 
@@ -32,7 +32,7 @@ package = false
 exclude-newer = "7 days"
 
 [build-system]
-requires = ["setuptools>=84.0.0"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
@@ -42,7 +42,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-mock>=3.17.0",
     "pytest-xdist>=3.8.0",
-    "ruff>=0.17.1",
+    "ruff>=0.17.2",
     "testcontainers[postgres]>=4.15.0",
 ]
 

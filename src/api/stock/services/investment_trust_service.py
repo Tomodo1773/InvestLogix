@@ -37,9 +37,36 @@ async def fetch_investment_trust_details(symbol: str) -> dict:
     }
 
 
+async def _fetch_mufg_nav(client: httpx.AsyncClient, symbol: str) -> float | None:
+    """
+    三菱UFJアセットマネジメントの公式「投信情報API」から基準価額を取得します。
+
+    同社のファンド以外はHTTP 200のまま datasets が null で返るため、None を返します。
+    """
+    response = await client.get(f"https://developer.am.mufg.jp/fund_information_latest/isin_cd/{symbol}")
+    response.raise_for_status()
+    datasets = response.json()["datasets"]
+    return float(datasets[0]["nav"]) if datasets else None
+
+
+async def _fetch_toushin_lib_nav(client: httpx.AsyncClient, symbol: str) -> float:
+    """投信総合検索ライブラリーのページから基準価額を取得します。取得できない場合は0"""
+    response = await client.get(f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}")
+    soup = BeautifulSoup(response.text, "html.parser")
+    price_div = soup.find("span", class_="h3 font-weight-bold")
+
+    if price_div and price_div.text:
+        # カンマを除去して数値に変換
+        return float(price_div.text.replace(",", "").replace("円", "").strip())
+    return 0.0
+
+
 async def get_fund_price(symbol: str) -> float:
     """
     投資信託の基準価額を取得します。
+
+    投信総合検索ライブラリーは自動取得を禁止しているため、公式APIがある三菱UFJアセットマネジメントの
+    ファンドはAPIから取得します。それ以外のファンドは代替の取得元が無いため、当面ライブラリーから取得します。
 
     Args:
         symbol (str): ISINコード
@@ -47,24 +74,14 @@ async def get_fund_price(symbol: str) -> float:
     Returns:
         float: 基準価額。取得できない場合は0
     """
-    url = f"https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
-
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url)
-            html = response.text
+            nav = await _fetch_mufg_nav(client, symbol)
+            if nav is not None:
+                return nav
+            return await _fetch_toushin_lib_nav(client, symbol)
 
-        soup = BeautifulSoup(html, "html.parser")
-        price_div = soup.find("span", class_="h3 font-weight-bold")
-
-        if price_div and price_div.text:
-            # カンマを除去して数値に変換
-            price_text = price_div.text.replace(",", "").replace("円", "").strip()
-            return float(price_text)
-
-        return 0.0
-
-    except (httpx.HTTPError, ValueError) as e:
+    except (httpx.HTTPError, ValueError, KeyError) as e:
         logger.error(
             "投資信託の基準価額取得に失敗しました action=external_io symbol={} error={}",
             symbol,
@@ -77,7 +94,7 @@ if __name__ == "__main__":
     import asyncio
 
     async def main():
-        # テスト用のシンボル（eMAXIS Slim 全世界株式(除く日本)）
+        # テスト用のシンボル（EXE-i グローバルサウス株式ファンド）
         symbol = "JP90C000Q3K5"
 
         # 基準価額の取得テスト

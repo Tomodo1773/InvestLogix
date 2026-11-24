@@ -7,12 +7,14 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 from mcp.server import MCPServer
 from mcp.server.mcpserver import Context
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ToolAnnotations
 
 from .. import models
-from ..schemas import AccountType
+from ..schemas import AccountType, PriceHistoryInterval, PriceHistoryResponse
 from ..services.dividend_service import DividendService
 from ..services.holding_service import list_holdings as list_holdings_service
+from ..services.price_history_service import PriceHistoryService
 from ..services.transaction_service import TransactionService
 from ..utils.datetime import to_jst
 from .middleware import get_user_context_from_mcp
@@ -151,8 +153,19 @@ def _sort_holdings(
     return [*with_value, *without_value]
 
 
+def _normalize_symbol(symbol: str) -> str:
+    """前後の空白を除いて大文字にそろえる。"""
+    normalized = symbol.strip().upper()
+    if not normalized:
+        raise ToolError("symbolには空白以外の文字を指定してください")
+    return normalized
+
+
 def register_tools(server: MCPServer) -> None:
-    """MCPツールをサーバーへ登録する。"""
+    """MCPツールをサーバーへ登録する。
+
+    想定内の失敗はToolErrorで投げる。それ以外の例外はSDKがメッセージを伏せるため、AIに理由が届かない。
+    """
 
     @server.tool(annotations=READ_ONLY)
     async def list_holdings(
@@ -185,7 +198,7 @@ def register_tools(server: MCPServer) -> None:
     ) -> HoldingDetailOutput:
         """現在保有中の指定した1銘柄について、評価額、損益、口座内訳などの詳細を取得する。"""
         user_context = get_user_context_from_mcp(ctx)
-        normalized_symbol = symbol.strip().upper()
+        normalized_symbol = _normalize_symbol(symbol)
         holdings = await list_holdings_service(
             user_context.db,
             user_context.user_id,
@@ -193,7 +206,7 @@ def register_tools(server: MCPServer) -> None:
             active_only=True,
         )
         if not holdings:
-            raise ValueError(f"現在保有している銘柄が見つかりません: {normalized_symbol}")
+            raise ToolError(f"現在保有している銘柄が見つかりません: {normalized_symbol}")
         return HoldingDetailOutput.model_validate(holdings[0])
 
     @server.tool(annotations=READ_ONLY)
@@ -207,11 +220,7 @@ def register_tools(server: MCPServer) -> None:
     ) -> ListTransactionsOutput:
         """最近の取引履歴を取得する。usd_priceはUSD、それ以外の金額はJPY。"""
         user_context = get_user_context_from_mcp(ctx)
-        normalized_symbol = None
-        if symbol is not None:
-            normalized_symbol = symbol.strip().upper()
-            if not normalized_symbol:
-                raise ValueError("symbolには空白以外の文字を指定してください")
+        normalized_symbol = None if symbol is None else _normalize_symbol(symbol)
 
         transactions = await TransactionService(user_context.db).list_transactions(
             user_context.user_id,
@@ -233,11 +242,7 @@ def register_tools(server: MCPServer) -> None:
     ) -> ListDividendsOutput:
         """最近の配当履歴を取得する。金額はすべてJPY。"""
         user_context = get_user_context_from_mcp(ctx)
-        normalized_symbol = None
-        if symbol is not None:
-            normalized_symbol = symbol.strip().upper()
-            if not normalized_symbol:
-                raise ValueError("symbolには空白以外の文字を指定してください")
+        normalized_symbol = None if symbol is None else _normalize_symbol(symbol)
 
         dividends = await DividendService(user_context.db).list_dividends(
             user_context.user_id,
@@ -259,3 +264,24 @@ def register_tools(server: MCPServer) -> None:
                 for dividend in dividends
             ]
         )
+
+    @server.tool(annotations=READ_ONLY)
+    async def get_price_history(
+        ctx: Context,
+        symbol: Annotated[str, Field(min_length=1, description="銘柄コードまたはティッカーシンボル")],
+        interval: Annotated[
+            PriceHistoryInterval,
+            Field(description="データ間隔。dailyは日足、weeklyは週足、monthlyは月足"),
+        ] = PriceHistoryInterval.DAILY,
+        limit: Annotated[int, Field(ge=1, le=500, description="取得件数。monthlyは60件まで")] = 80,
+    ) -> PriceHistoryResponse:
+        """株・ETFの調整済み株価の推移を古い順に取得する。日本株はJPY、米国株はUSD。投資信託は非対応。"""
+        user_context = get_user_context_from_mcp(ctx)
+        normalized_symbol = _normalize_symbol(symbol)
+        try:
+            result = await PriceHistoryService(user_context.db).get_price_history(
+                normalized_symbol, interval, limit
+            )
+        except ValueError as e:
+            raise ToolError(str(e)) from e
+        return PriceHistoryResponse.model_validate(result)

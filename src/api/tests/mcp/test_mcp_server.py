@@ -214,6 +214,12 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
         filtered_transactions_result = await mcp_client.call_tool("list_transactions", {"symbol": " 8058 "})
         dividends_result = await mcp_client.call_tool("list_dividends", {"limit": 1})
         filtered_dividends_result = await mcp_client.call_tool("list_dividends", {"symbol": " aapl "})
+        price_history_result = await mcp_client.call_tool(
+            "get_price_history", {"symbol": " 8058 ", "limit": 3}
+        )
+        monthly_over_limit_result = await mcp_client.call_tool(
+            "get_price_history", {"symbol": "8058", "interval": "monthly", "limit": 61}
+        )
 
         sell_response = await client.post(
             "/api/v1/transactions/",
@@ -254,6 +260,7 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
         "get_holding",
         "list_transactions",
         "list_dividends",
+        "get_price_history",
     }
     assert all(tool.annotations and tool.annotations.read_only_hint for tool in tools.tools)
 
@@ -352,6 +359,7 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
     assert "user_id" not in detail
     assert sold_holdings_result.structured_content == {"holdings": []}
     assert sold_detail_result.is_error
+    assert "見つかりません" in sold_detail_result.content[0].text
     assert other_user_detail_result.is_error
 
     transactions = transactions_result.structured_content["transactions"]
@@ -369,3 +377,13 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
     assert dividends[0]["net_amount"] == 10000
     assert dividends[0]["payment_date"].endswith("+09:00")
     assert filtered_dividends_result.structured_content == {"dividends": []}
+
+    price_history = price_history_result.structured_content
+    assert price_history["symbol"] == "8058"
+    assert price_history["interval"] == "daily"
+    assert len(price_history["data"]) == 3
+    assert set(price_history["data"][0]) == {"date", "open", "high", "low", "close", "volume"}
+    price_dates = [point["date"] for point in price_history["data"]]
+    assert price_dates == sorted(price_dates)
+    assert monthly_over_limit_result.is_error
+    assert "60" in monthly_over_limit_result.content[0].text

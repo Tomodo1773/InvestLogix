@@ -235,9 +235,15 @@ class PriceHistoryService:
             株価履歴データ
 
         Raises:
-            ValueError: 投資信託など非対応の証券種別の場合
+            ValueError: 月足のlimitが上限を超える場合、または投資信託など非対応の証券種別の場合
             Exception: データ取得失敗時
         """
+        # 月足はJ-Quantsの5年制限に合わせて上限を60件に制限
+        if interval == PriceHistoryInterval.MONTHLY and limit > 60:
+            raise ValueError(
+                "For monthly interval, limit should not exceed 60 (approximately 5 years of data)"
+            )
+
         start_date = self._calculate_start_date(interval, limit)
         end_date = now_jst().strftime("%Y-%m-%d")
 

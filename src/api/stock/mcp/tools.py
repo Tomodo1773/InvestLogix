@@ -10,9 +10,10 @@ from mcp.server.mcpserver import Context
 from mcp.types import ToolAnnotations
 
 from .. import models
-from ..schemas import AccountType
+from ..schemas import AccountType, PriceHistoryInterval, PriceHistoryResponse
 from ..services.dividend_service import DividendService
 from ..services.holding_service import list_holdings as list_holdings_service
+from ..services.price_history_service import PriceHistoryService
 from ..services.transaction_service import TransactionService
 from ..utils.datetime import to_jst
 from .middleware import get_user_context_from_mcp
@@ -259,3 +260,20 @@ def register_tools(server: MCPServer) -> None:
                 for dividend in dividends
             ]
         )
+
+    @server.tool(annotations=READ_ONLY)
+    async def get_price_history(
+        ctx: Context,
+        symbol: Annotated[str, Field(min_length=1, description="銘柄コードまたはティッカーシンボル")],
+        interval: Annotated[
+            PriceHistoryInterval,
+            Field(description="データ間隔。dailyは日足、weeklyは週足、monthlyは月足"),
+        ] = PriceHistoryInterval.DAILY,
+        limit: Annotated[int, Field(ge=1, le=500, description="取得件数。monthlyは60件まで")] = 80,
+    ) -> PriceHistoryResponse:
+        """株・ETFの調整済み株価の推移を古い順に取得する。日本株はJPY、米国株はUSD。投資信託は非対応。"""
+        user_context = get_user_context_from_mcp(ctx)
+        result = await PriceHistoryService(user_context.db).get_price_history(
+            symbol.strip().upper(), interval, limit
+        )
+        return PriceHistoryResponse.model_validate(result)

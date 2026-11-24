@@ -359,6 +359,7 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
     assert "user_id" not in detail
     assert sold_holdings_result.structured_content == {"holdings": []}
     assert sold_detail_result.is_error
+    assert "見つかりません" in sold_detail_result.content[0].text
     assert other_user_detail_result.is_error
 
     transactions = transactions_result.structured_content["transactions"]
@@ -385,3 +386,4 @@ async def test_mcp_exposes_read_only_tools_with_fixed_schemas_and_holding_sortin
     price_dates = [point["date"] for point in price_history["data"]]
     assert price_dates == sorted(price_dates)
     assert monthly_over_limit_result.is_error
+    assert "60" in monthly_over_limit_result.content[0].text

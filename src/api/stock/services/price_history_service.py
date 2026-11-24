@@ -3,6 +3,7 @@
 日本株はJ-Quants API、米国株はTiingoを使用
 """
 
+import asyncio
 from datetime import timedelta
 
 import pandas as pd
@@ -29,8 +30,8 @@ class PriceHistoryService:
         """間隔と取得件数から開始日を計算する（十分な余裕を持たせる）"""
         today = now_jst()
         if interval == PriceHistoryInterval.DAILY:
-            # 平日営業日を考慮して、limit * 1.5日分遡る
-            days_back = int(limit * 1.5)
+            # 土日を考慮して limit * 1.5日分、件数が少ないときに連休をまたいでも足りるよう10日分を足して遡る
+            days_back = int(limit * 1.5) + 10
         elif interval == PriceHistoryInterval.WEEKLY:
             # 週足なら limit週 * 7日
             days_back = limit * 7
@@ -189,7 +190,7 @@ class PriceHistoryService:
         self, symbol: str, start_date: str, end_date: str
     ) -> list[PriceDataPoint]:
         """
-        米国株の株価データを取得（非同期ラッパー）
+        米国株の株価データを取得（同期HTTPでイベントループを止めないよう別スレッドで実行）
 
         Args:
             symbol: 銘柄コード
@@ -199,7 +200,7 @@ class PriceHistoryService:
         Returns:
             株価データのリスト
         """
-        return self._fetch_us_stock_prices_cached(symbol, start_date, end_date)
+        return await asyncio.to_thread(self._fetch_us_stock_prices_cached, symbol, start_date, end_date)
 
     async def _fetch_stock_prices(self, symbol: str, start_date: str, end_date: str) -> list[dict]:
         result = await self.db.execute(select(Stock).where(Stock.symbol == symbol))

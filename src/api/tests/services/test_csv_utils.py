@@ -7,7 +7,6 @@ import pytest
 from stock.services.csv_utils import (
     date_key,
     decode_csv_content,
-    get_fund_symbol,
     is_empty,
     to_number,
 )
@@ -63,27 +62,6 @@ class TestToNumber:
         assert to_number(None) == 0.0
 
 
-class TestGetFundSymbol:
-    """get_fund_symbol関数のテスト"""
-
-    def test_exact_match(self):
-        symbol = get_fund_symbol("eMAXIS Slim 全世界株式(オール・カントリー)")
-        assert symbol == "JP90C000H1T1"
-
-    def test_normalized_match(self):
-        # 全角括弧のバリエーション
-        symbol = get_fund_symbol("ＳＢＩ・Ｓ・米国高配当株式ファンド（年４回決算型）")
-        assert symbol == "JP90C000REE2"
-
-    def test_unknown_fund(self):
-        symbol = get_fund_symbol("未知のファンド")
-        assert symbol is None
-
-    def test_empty_string(self):
-        symbol = get_fund_symbol("")
-        assert symbol is None
-
-
 class TestDecodeCsvContent:
     """decode_csv_content関数のテスト"""
 
@@ -125,19 +103,3 @@ class TestDateKey:
         jst = ZoneInfo("Asia/Tokyo")
         dt = datetime(2024, 1, 15, 23, 0, 0, tzinfo=jst)
         assert date_key(dt) == "2024-01-15"
-
-
-class TestFundSymbolMap:
-    """FUND_SYMBOL_MAPの検証"""
-
-    def test_sbi_fund_variants_map_to_same_symbol(self):
-        """SBI米国高配当株式ファンドの各表記が同じシンボルにマッピングされることを確認"""
-        expected_symbol = "JP90C000REE2"
-        variants = [
-            "SBI・S・米国高配当株式ファンド(年4回決算型)",
-            "ＳＢＩ・Ｓ・米国高配当株式ファンド(年４回決算型)",
-            "ＳＢＩ・Ｓ・米国高配当株式ファンド（年４回決算型）",
-        ]
-        for variant in variants:
-            symbol = get_fund_symbol(variant)
-            assert symbol == expected_symbol, f"{variant}が{expected_symbol}にマッピングされていません"

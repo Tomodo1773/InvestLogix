@@ -110,7 +110,7 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
 
     期待する動作:
     - ステータスコード200
-    - 登録された投資信託情報を返却
+    - 銘柄名は台帳（fund_master）の名前で登録される
 
     Args:
         client: 非同期HTTPクライアント
@@ -127,8 +127,17 @@ async def test_create_investment_trust(client: AsyncClient, db_session: AsyncSes
     assert response.status_code == 200
     data = response.json()
     assert data["symbol"] == "JP90C000J569"
+    assert data["name"] == "SBI・V・S&P500インデックス・ファンド"
     assert data["market"] == "JPX"
     assert data["security_type"] == "FUND"
+
+
+@pytest.mark.asyncio
+async def test_create_investment_trust_not_in_fund_master(client: AsyncClient, auth_user):
+    """台帳に無い投資信託は登録できず404を返す"""
+    response = await client.post("/api/v1/stocks/", json={"symbol": "JP90C000ZZZ9"})
+
+    assert response.status_code == 404
 
 
 @pytest.mark.asyncio

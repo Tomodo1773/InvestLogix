@@ -4,30 +4,12 @@ SBI証券からエクスポートしたCSVをパースする際に使用する
 共通関数・定数を提供する。
 """
 
-import unicodedata
 from datetime import datetime
 
 import pandas as pd
 from loguru import logger
 
 from ..utils.datetime import to_jst
-
-# 投資信託名からシンボルへのマッピング
-FUND_SYMBOL_MAP = {
-    "eMAXIS Slim 全世界株式(オール・カントリー)": "JP90C000H1T1",
-    "eMAXIS Slim 新興国株式インデックス": "JP90C000F7H5",
-    "SBI・iシェアーズ・インド株式インデックス・ファンド": "JP90C000PZX1",
-    "SBI・V・S&P500インデックス・ファンド": "JP90C000J569",
-    "EXE-i グローバルサウス株式ファンド": "JP90C000Q3K5",
-    "eMAXIS Slim 国内株式(TOPIX)": "JP90C000ENA9",
-    "SBI・S・米国高配当株式ファンド(年4回決算型)": "JP90C000REE2",
-    "ＳＢＩ・Ｓ・米国高配当株式ファンド(年４回決算型)": "JP90C000REE2",
-    "ＳＢＩ・Ｓ・米国高配当株式ファンド（年４回決算型）": "JP90C000REE2",
-    "eMAXIS Neo 自動運転": "JP90C000HR52",
-}
-
-# Unicode正規化済みのマッピング
-NORMALIZED_FUND_MAP = {unicodedata.normalize("NFKC", k): v for k, v in FUND_SYMBOL_MAP.items()}
 
 
 def is_empty(val) -> bool:
@@ -40,15 +22,6 @@ def to_number(val, default: float = 0.0) -> float:
     if is_empty(val):
         return default
     return float(str(val).replace(",", ""))
-
-
-def get_fund_symbol(fund_name: str) -> str | None:
-    """ファンド名からシンボルを取得
-
-    Unicode正規化を行い、全角/半角の表記揺れを吸収する。
-    """
-    key = unicodedata.normalize("NFKC", fund_name) if fund_name else ""
-    return NORMALIZED_FUND_MAP.get(key)
 
 
 def parse_date(val) -> str | None:

@@ -9,7 +9,7 @@ from .. import models, schemas
 from .alphavantage_service import fetch_us_stock_overview, fetch_us_stock_search
 from .classification_service import classify_fund_currency
 from .errors import StockNotFoundError
-from .investment_trust_service import fetch_investment_trust_details
+from .fund_master import FUNDS
 from .jquants_service import get_jquants_client
 
 
@@ -101,9 +101,12 @@ class StockService:
         return db_stock
 
     async def _fetch_investment_trust_attrs(self, db_stock: models.Stock) -> None:
-        """外部APIから投資信託の属性を取得してdb_stockに反映する"""
-        details = await fetch_investment_trust_details(db_stock.symbol)
-        db_stock.name = details["name"]
+        """台帳から投資信託の銘柄名を引き、通貨を分類してdb_stockに反映する"""
+        fund = FUNDS.get(db_stock.symbol)
+        if fund is None:
+            logger.error("投資信託が台帳に未登録です action=create symbol={}", db_stock.symbol)
+            raise StockNotFoundError(f"Investment trust not registered in fund master: {db_stock.symbol}")
+        db_stock.name = fund.name
         db_stock.currency = await classify_fund_currency(db_stock.name)
 
     async def create_japanese_stock(self, stock: schemas.StockCreate) -> models.Stock:

@@ -1,74 +1,66 @@
 """
-投資信託の銘柄名と基準価額を取得します。
+投資信託の基準価額を、台帳（fund_master）に書いた取得元から取得します。
 
-投信総合検索ライブラリーは自動取得を禁止しているため、公式APIがある三菱UFJアセットマネジメントの
-ファンドはAPIから取得します。それ以外のファンドは代替の取得元が無いため、当面ライブラリーから取得します。
+投信総合検索ライブラリーは自動取得を禁止しているため使わず、各運用会社から取得します。
+三菱UFJアセットマネジメント以外は公式APIが無いため、サイトが画面表示に使っているデータを読みます。
 """
 
+import json
+import re
+from collections.abc import Awaitable, Callable
+
 import httpx
-from bs4 import BeautifulSoup
 from loguru import logger
 
+from .fund_master import FUNDS, Fund
+
 MUFG_FUND_API_URL = "https://developer.am.mufg.jp/fund_information_latest/isin_cd/{symbol}"
-TOUSHIN_LIB_URL = "https://toushin-lib.fwg.ne.jp/FdsWeb/FDST030000?isinCd={symbol}"
+SBI_AM_FUND_LIST_URL = "https://apl.wealthadvisor.jp/webasp/sbi_am/pc/fund.aspx"
+NISSAY_NAV_URL = "https://www.nam.co.jp/fundinfo/data/s_djson.php"
 
 
-async def _fetch_mufg_fund(client: httpx.AsyncClient, symbol: str) -> dict | None:
-    """
-    三菱UFJアセットマネジメントの公式「投信情報API」からファンド情報を取得します。
-
-    同社のファンド以外はHTTP 200のまま datasets が null で返るため、None を返します。
-    APIの障害で同社以外のファンドの取得まで止めないよう、取得失敗もログを残して None を返します。
-    """
-    try:
-        response = await client.get(MUFG_FUND_API_URL.format(symbol=symbol))
-        response.raise_for_status()
-        datasets = response.json()["datasets"]
-    except (httpx.HTTPError, ValueError, KeyError) as e:
-        logger.warning(
-            "三菱UFJ投信情報APIの取得に失敗しました action=external_io symbol={} error={}", symbol, str(e)
-        )
-        return None
-    return datasets[0] if datasets else None
-
-
-async def _fetch_toushin_lib_page(client: httpx.AsyncClient, symbol: str) -> BeautifulSoup:
-    """投信総合検索ライブラリーのファンド詳細ページを取得します。"""
-    response = await client.get(TOUSHIN_LIB_URL.format(symbol=symbol))
+async def _fetch_mufg_nav(client: httpx.AsyncClient, symbol: str, fund: Fund) -> float:
+    """三菱UFJアセットマネジメントの公式「投信情報API」から基準価額を取得します。"""
+    response = await client.get(MUFG_FUND_API_URL.format(symbol=symbol))
     response.raise_for_status()
-    return BeautifulSoup(response.text, "html.parser")
+    # 同社のファンド以外はHTTP 200のまま datasets が null で返る
+    datasets = response.json()["datasets"]
+    if not datasets or datasets[0]["nav"] is None:
+        raise ValueError("投信情報APIに基準価額がありません")
+    return float(datasets[0]["nav"])
 
 
-async def fetch_investment_trust_details(symbol: str) -> dict:
-    """
-    投資信託の詳細情報を取得します。
+async def _fetch_sbi_am_nav(client: httpx.AsyncClient, symbol: str, fund: Fund) -> float:
+    """SBIアセットマネジメントのファンド一覧ページに埋め込まれたJSONから基準価額を取得します。"""
+    response = await client.get(SBI_AM_FUND_LIST_URL)
+    response.raise_for_status()
+    match = re.search(r"result\s*=\s*\{", response.text)
+    if not match:
+        raise ValueError("ファンド一覧のデータが見つかりません")
+    data, _ = json.JSONDecoder().raw_decode(response.text, match.end() - 1)
+    for row in data["fundlist"]:
+        if row["msFundCode"] == fund.source_code:
+            return float(row["kijyunkagaku"].replace(",", ""))
+    raise ValueError(f"ファンド一覧にコード {fund.source_code} がありません")
 
-    Args:
-        symbol (str): ISINコード
 
-    Returns:
-        dict: 投資信託の詳細情報
-    """
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        fund = await _fetch_mufg_fund(client, symbol)
-        if fund:
-            name = fund.get("fund_name")
-        else:
-            soup = await _fetch_toushin_lib_page(client, symbol)
-            name_elem = soup.select_one(
-                "body > div:nth-of-type(4) > div > div > div:nth-of-type(1) > div:nth-of-type(1) > h3"
-            )
-            name = name_elem.text.strip() if name_elem else None
+async def _fetch_nissay_nav(client: httpx.AsyncClient, symbol: str, fund: Fund) -> float:
+    """ニッセイアセットマネジメントの基準価額一覧データ（JSONP）から基準価額を取得します。"""
+    response = await client.post(NISSAY_NAV_URL, data={"jsonname": "s_dkijun1.json"})
+    response.raise_for_status()
+    text = response.text
+    data = json.loads(text[text.index("(") + 1 : text.rindex(")")])
+    for node in data["result"]["nodes"]:
+        if node["a_fcode"] == fund.source_code:
+            return float(node["a_kj_003"])
+    raise ValueError(f"基準価額一覧にコード {fund.source_code} がありません")
 
-    if not name:
-        logger.error("投資信託の名前が取得できませんでした action=external_io symbol={}", symbol)
-        raise ValueError(f"投資信託の名前が取得できませんでした: {symbol}")
 
-    return {
-        "name": name,
-        "market": None,
-        "industry": None,
-    }
+_FETCHERS: dict[str, Callable[[httpx.AsyncClient, str, Fund], Awaitable[float]]] = {
+    "mufg": _fetch_mufg_nav,
+    "sbi_am": _fetch_sbi_am_nav,
+    "nissay": _fetch_nissay_nav,
+}
 
 
 async def get_fund_price(symbol: str) -> float:
@@ -81,41 +73,19 @@ async def get_fund_price(symbol: str) -> float:
     Returns:
         float: 基準価額。取得できない場合は0
     """
+    fund = FUNDS.get(symbol)
+    if fund is None:
+        logger.error("投資信託が台帳に未登録です action=external_io symbol={}", symbol)
+        return 0.0
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            fund = await _fetch_mufg_fund(client, symbol)
-            if fund and fund.get("nav") is not None:
-                return float(fund["nav"])
-            soup = await _fetch_toushin_lib_page(client, symbol)
-
-        price_span = soup.find("span", class_="h3 font-weight-bold")
-        if not (price_span and price_span.text):
-            raise ValueError("基準価額の要素がページに見つかりません")
-        # カンマを除去して数値に変換
-        return float(price_span.text.replace(",", "").replace("円", "").strip())
-
-    except (httpx.HTTPError, ValueError) as e:
+            return await _FETCHERS[fund.source](client, symbol, fund)
+    except (httpx.HTTPError, ValueError, KeyError) as e:
         logger.error(
-            "投資信託の基準価額取得に失敗しました action=external_io symbol={} error={}",
+            "投資信託の基準価額取得に失敗しました action=external_io symbol={} source={} error={}",
             symbol,
+            fund.source,
             str(e),
         )
         return 0.0
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    async def main():
-        # テスト用のシンボル（EXE-i グローバルサウス株式ファンド）
-        symbol = "JP90C000Q3K5"
-
-        # 基準価額の取得テスト
-        price = await get_fund_price(symbol)
-        logger.info("基準価額を取得しました action=external_io symbol={} price={}", symbol, price)
-
-        # 詳細情報の取得テスト
-        await fetch_investment_trust_details(symbol)
-        logger.info("投資信託の詳細情報を取得しました action=external_io symbol={}", symbol)
-
-    asyncio.run(main())

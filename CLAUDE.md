@@ -167,6 +167,7 @@ FastAPIベースのREST APIです。PostgreSQLをデータベースとして使�
 
 - パッケージを追加するときはadd-python-packageスキルを利用すること
 - 設定値は `stock/database.py` の `Settings` に集約する
+- 投資信託は `stock/services/fund_master.py` の `FUNDS`（台帳）で管理する。CSV取込の銘柄名照合、新規登録時の銘柄名、基準価額の取得元はすべて台帳を見るため、新しく投資信託を保有したら台帳に1件追加してからCSVを取り込む。投信総合検索ライブラリーは自動取得を禁止しているため使わない
 
 ### コマンド
 

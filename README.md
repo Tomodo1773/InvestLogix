@@ -63,7 +63,7 @@ Accessが確認するのはメールアドレスまでで、アプリ内ユー�
 | バックエンドの実行環境 | Google Cloud Run / Cloud Run Jobs / Cloud Scheduler | APIとMCPの常時稼働、定時ジョブの実行 |
 | 認証 | Cloudflare Access (Zero Trust) | 本人確認、ログインセッション、MCPのOAuth |
 | インフラ定義 | OpenTofu | Google Cloud側のリソース管理 |
-| 外部データ | J-Quants / Tiingo / Alpha Vantage / 三菱UFJアセットマネジメント投信情報API | 日本株・米国株の株価、投資信託の基準価額、為替、銘柄情報 |
+| 外部データ | J-Quants / Tiingo / Alpha Vantage / 各運用会社（三菱UFJアセットマネジメント投信情報APIほか） | 日本株・米国株の株価、投資信託の基準価額、為替、銘柄情報 |
 | 外部連携 | OpenAI API / Slack API | 週次レポートの解説生成とDM送信 |
 
 ## 補足

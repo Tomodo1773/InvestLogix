@@ -13,7 +13,8 @@ import pandas as pd
 from loguru import logger
 
 from ..utils.datetime import JST
-from .csv_utils import date_key, decode_csv_content, get_fund_symbol, is_empty, to_number
+from .csv_utils import date_key, decode_csv_content, is_empty, to_number
+from .fund_master import get_fund_symbol
 
 
 @dataclass
